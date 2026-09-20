@@ -45,6 +45,23 @@ O código desse endpoint e um protótipo desktop foram preparados separadamente,
 
 Enquanto o endpoint não estiver disponível, o front pode ser construído com um adaptador de dados mockados que respeite exatamente o contrato deste documento.
 
+### 3.1. Como o agente consulta o Swagger
+
+Com a CEP API executando localmente em modo `Development`, estes endereços ficam disponíveis:
+
+- Interface Swagger: `http://127.0.0.1:8080/swagger`
+- Contrato OpenAPI JSON: `http://127.0.0.1:8080/swagger/v1/swagger.json`
+
+O repositório do front mantém também uma cópia em `docs/openapi.json`. Antes de implementar ou alterar uma integração, o agente deve ler esse arquivo e não inventar endpoints, parâmetros ou respostas que não estejam nele.
+
+Para atualizar a cópia usando a API local:
+
+```powershell
+.\scripts\sync-openapi.ps1
+```
+
+O Swagger consegue iniciar sem PostgreSQL, mas nesse cenário serve apenas para documentação: chamadas que acessam dados falharão. Para testar os fluxos reais, é necessário iniciar o PostgreSQL, aplicar as migrations e então executar a API.
+
 ## 4. Arquitetura esperada
 
 ```text
