@@ -4,6 +4,39 @@ Atualizado em 20/09/2026.
 
 Este documento é o briefing de implementação do front-end da aplicação desktop **CEP Horas**. Ele deve ser lido antes de escrever código. A especificação funcional completa continua em [`docs/conciliacao-horas/especificacao-funcional.md`](conciliacao-horas/especificacao-funcional.md).
 
+## Implementação disponível
+
+O repositório também contém a área web **Administração > Integrações e pessoas**, que antecede a consulta pessoal. Ela permite que um `organizationAdmin`:
+
+- acompanhe e execute sincronizações do Monday e do VR Mais;
+- confirme manualmente correspondências entre identidades das duas fontes;
+- associe a pessoa e envie o convite de acesso;
+- acompanhe contas e convites;
+- consulte o histórico bruto persistido de até 60 dias.
+
+Essa área usa exclusivamente a CEP API. O desenvolvimento local encaminha `/api` para `http://127.0.0.1:8080`, e o contrato versionado fica em [`docs/openapi.json`](docs/openapi.json).
+
+### Executar o front administrativo
+
+Com a API local ativa:
+
+```powershell
+npm install
+npm run dev
+```
+
+A aplicação estará em `http://127.0.0.1:5173`. Para usar outra origem da API, copie `.env.example` para `.env.local` e defina `VITE_API_BASE_URL`.
+
+Validação completa:
+
+```powershell
+npm run lint
+npm test
+npm run build
+```
+
+O código está organizado em `src/features/auth` e `src/features/workforce`. Componentes não chamam `fetch` diretamente; autenticação, renovação de sessão e erros `application/problem+json` ficam centralizados em `src/api/client.ts`.
+
 ## 1. Objetivo do produto
 
 O CEP Horas permite que uma pessoa compare, por dia e por período, as horas registradas em atividades do **Monday** com as horas registradas no **VR Mais**.
