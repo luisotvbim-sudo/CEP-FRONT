@@ -3,7 +3,7 @@ set -Eeuo pipefail
 
 app_dir=/opt/cep-front
 repo=luisotvbim-sudo/CEP-FRONT
-health_url=https://app.cep.lat/healthz
+health_url=https://cep.lat/healthz
 cd "$app_dir"
 
 compose=(docker compose --env-file .env -f compose.production.yaml)

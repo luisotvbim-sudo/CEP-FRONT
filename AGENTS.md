@@ -12,4 +12,4 @@ Antes de escrever ou alterar qualquer integração com o backend:
 
 Quando a API mudar, atualize e versione `docs/openapi.json` no mesmo trabalho que adaptar o cliente do front.
 
-Para produção web, preserve a separação descrita em `deploy/README.md`: este repositório gera apenas o contêiner `cep-front`, sem porta publicada; o Nginx de borda encaminha `app.cep.lat` ao front e `/api/` diretamente ao contêiner independente da CEP API. Não habilite CORS nem mude o cliente para guardar tokens no navegador. Mudanças em Docker, Nginx ou deploy precisam validar `compose.production.yaml`, a imagem read-only sem privilégios, os scripts Bash e o health check `/healthz`.
+Para produção web, preserve a separação descrita em `deploy/README.md`: este repositório gera apenas o contêiner `cep-front`, sem porta publicada; o Nginx de borda encaminha `cep.lat` ao front e `/api/` diretamente ao contêiner independente da CEP API. Não habilite CORS nem mude o cliente para guardar tokens no navegador. Mudanças em Docker, Nginx ou deploy precisam validar `compose.production.yaml`, a imagem read-only sem privilégios, os scripts Bash e o health check `/healthz`.

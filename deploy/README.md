@@ -1,6 +1,6 @@
 # Produção web
 
-O front web roda em um contêiner próprio e não publica portas no host. Ele entra na rede externa `cep-api-production_frontend` com o alias `cep-front`; o Nginx de borda da CEP API encaminha `app.cep.lat` para esse alias e encaminha `/api/` diretamente para a API. Assim o navegador usa uma única origem, os tokens continuam apenas em memória e CORS não precisa ser aberto.
+O front web roda em um contêiner próprio e não publica portas no host. Ele entra na rede externa `cep-api-production_frontend` com o alias `cep-front`; o Nginx de borda da CEP API encaminha `cep.lat` para esse alias e encaminha `/api/` diretamente para a API. Assim o navegador usa uma única origem, os tokens continuam apenas em memória e CORS não precisa ser aberto.
 
 ## Primeira implantação
 
@@ -14,7 +14,7 @@ docker build -t "cep-front:$(git rev-parse --short=12 HEAD)" .
 sed -i "s/^FRONT_IMAGE_TAG=.*/FRONT_IMAGE_TAG=$(git rev-parse --short=12 HEAD)/" .env
 docker compose --env-file .env -f compose.production.yaml up -d --wait
 git rev-parse HEAD > .local/deployed-commit
-curl -fsS https://app.cep.lat/healthz
+curl -fsS https://cep.lat/healthz
 ```
 
 A rede da API precisa existir antes de iniciar o front. Somente o Nginx da API publica 443. Não publique 8080 e não combine este Compose com arquivos de desenvolvimento.
