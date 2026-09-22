@@ -7,6 +7,10 @@
   color: #666666;
   font-size: 14px;
 }
+.system-admin-app > .admin-main { width: 100%; margin-left: 0; }
+.system-admin-app form { max-width: 560px; display: grid; gap: 16px; margin-block: 24px; }
+.system-admin-app label { display: grid; gap: 6px; }
+.system-admin-app input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; }
 .admin-app {
   display: flex;
   min-height: 100svh;

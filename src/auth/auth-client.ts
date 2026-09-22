@@ -1,7 +1,7 @@
 import type { components } from './api-schema'
 
 export type User = components['schemas']['UserResponse']
-type TokenResponse = components['schemas']['TokenResponse']
+type TokenResponse = components['schemas']['WebSessionResponse']
 export type Credentials = { email: string; password: string }
 export type ResetPassword = { email: string; code: string; newPassword: string }
 export type AuthSession = { user: User; expiresAt: string }
@@ -64,6 +64,8 @@ export function describeError(status: number, problem: ApiProblem): string {
     history_period_too_large: 'Selecione um intervalo de até 60 dias, incluindo as duas datas.',
     invalid_history_period: 'Informe um período válido para a consulta.',
     session_expired: 'Sua sessão expirou ou foi revogada. Entre novamente.',
+    web_origin_invalid:
+      'Não foi possível validar a origem da sessão. Confira a configuração do endereço e do proxy com o responsável.',
     desktop_request_failed:
       'Não foi possível conectar. Verifique sua conexão. Se você estava salvando, confira o resultado antes de repetir.',
   }
@@ -81,17 +83,46 @@ export function describeError(status: number, problem: ApiProblem): string {
 }
 
 export class HttpAuthClient implements AuthClient {
-  private refreshToken: string | null = null
+  private hasSession = false
+  private user: User | null = null
   private accessToken: string | null = null
   private expiresAt = 0
+  private restoreFlight: Promise<AuthSession | null> | null = null
   private refreshFlight: Promise<void> | null = null
   private epoch = 0
   private listeners = new Set<(error?: AuthError) => void>()
+  private readonly channel =
+    typeof window !== 'undefined' && typeof BroadcastChannel !== 'undefined'
+      ? new BroadcastChannel('cep-web-session')
+      : null
 
   constructor(
     private readonly fetcher: typeof fetch = globalThis.fetch.bind(globalThis),
     private readonly baseUrl = '/api/v1',
-  ) {}
+  ) {
+    this.channel?.addEventListener('message', () => this.expire())
+  }
+
+  private async withSessionLock<T>(action: () => Promise<T>): Promise<T> {
+    // The cookie is shared by tabs: serialize the whole request, including Set-Cookie.
+    if (typeof window !== 'undefined') {
+      if (!navigator.locks)
+        throw new AuthError('Atualize seu navegador para manter a sessão com segurança.')
+      return await navigator.locks.request(`cep-web-session:${this.baseUrl}`, action)
+    }
+    return action()
+  }
+
+  private interrupted(value?: boolean): boolean {
+    // This is only a non-secret failure marker, never a token or identity.
+    try {
+      if (value === true) localStorage.setItem('cep-session-interrupted', '1')
+      if (value === false) localStorage.removeItem('cep-session-interrupted')
+      return localStorage.getItem('cep-session-interrupted') === '1'
+    } catch {
+      return false
+    }
+  }
 
   private async send(
     method: string,
@@ -106,10 +137,11 @@ export class HttpAuthClient implements AuthClient {
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json, application/problem+json',
+          ...(path.startsWith('/auth/web/') ? { 'X-CEP-Web-Session': '1' } : {}),
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: body === undefined ? undefined : JSON.stringify(body),
-        credentials: 'omit',
+        credentials: path.startsWith('/auth/web/') ? 'same-origin' : 'omit',
         cache: 'no-store',
         signal: AbortSignal.timeout(
           path.startsWith('/organization/time-control/synchronizations') && method === 'POST'
@@ -146,14 +178,25 @@ export class HttpAuthClient implements AuthClient {
       this.listeners.delete(listener)
     }
   }
-  async restore(): Promise<AuthSession | null> {
-    return null
+  restore(): Promise<AuthSession | null> {
+    this.restoreFlight ??= (async () => {
+      try {
+        await this.refresh(true)
+        const user = await this.request<User>('GET', '/me')
+        return { user, expiresAt: new Date(this.expiresAt).toISOString() }
+      } catch (error) {
+        if (error instanceof AuthError && error.status === 401) return null
+        throw error
+      }
+    })()
+    return this.restoreFlight
   }
 
   private expire(error?: AuthError) {
     this.epoch++
     this.accessToken = null
-    this.refreshToken = null
+    this.hasSession = false
+    this.user = null
     this.expiresAt = 0
     this.listeners.forEach((listener) => listener(error))
   }
@@ -161,7 +204,9 @@ export class HttpAuthClient implements AuthClient {
   private accept(tokens: TokenResponse | null): AuthSession {
     if (
       !tokens?.accessToken ||
-      !tokens.refreshToken ||
+      !tokens.sessionExpiresAt ||
+      !Number.isFinite(Date.parse(tokens.sessionExpiresAt)) ||
+      Date.parse(tokens.sessionExpiresAt) <= Date.now() ||
       !tokens.user?.id ||
       !tokens.accessTokenExpiresAt ||
       !Number.isFinite(Date.parse(tokens.accessTokenExpiresAt)) ||
@@ -173,48 +218,68 @@ export class HttpAuthClient implements AuthClient {
         'invalid_session_response',
       )
     this.accessToken = tokens.accessToken
-    this.refreshToken = tokens.refreshToken
-    this.expiresAt = Date.parse(tokens.accessTokenExpiresAt)
-    return { user: tokens.user, expiresAt: tokens.accessTokenExpiresAt }
+    this.hasSession = true
+    this.user = tokens.user
+    this.expiresAt = Math.min(
+      Date.parse(tokens.accessTokenExpiresAt),
+      Date.parse(tokens.sessionExpiresAt),
+    )
+    return { user: tokens.user, expiresAt: new Date(this.expiresAt).toISOString() }
   }
 
-  private refresh(): Promise<void> {
+  private refresh(restoring = false): Promise<void> {
     if (this.refreshFlight) return this.refreshFlight
-    const token = this.refreshToken
     const epoch = this.epoch
-    // A lost refresh response must never cause replay of the previous token.
-    this.refreshToken = null
-    this.refreshFlight = Promise.resolve().then(async () => {
-      try {
-        if (!token)
-          throw new AuthError(
-            'Sua sessão expirou. Entre novamente.',
-            undefined,
-            'session_expired',
-            401,
-          )
-        const response = await this.post('/auth/refresh', { refreshToken: token })
-        const tokens: TokenResponse | null = await response.json().catch(() => null)
-        if (epoch !== this.epoch)
-          throw new AuthError('A sessão foi encerrada.', undefined, 'session_expired', 401)
-        this.accept(tokens)
-      } catch (error) {
-        if (epoch === this.epoch) this.expire(errorMessage(error))
-        throw new AuthError(
-          'Sua sessão expirou ou não pôde ser renovada. Entre novamente.',
-          error instanceof AuthError ? error.correlationId : undefined,
-          'session_expired',
-          401,
-        )
-      } finally {
+    this.refreshFlight = Promise.resolve()
+      .then(() =>
+        this.withSessionLock(async () => {
+          let started = false
+          try {
+            if ((!restoring && !this.hasSession) || this.interrupted() || epoch !== this.epoch)
+              throw new AuthError(
+                'Sua sessão expirou. Entre novamente.',
+                undefined,
+                'session_expired',
+                401,
+              )
+            // If the tab closes mid-rotation, the next tab must not replay an uncertain cookie.
+            started = true
+            this.interrupted(true)
+            const response = await this.post('/auth/web/refresh', {})
+            const tokens: TokenResponse | null = await response.json().catch(() => null)
+            if (epoch !== this.epoch || (this.user && tokens?.user?.id !== this.user.id))
+              throw new AuthError('A sessão foi encerrada.', undefined, 'session_expired', 401)
+            this.accept(tokens)
+            this.interrupted(false)
+          } catch (error) {
+            if (
+              error instanceof AuthError &&
+              (['connection_failed', 'invalid_session_response'].includes(error.code || '') ||
+                (error.status !== undefined && error.status >= 500))
+            ) {
+              this.interrupted(true)
+              this.channel?.postMessage('expired')
+            } else if (
+              started &&
+              error instanceof AuthError &&
+              error.status !== undefined &&
+              error.status < 500
+            ) {
+              this.interrupted(false)
+            }
+            if (epoch === this.epoch && !restoring) this.expire(errorMessage(error))
+            throw error
+          }
+        }),
+      )
+      .finally(() => {
         this.refreshFlight = null
-      }
-    })
+      })
     return this.refreshFlight
   }
 
   async request<T>(method: 'GET' | 'POST' | 'PATCH', path: string, body?: object): Promise<T> {
-    if (!path.startsWith('/organization/') && path !== '/me')
+    if (!path.startsWith('/organization/') && path.split('?')[0] !== '/admin/organizations' && path !== '/me')
       throw new Error('Unsupported API route')
     if (this.refreshFlight) await this.refreshFlight
     if (!this.accessToken || this.expiresAt <= Date.now() + 30_000) await this.refresh()
@@ -246,11 +311,16 @@ export class HttpAuthClient implements AuthClient {
       password: credentials.password,
       client: { type: 'cep-horas-web', version: '0.2.0' },
     }
-    const response = await this.post('/auth/login', body)
-    const tokens: TokenResponse | null = await response.json().catch(() => null)
-    this.epoch++
     try {
-      const session = this.accept(tokens)
+      const session = await this.withSessionLock(async () => {
+        const response = await this.post('/auth/web/login', body)
+        const tokens: TokenResponse | null = await response.json().catch(() => null)
+        this.epoch++
+        const session = this.accept(tokens)
+        this.interrupted(false)
+        this.channel?.postMessage('login')
+        return session
+      })
       session.user = await this.request<User>('GET', '/me')
       return session
     } catch (error) {
@@ -261,10 +331,12 @@ export class HttpAuthClient implements AuthClient {
 
   async logout(): Promise<void> {
     if (this.refreshFlight) await this.refreshFlight.catch(() => undefined)
-    const token = this.refreshToken
-    if (!token) return
-    await this.post('/auth/logout', { refreshToken: token })
-    if (this.refreshToken === token) this.expire()
+    if (!this.hasSession) return
+    await this.withSessionLock(async () => {
+      await this.post('/auth/web/logout', {})
+      this.expire()
+      this.channel?.postMessage('logout')
+    })
   }
 
   async requestPasswordReset(email: string): Promise<void> {

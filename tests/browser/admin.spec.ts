@@ -177,7 +177,7 @@ test('expired session returns to login and preserves the support correlation', a
     route.fulfill({ status: 401, json: { code: 'unauthorized' } }),
   )
   let rotations = 0
-  await page.route('**/auth/refresh', (route) => {
+  await page.route('**/auth/web/refresh', (route) => {
     rotations++
     return route.fulfill({
       status: 401,

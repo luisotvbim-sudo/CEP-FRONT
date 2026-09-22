@@ -3,7 +3,7 @@ import { AuthError, HttpAuthClient } from './auth-client'
 
 const session = () => ({
   accessToken: 'test-access-token',
-  refreshToken: 'test-refresh-token',
+  sessionExpiresAt: new Date(Date.now() + 7 * 86400_000).toISOString(),
   accessTokenExpiresAt: new Date(Date.now() + 60_000).toISOString(),
   user: {
     id: 'test-id',
@@ -32,7 +32,7 @@ describe('HTTP authentication', () => {
       password: ' password with spaces ',
       client: { type: 'cep-horas-web', version: '0.2.0' },
     })
-    expect(fetcher.mock.calls[0][0]).toBe('/api/v1/auth/login')
+    expect(fetcher.mock.calls[0][0]).toBe('/api/v1/auth/web/login')
   })
 
   it.each([401, 403, 429, 500])(
@@ -93,10 +93,8 @@ describe('HTTP authentication', () => {
     await client.login({ email: 'test@example.invalid', password: 'test' })
     await expect(client.logout()).rejects.toBeInstanceOf(AuthError)
     await client.logout()
-    expect(fetcher.mock.calls[3][0]).toBe('/api/v1/auth/logout')
-    expect(JSON.parse(fetcher.mock.calls[3][1]?.body as string)).toEqual({
-      refreshToken: 'test-refresh-token',
-    })
+    expect(fetcher.mock.calls[3][0]).toBe('/api/v1/auth/web/logout')
+    expect(JSON.parse(fetcher.mock.calls[3][1]?.body as string)).toEqual({})
     await client.logout()
     expect(fetcher).toHaveBeenCalledTimes(4)
   })
