@@ -113,7 +113,7 @@ test('teams can be created, edited, assigned and ended with effective dates', as
   await page.getByRole('button', { name: /Projetos de teste/ }).click()
   await page.getByLabel('Nome da equipe', { exact: true }).fill('Projetos revisados')
   await page.getByRole('button', { name: 'Salvar equipe' }).click()
-  await expect(page.getByRole('status')).toContainText('Equipe atualizada')
+  await expect(page.getByRole('status').filter({ hasText: 'Equipe atualizada' })).toBeVisible()
   await page.getByRole('radio', { name: /Admin de teste/ }).check()
   await page.getByLabel('Função na equipe', { exact: true }).selectOption('manager')
   await page.getByLabel('Início da vigência').fill('2026-09-01')
