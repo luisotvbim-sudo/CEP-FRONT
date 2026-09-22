@@ -3,10 +3,10 @@ import { HttpAuthClient } from './auth-client'
 
 const credentials = { email: 'fixture@example.invalid', password: 'test-only' }
 const user = { id: 'fixture', role: 'organizationAdmin', organizationId: 'fixture-org' }
-function tokens(access: string, refresh: string) {
+function tokens(access: string) {
   return {
     accessToken: access,
-    refreshToken: refresh,
+    sessionExpiresAt: new Date(Date.now() + 7 * 86400_000).toISOString(),
     accessTokenExpiresAt: new Date(Date.now() + 60_000).toISOString(),
     user,
   }
@@ -19,16 +19,16 @@ describe('rotating sessions', () => {
     let refreshes = 0
     const sent: string[] = []
     const fetcher = vi.fn<typeof fetch>(async (url, init) => {
-      if (String(url).endsWith('/auth/login')) return Response.json(tokens('access-1', 'refresh-1'))
+      if (String(url).endsWith('/auth/web/login')) return Response.json(tokens('access-1'))
       if (String(url).endsWith('/me')) return Response.json(user)
-      if (String(url).endsWith('/auth/refresh')) {
+      if (String(url).endsWith('/auth/web/refresh')) {
         refreshes++
-        expect(JSON.parse(init?.body as string)).toEqual({ refreshToken: 'refresh-1' })
+        expect(JSON.parse(init?.body as string)).toEqual({})
         await new Promise((resolve) => setTimeout(resolve, 20))
-        return Response.json(tokens('access-2', 'refresh-2'))
+        return Response.json(tokens('access-2'))
       }
-      if (String(url).endsWith('/auth/logout')) {
-        expect(JSON.parse(init?.body as string)).toEqual({ refreshToken: 'refresh-2' })
+      if (String(url).endsWith('/auth/web/logout')) {
+        expect(JSON.parse(init?.body as string)).toEqual({})
         return new Response(null, { status: 204 })
       }
       sent.push((init?.headers as Record<string, string>).Authorization)
@@ -51,9 +51,9 @@ describe('rotating sessions', () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     let calls = 0
     const fetcher = vi.fn<typeof fetch>(async (url) => {
-      if (String(url).endsWith('/auth/login')) return Response.json(tokens('access', 'refresh'))
+      if (String(url).endsWith('/auth/web/login')) return Response.json(tokens('access'))
       if (String(url).endsWith('/me')) return Response.json(user)
-      if (String(url).endsWith('/auth/refresh')) {
+      if (String(url).endsWith('/auth/web/refresh')) {
         calls++
         throw new TypeError('connection lost')
       }
@@ -65,7 +65,7 @@ describe('rotating sessions', () => {
     await client.login(credentials)
     vi.setSystemTime(Date.now() + 40_000)
     await expect(client.request('GET', '/organization/users')).rejects.toMatchObject({
-      code: 'session_expired',
+      code: 'connection_failed',
     })
     await expect(client.request('GET', '/organization/users')).rejects.toMatchObject({
       code: 'session_expired',
@@ -78,7 +78,7 @@ describe('rotating sessions', () => {
   it('does not retry mutations on connection failure or access denied', async () => {
     const fetcher = vi
       .fn<typeof fetch>()
-      .mockResolvedValueOnce(Response.json(tokens('a', 'r')))
+      .mockResolvedValueOnce(Response.json(tokens('a')))
       .mockResolvedValueOnce(Response.json(user))
       .mockRejectedValueOnce(new TypeError('connection lost'))
       .mockResolvedValueOnce(Response.json({ code: 'forbidden' }, { status: 403 }))

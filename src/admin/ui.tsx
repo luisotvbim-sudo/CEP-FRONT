@@ -96,12 +96,29 @@ export function SearchBox({
   initial?: string
 }) {
   const [value, setValue] = useState(initial)
+  const search = useRef(onSearch)
+  const lastSearch = useRef(initial.trim())
+  search.current = onSearch
+  useEffect(() => {
+    const query = value.trim()
+    if (query === lastSearch.current) return
+    const timer = setTimeout(() => {
+      if (query === lastSearch.current) return
+      lastSearch.current = query
+      search.current(query)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [value])
   return (
     <form
       className="admin-search"
       onSubmit={(e) => {
         e.preventDefault()
-        onSearch(value.trim())
+        const query = value.trim()
+        if (query !== lastSearch.current) {
+          lastSearch.current = query
+          onSearch(query)
+        }
       }}
     >
       <Search size={17} aria-hidden="true" />
@@ -112,7 +129,6 @@ export function SearchBox({
         onChange={(e) => setValue(e.target.value)}
         placeholder={placeholder}
       />
-      <button type="submit">Buscar</button>
     </form>
   )
 }

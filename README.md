@@ -4,14 +4,14 @@ Interface React + TypeScript compartilhada entre navegador e um executável Wind
 
 ## Funcionalidades implementadas
 
-- **Login:** autenticação, consulta de `/me`, renovação serializada de refresh token, logout, recuperação e redefinição de senha. A área de horas exige `organizationAdmin` e organização presente na sessão.
+- **Login:** autenticação, consulta de `/me`, renovação serializada de refresh token, logout, recuperação e redefinição de senha. A área de horas aceita `organizationAdmin` na organização da sessão e `systemAdmin` com seleção explícita de organização.
 - **Pessoas:** pesquisa e paginação das associações Monday/VR, detalhes da pessoa, estado do convite, reenvio de convites expirados com confirmação e atalho para histórico. Convites pendentes não comprovam entrega de e-mail. O estado complementar de revogação vem de `/organization/invitations`; quando não disponível, a tela não afirma que o convite continua válido.
-- **Associar e convidar:** busca independente de perfis ativos e ainda não associados, seleção pelos IDs internos, confirmação humana da correspondência, nome/e-mail e convite com papel `User`, válido por 48 horas. A confirmação informa enfileiramento, não entrega.
+- **Associar e convidar:** busca de perfis ativos e ainda não associados, atualização de nome/e-mail ao trocar a seleção, sugestão entre Monday e VR nos dois sentidos por e-mail exato e único, seleção pelos IDs internos e confirmação humana da correspondência, nome/e-mail e convite com papel `User`, válido por 48 horas. A confirmação informa enfileiramento, não entrega.
 - **Sincronização:** coleta incremental ou reprocessamento de 60 dias, consulta periódica enquanto executa, resultados, contagens, cobertura e falhas separados por fonte. Sucesso parcial e integração desabilitada são explícitos; não há percentual fictício.
 - **Equipes:** cadastro, edição, ativação, pesquisa de contas ativas, vínculos de membros/gestores com vigência e encerramento. A função de gestor da equipe não muda o papel de acesso da conta.
 - **Histórico:** consulta bruta por pessoa, fonte e período de até 60 dias inclusivos. Durações recebidas em segundos são apresentadas em horas/minutos/segundos, sem converter `null` em zero. Datas com horário usam `America/Sao_Paulo`; datas civis mantêm o dia informado pela API.
 
-Todas as chamadas usam o [OpenAPI versionado](docs/openapi.json). A base administrativa é `/api/v1/organization/time-control`. A organização não é escolhida nem enviada pelo frontend: é determinada pela sessão no backend. Dados simulados existem somente nos testes.
+Todas as chamadas usam o [OpenAPI versionado](docs/openapi.json). A base administrativa é `/api/v1/organization/time-control`. Para `organizationAdmin`, a organização é determinada pela sessão. Para `systemAdmin`, a interface lista as organizações e envia `organizationId` na query de cada operação; o backend valida o contexto e mantém o ator real na auditoria. Dados simulados existem somente nos testes.
 
 O [briefing antigo](docs/briefing-consulta-inicial.md) é histórico e não orienta a integração atual. `/api/v1/time-logs` não existe no contrato e não é chamado.
 
@@ -50,13 +50,13 @@ Release usa `https://api.cep.lat` por padrão. `CEP_API_URL` substitui o destino
 
 `AuthClient` separa componentes do transporte. `HttpAuthClient` usa o proxy de mesma origem no navegador; `DesktopAuthClient` usa o bridge WPF. Os dois renovam antes da expiração ou após um 401 e serializam a rotação para impedir uso concorrente do mesmo refresh token. Falha ou resposta perdida na renovação exige novo login, sem reapresentar o token antigo. Falhas de rede em operações de gravação não causam repetição automática.
 
-- **Navegador:** access/refresh tokens ficam apenas em memória, sem localStorage, sessionStorage ou IndexedDB. Recarregar/fechar exige novo login; cada aba possui sua sessão. Persistência web futura exige um BFF com cookie `HttpOnly`, `Secure` e proteção CSRF, não tokens gravados pelo JavaScript.
+- **Navegador:** a API guarda o refresh token em cookie `HttpOnly`, protegido com Data Protection, `SameSite=Strict`, `Secure` em HTTPS e vencimento absoluto de até sete dias desde o login. Recarregar, fechar/reabrir e abrir outra aba retomam a sessão por `POST /auth/web/refresh`; access token fica apenas em memória. Login/logout usam `/auth/web/login` e `/auth/web/logout`. O backend exige origem correspondente ao Host do proxy e `X-CEP-Web-Session: 1` contra CSRF. HTTP é permitido somente em loopback fora de produção. Web Locks serializa login, refresh e logout entre abas; BroadcastChannel propaga encerramento/troca de conta. Nenhum token é gravado por JavaScript. Após resposta perdida, somente um marcador de falha sem identidade é salvo em localStorage para impedir replay ao recarregar, até novo login. Logout e revogação encerram o acesso antes dos sete dias.
 - **Desktop:** access token fica no host nativo. Refresh token é criptografado por Windows DPAPI (`CurrentUser`) em `%LOCALAPPDATA%/Conceito/CepHoras/Sessions`, separado pela origem da API. O processo impede outra instância de disputar o mesmo arquivo. A retomada rotaciona o token e revalida `/me`. O logout revoga a sessão e remove o arquivo. O token antigo é removido antes da rotação para evitar replay após interrupção.
 - **Bridge:** devolve metadados da sessão e resultados permitidos, nunca tokens. A lista de rotas permitidas é validada no host. O servidor continua responsável pela autorização e pelo isolamento entre organizações.
 
 `ProblemDetails` é tratado por `code`; `correlationId` é preservado para suporte. Estados de carregamento, ausência de dados, falha de conexão, acesso negado, sessão expirada, associação duplicada e integração desabilitada são apresentados na interface.
 
-Para publicar na web, sirva `dist/` por HTTPS e configure proxy de mesma origem para `/api`, preservando as regras de proxy confiável da CEP API. Vite é desenvolvimento/prévia. Não abra por `file://`. O build inclui CSP sem scripts de terceiros; fontes e logo são locais. Tokens Monday/VR pertencem exclusivamente ao backend.
+Para publicar na web, sirva `dist/` por HTTPS e configure proxy de mesma origem para `/api`, preservando `Host`, `Origin`, `Cookie` e `Set-Cookie`, sem cache nas rotas de sessão e respeitando as regras de proxy confiável da CEP API. Publique a API com `/auth/web/*` antes deste frontend. As chaves Data Protection do servidor precisam persistir entre atualizações. Vite é desenvolvimento/prévia. Não abra por `file://`. O build inclui CSP sem scripts de terceiros; fontes e logo são locais. Tokens Monday/VR pertencem exclusivamente ao backend.
 
 ## Contrato e validação
 

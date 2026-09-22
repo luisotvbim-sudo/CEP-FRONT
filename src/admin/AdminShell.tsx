@@ -25,12 +25,16 @@ export function AdminShell({
   client,
   session,
   onLogout,
+  organization,
+  onChangeOrganization,
 }: {
   client: AuthClient
   session: AuthSession
   onLogout(): void
+  organization?: { id: string; name: string }
+  onChangeOrganization?(): void
 }) {
-  const api = useMemo(() => new AdminApi(client), [client])
+  const api = useMemo(() => new AdminApi(client, organization?.id), [client, organization?.id])
   const [page, setPage] = useState<Page>('people')
   const [person, setPerson] = useState<Person | null>(null)
   const action = useAction()
@@ -66,8 +70,9 @@ export function AdminShell({
         <div className="sidebar-bottom">
           <ShieldCheck size={18} />
           <span>
-            Acesso restrito à<br />
-            organização da sua sessão
+            {organization
+              ? 'Administrador global · organização selecionada'
+              : 'Acesso restrito à organização da sua sessão'}
           </span>
         </div>
       </aside>
@@ -78,6 +83,14 @@ export function AdminShell({
               Administração <span>/</span>{' '}
               <strong>{navigation.find((x) => x.id === page)?.label}</strong>
             </span>
+            {organization && (
+              <div>
+                <strong>{organization.name}</strong>{' '}
+                <button className="text-button" onClick={onChangeOrganization}>
+                  Trocar organização
+                </button>
+              </div>
+            )}
           </div>
           <div className="admin-account">
             <span className="avatar">
@@ -85,7 +98,7 @@ export function AdminShell({
             </span>
             <div>
               <strong>{session.user.displayName || 'Administrador'}</strong>
-              <span>Administrador da organização</span>
+              <span>{organization ? 'Administrador global' : 'Administrador da organização'}</span>
             </div>
             <button
               className="icon-button"

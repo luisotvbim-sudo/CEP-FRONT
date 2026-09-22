@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ArrowRight, Check, Link2 } from 'lucide-react'
 import type { AdminApi, Identity, Source } from './api'
 import { sourceLabel, timestamp } from './format'
@@ -13,6 +13,9 @@ import {
   useQuery,
 } from './ui'
 import { FormNotice } from '../components/FormNotice'
+import { errorMessage, type AuthError } from '../auth/auth-client'
+
+const normalizedEmail = (value?: string | null) => value?.trim().toLowerCase() || ''
 
 function IdentityPicker({
   api,
@@ -35,6 +38,18 @@ function IdentityPicker({
         {sourceLabel(source)}
       </h2>
       <p className="muted">Perfis ativos, ainda não associados.</p>
+      {selected && !list.data?.items?.some((item) => item.id === selected.id) && (
+        <div className="identity-option selected">
+          <Check size={17} aria-hidden="true" />
+          <span>
+            <small>Perfil selecionado fora desta página de resultados</small>
+            <strong>{selected.displayName || 'Nome indisponível'}</strong>
+            <small>
+              {selected.email || 'Sem e-mail'} · ID externo {selected.externalId || '—'}
+            </small>
+          </span>
+        </div>
+      )}
       <SearchBox
         label={`Buscar perfil ${sourceLabel(source)}`}
         placeholder="Nome, e-mail ou ID externo"
@@ -102,6 +117,98 @@ export function InvitePage({
   const [confirmed, setConfirmed] = useState(false)
   const [success, setSuccess] = useState<string | null>(null)
   const action = useAction()
+  const [matching, setMatching] = useState(false)
+  const [matchNotice, setMatchNotice] = useState('')
+  const [matchError, setMatchError] = useState<AuthError | null>(null)
+  const lookupVersion = useRef(0)
+  const suggestedSource = useRef<Source | null>(null)
+  useEffect(
+    () => () => {
+      lookupVersion.current++
+    },
+    [],
+  )
+
+  async function selectIdentity(source: Source, value: Identity) {
+    const version = ++lookupVersion.current
+    const current = source === 'monday' ? monday : vr
+    const other = source === 'monday' ? vr : monday
+    const otherSource: Source = source === 'monday' ? 'vrMais' : 'monday'
+    const setOther = source === 'monday' ? setVr : setMonday
+    const manualPair = !!other && (!current || suggestedSource.current === source)
+    if (source === 'monday') setMonday(value)
+    else setVr(value)
+    setName(value.displayName || '')
+    setEmail(value.email || '')
+    setConfirmed(false)
+    action.clear()
+    setMatchError(null)
+    setMatching(false)
+    suggestedSource.current = null
+    if (manualPair) {
+      setMatchNotice('Correspondência escolhida manualmente. Confira os perfis antes de confirmar.')
+      return
+    }
+    // Changing the person must not retain the previously suggested counterpart.
+    setOther(null)
+    const address = normalizedEmail(value.email)
+    if (!address) {
+      setMatchNotice(
+        `Este perfil não possui e-mail. Selecione o perfil correspondente no ${sourceLabel(otherSource)}.`,
+      )
+      return
+    }
+    setMatching(true)
+    setMatchNotice(`Buscando o mesmo e-mail no ${sourceLabel(otherSource)}…`)
+    try {
+      const result = await api.identities(otherSource, address)
+      if (version !== lookupVersion.current) return
+      const items = result.items || []
+      const matches = items.filter(
+        (item) =>
+          item.id &&
+          item.source === otherSource &&
+          item.isActive === true &&
+          !item.workforcePersonId &&
+          normalizedEmail(item.email) === address,
+      )
+      // Search is partial and paginated. Never treat an incomplete page as a unique match.
+      const complete = typeof result.total === 'number' && result.total <= items.length
+      if (complete && matches.length === 1) {
+        setOther(matches[0])
+        suggestedSource.current = otherSource
+        setMatchNotice(
+          `Perfil do ${sourceLabel(otherSource)} pré-selecionado pelo mesmo e-mail. Confira se pertence à mesma pessoa antes de confirmar.`,
+        )
+      } else {
+        setMatchNotice(
+          !complete || matches.length > 1
+            ? `Há mais de um resultado possível no ${sourceLabel(otherSource)}. Pesquise e selecione o perfil manualmente.`
+            : `Nenhum perfil disponível com o mesmo e-mail no ${sourceLabel(otherSource)}. Os endereços podem ser diferentes; pesquise pelo nome e selecione manualmente.`,
+        )
+      }
+    } catch (failure) {
+      if (version !== lookupVersion.current) return
+      setMatchError(errorMessage(failure))
+      setMatchNotice(
+        'Não foi possível buscar a correspondência. Você pode selecionar os dois perfis manualmente.',
+      )
+    } finally {
+      if (version === lookupVersion.current) setMatching(false)
+    }
+  }
+
+  function changeEmail(value: string) {
+    setEmail(value)
+    setConfirmed(false)
+    action.clear()
+    const address = normalizedEmail(value)
+    // Editing the recipient does not change the linked IDs or invent a person's name.
+    const known = address
+      ? [monday, vr].find((item) => normalizedEmail(item?.email) === address)
+      : null
+    if (known?.displayName) setName(known.displayName)
+  }
   const differentProfiles =
     monday &&
     vr &&
@@ -151,30 +258,20 @@ export function InvitePage({
             api={api}
             source="monday"
             selected={monday}
-            onSelect={(value) => {
-              setMonday(value)
-              setConfirmed(false)
-              action.clear()
-              if (!name) setName(value.displayName || '')
-              if (!email) setEmail(value.email || '')
-            }}
+            onSelect={(value) => void selectIdentity('monday', value)}
           />
           <IdentityPicker
             api={api}
             source="vrMais"
             selected={vr}
-            onSelect={(value) => {
-              setVr(value)
-              setConfirmed(false)
-              action.clear()
-            }}
+            onSelect={(value) => void selectIdentity('vrMais', value)}
           />
         </div>
         <form
           className="admin-panel invite-confirmation"
           onSubmit={(e) => {
             e.preventDefault()
-            if (!monday?.id || !vr?.id || !confirmed) return
+            if (!monday?.id || !vr?.id || !confirmed || matching) return
             void action.run(async () => {
               const result = await api.invite({
                 displayName: name.trim(),
@@ -187,6 +284,12 @@ export function InvitePage({
           }}
         >
           <h2>Confirme a pessoa e o convite</h2>
+          {matchNotice && (
+            <p className="inline-info" role="status">
+              {matchNotice}
+            </p>
+          )}
+          <FormNotice error={matchError} />
           <div className="selected-profiles">
             <div>
               <span>Monday selecionado</span>
@@ -212,7 +315,11 @@ export function InvitePage({
                 required
                 maxLength={200}
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => {
+                  setName(e.target.value)
+                  setConfirmed(false)
+                  action.clear()
+                }}
               />
             </div>
             <div>
@@ -224,7 +331,7 @@ export function InvitePage({
                 maxLength={320}
                 autoComplete="off"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => changeEmail(e.target.value)}
               />
             </div>
           </div>
@@ -239,7 +346,7 @@ export function InvitePage({
               type="checkbox"
               checked={confirmed}
               onChange={(e) => setConfirmed(e.target.checked)}
-              disabled={!monday || !vr}
+              disabled={!monday || !vr || matching}
               required
             />
             <span>Conferi os perfis Monday e VR Mais e confirmo que pertencem à mesma pessoa.</span>
@@ -256,7 +363,15 @@ export function InvitePage({
             <button
               type="submit"
               className="primary-button compact"
-              disabled={!monday?.id || !vr?.id || !confirmed || !name.trim() || action.pending}
+              disabled={
+                !monday?.id ||
+                !vr?.id ||
+                !confirmed ||
+                !name.trim() ||
+                !email.trim() ||
+                matching ||
+                action.pending
+              }
             >
               {action.pending ? 'Salvando e convidando…' : 'Confirmar e enviar convite'}
               <ArrowRight size={17} />

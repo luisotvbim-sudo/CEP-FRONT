@@ -1,5 +1,11 @@
 import { test, expect } from '@playwright/test'
 
+test.beforeEach(async ({ page }) => {
+  await page.route('**/api/v1/auth/web/refresh', (route) =>
+    route.fulfill({ status: 401, json: { code: 'session_expired' } }),
+  )
+})
+
 test('responsive login, keyboard and password visibility', async ({ page }, testInfo) => {
   await page.goto('/')
   await expect(page.getByRole('heading', { name: 'Bom ter você aqui.' })).toBeVisible()
@@ -21,7 +27,7 @@ test('responsive login, keyboard and password visibility', async ({ page }, test
 
 test('submits once, shows the API error and preserves the support code', async ({ page }) => {
   let requests = 0
-  await page.route('**/api/v1/auth/login', async (route) => {
+  await page.route('**/api/v1/auth/web/login', async (route) => {
     requests++
     await new Promise((resolve) => setTimeout(resolve, 350))
     await route.fulfill({
@@ -43,11 +49,11 @@ test('submits once, shows the API error and preserves the support code', async (
 test('authenticated state uses backend identity, logs out and stores no credentials', async ({
   page,
 }) => {
-  await page.route('**/api/v1/auth/login', (route) =>
+  await page.route('**/api/v1/auth/web/login', (route) =>
     route.fulfill({
       json: {
         accessToken: 'test-access',
-        refreshToken: 'test-refresh',
+        sessionExpiresAt: new Date(Date.now() + 7 * 86400_000).toISOString(),
         accessTokenExpiresAt: new Date(Date.now() + 60_000).toISOString(),
         user: {
           id: 'test',
@@ -69,8 +75,8 @@ test('authenticated state uses backend identity, logs out and stores no credenti
       },
     }),
   )
-  await page.route('**/api/v1/auth/logout', (route) => {
-    expect(route.request().postDataJSON()).toEqual({ refreshToken: 'test-refresh' })
+  await page.route('**/api/v1/auth/web/logout', (route) => {
+    expect(route.request().postDataJSON()).toEqual({})
     loggedOut = true
     return route.fulfill({ status: 204 })
   })
@@ -113,7 +119,7 @@ test('password recovery calls the API and returns focus to the login', async ({ 
 })
 
 test('network failure stays recoverable and does not expose internal errors', async ({ page }) => {
-  await page.route('**/api/v1/auth/login', (route) => route.abort('connectionfailed'))
+  await page.route('**/api/v1/auth/web/login', (route) => route.abort('connectionfailed'))
   await page.goto('/')
   await page.getByLabel('E-mail corporativo', { exact: true }).fill('test@example.invalid')
   await page.getByLabel('Senha', { exact: true }).fill('test-password')

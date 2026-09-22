@@ -23,77 +23,83 @@ function query(values: Record<string, string | number | boolean | undefined>) {
   return params.size ? `?${params}` : ''
 }
 export class AdminApi {
-  constructor(private readonly client: AuthClient) {}
+  constructor(
+    private readonly client: AuthClient,
+    private readonly organizationId?: string,
+  ) {}
+  private request<T>(method: 'GET' | 'POST' | 'PATCH', path: string, body?: object): Promise<T> {
+    const scoped = this.organizationId
+      ? `${path}${path.includes('?') ? '&' : '?'}organizationId=${encodeURIComponent(this.organizationId)}`
+      : path
+    return this.client.request<T>(method, scoped, body)
+  }
   people(search = '', page = 1) {
-    return this.client.request<Paged<Person>>(
+    return this.request<Paged<Person>>(
       'GET',
       `${root}/people${query({ search, page, pageSize: 12 })}`,
     )
   }
   invitations() {
-    return this.client.request<Invitation[]>('GET', '/organization/invitations')
+    return this.request<Invitation[]>('GET', '/organization/invitations')
   }
   resendInvitation(id: string) {
-    return this.client.request<void>(
-      'POST',
-      `/organization/invitations/${encodeURIComponent(id)}/resend`,
-    )
+    return this.request<void>('POST', `/organization/invitations/${encodeURIComponent(id)}/resend`)
   }
   identities(source: Source, search = '', page = 1) {
-    return this.client.request<Paged<Identity>>(
+    return this.request<Paged<Identity>>(
       'GET',
       `${root}/external-identities${query({ source, search, page, pageSize: 8, activeOnly: true, mapped: false })}`,
     )
   }
   invite(body: Schema['InviteWorkforcePersonRequest']) {
-    return this.client.request<Schema['InviteWorkforcePersonResponse']>(
+    return this.request<Schema['InviteWorkforcePersonResponse']>(
       'POST',
       `${root}/people/invitations`,
       body,
     )
   }
   latest() {
-    return this.client.request<Sync>('GET', `${root}/synchronizations/latest`)
+    return this.request<Sync>('GET', `${root}/synchronizations/latest`)
   }
   syncStatus(id: string) {
-    return this.client.request<Sync>('GET', `${root}/synchronizations/${encodeURIComponent(id)}`)
+    return this.request<Sync>('GET', `${root}/synchronizations/${encodeURIComponent(id)}`)
   }
   synchronize(full: boolean) {
-    return this.client.request<Sync>('POST', `${root}/synchronizations${query({ full })}`)
+    return this.request<Sync>('POST', `${root}/synchronizations${query({ full })}`)
   }
   teams(includeInactive: boolean, asOf: string) {
-    return this.client.request<Team[]>('GET', `${root}/teams${query({ includeInactive, asOf })}`)
+    return this.request<Team[]>('GET', `${root}/teams${query({ includeInactive, asOf })}`)
   }
   createTeam(name: string) {
-    return this.client.request<Team>('POST', `${root}/teams`, { name })
+    return this.request<Team>('POST', `${root}/teams`, { name })
   }
   updateTeam(id: string, name: string, isActive: boolean) {
-    return this.client.request<Team>('PATCH', `${root}/teams/${encodeURIComponent(id)}`, {
+    return this.request<Team>('PATCH', `${root}/teams/${encodeURIComponent(id)}`, {
       name,
       isActive,
     })
   }
   assignments(teamId: string, includeHistory: boolean, asOf: string) {
-    return this.client.request<Assignment[]>(
+    return this.request<Assignment[]>(
       'GET',
       `${root}/teams/${encodeURIComponent(teamId)}/assignments${query({ includeHistory, asOf })}`,
     )
   }
   users(search: string, page = 1) {
-    return this.client.request<Paged<User>>(
+    return this.request<Paged<User>>(
       'GET',
       `/organization/users${query({ search, page, pageSize: 12, status: 'active' })}`,
     )
   }
   assign(teamId: string, body: Schema['CreateTeamAssignmentRequest']) {
-    return this.client.request<Assignment>(
+    return this.request<Assignment>(
       'POST',
       `${root}/teams/${encodeURIComponent(teamId)}/assignments`,
       body,
     )
   }
   endAssignment(teamId: string, id: string, effectiveTo: string) {
-    return this.client.request<Assignment>(
+    return this.request<Assignment>(
       'PATCH',
       `${root}/teams/${encodeURIComponent(teamId)}/assignments/${encodeURIComponent(id)}/end`,
       { effectiveTo },
@@ -106,6 +112,6 @@ export class AdminApi {
     source?: Source
     search?: string
   }) {
-    return this.client.request<History>('GET', `${root}/history${query(input)}`)
+    return this.request<History>('GET', `${root}/history${query(input)}`)
   }
 }

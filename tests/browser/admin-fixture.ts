@@ -82,16 +82,23 @@ export async function fixture(page: Page, options: { role?: string; empty?: bool
       method = request.method()
     const body = request.postData() ? request.postDataJSON() : undefined
     calls.push({ path: path + url.search, method, body })
-    if (path === '/api/v1/auth/login')
+    if (path === '/api/v1/admin/organizations' && method === 'GET')
+      return route.fulfill({ json: { items: [
+        { id: ids.org, name: 'Organização A', status: 'active' },
+        { id: '10000000-0000-0000-0000-000000000002', name: 'Organização B', status: 'active' },
+      ], total: 2, page: 1, pageSize: 20 } })
+    if (path === '/api/v1/auth/web/refresh')
+      return route.fulfill({ status: 401, json: { code: 'session_expired' } })
+    if (path === '/api/v1/auth/web/login')
       return route.fulfill({
         json: {
           accessToken: 'test-access',
-          refreshToken: 'test-refresh',
+          sessionExpiresAt: new Date(Date.now() + 7 * 86400_000).toISOString(),
           accessTokenExpiresAt: new Date(Date.now() + 900_000).toISOString(),
           user: currentUser,
         },
       })
-    if (path === '/api/v1/auth/logout') return route.fulfill({ status: 204 })
+    if (path === '/api/v1/auth/web/logout') return route.fulfill({ status: 204 })
     expect(request.headers().authorization).toBe('Bearer test-access')
     if (path === '/api/v1/me') return route.fulfill({ json: currentUser })
     if (path === '/api/v1/organization/invitations')
