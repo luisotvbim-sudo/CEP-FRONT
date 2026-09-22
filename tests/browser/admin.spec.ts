@@ -9,7 +9,7 @@ test('people, search, invitation state and administrative accessibility', async 
   await expect(page.getByRole('heading', { name: 'Pessoas', exact: true })).toBeVisible()
   await expect(page.getByText('Aguardando aceite', { exact: true })).toBeVisible()
   await page.getByRole('searchbox', { name: 'Pesquisar', exact: true }).fill('Ana')
-  await expect(page.getByRole('button', { name: 'Buscar', exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Buscar', exact: true }).click()
   await expect.poll(() => calls.some((c) => c.path.includes('search=Ana'))).toBe(true)
   const scan = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()
   expect(scan.violations).toEqual([])
