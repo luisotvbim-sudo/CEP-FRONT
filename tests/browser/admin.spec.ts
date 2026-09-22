@@ -9,7 +9,7 @@ test('people, search, invitation state and administrative accessibility', async 
   await expect(page.getByRole('heading', { name: 'Pessoas', exact: true })).toBeVisible()
   await expect(page.getByText('Aguardando aceite', { exact: true })).toBeVisible()
   await page.getByRole('searchbox', { name: 'Pesquisar', exact: true }).fill('Ana')
-  await page.getByRole('button', { name: 'Buscar', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Buscar', exact: true })).toHaveCount(0)
   await expect.poll(() => calls.some((c) => c.path.includes('search=Ana'))).toBe(true)
   const scan = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()
   expect(scan.violations).toEqual([])
@@ -113,7 +113,7 @@ test('teams can be created, edited, assigned and ended with effective dates', as
   await page.getByRole('button', { name: /Projetos de teste/ }).click()
   await page.getByLabel('Nome da equipe', { exact: true }).fill('Projetos revisados')
   await page.getByRole('button', { name: 'Salvar equipe' }).click()
-  await expect(page.getByRole('status').filter({ hasText: 'Equipe atualizada' })).toBeVisible()
+  await expect(page.getByRole('status')).toContainText('Equipe atualizada')
   await page.getByRole('radio', { name: /Admin de teste/ }).check()
   await page.getByLabel('Função na equipe', { exact: true }).selectOption('manager')
   await page.getByLabel('Início da vigência').fill('2026-09-01')
@@ -177,7 +177,7 @@ test('expired session returns to login and preserves the support correlation', a
     route.fulfill({ status: 401, json: { code: 'unauthorized' } }),
   )
   let rotations = 0
-  await page.route('**/auth/refresh', (route) => {
+  await page.route('**/auth/web/refresh', (route) => {
     rotations++
     return route.fulfill({
       status: 401,

@@ -6,6 +6,7 @@ import { BrandPanel } from './components/BrandPanel'
 import { LoginForm } from './components/LoginForm'
 import { FormNotice } from './components/FormNotice'
 import { AdminShell } from './admin/AdminShell'
+import { SystemAdminShell } from './admin/SystemAdminShell'
 
 export function App({ client }: { client: AuthClient }) {
   const [session, setSession] = useState<AuthSession | null>(null)
@@ -33,7 +34,13 @@ export function App({ client }: { client: AuthClient }) {
           if (active) setSession(value)
         },
         (failure) => {
-          if (active) setNotice(errorMessage(failure).message)
+          if (active) {
+            const error = errorMessage(failure)
+            setNotice(
+              error.message +
+                (error.correlationId ? ` Código para suporte: ${error.correlationId}` : ''),
+            )
+          }
         },
       )
       .finally(() => {
@@ -70,6 +77,8 @@ export function App({ client }: { client: AuthClient }) {
         <LoaderCircle className="spin" /> Verificando sua sessão…
       </div>
     )
+  if (session?.user.role === 'systemAdmin')
+    return <SystemAdminShell client={client} session={session} onLogout={() => setSession(null)} />
   if (session?.user.role === 'organizationAdmin' && session.user.organizationId)
     return (
       <AdminShell

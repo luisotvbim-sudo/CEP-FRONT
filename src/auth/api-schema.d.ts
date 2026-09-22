@@ -16,6 +16,8 @@ export interface paths {
                 query?: {
                     before?: string;
                     pageSize?: number;
+                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
+                    organizationId?: string;
                 };
                 header?: never;
                 path?: never;
@@ -38,6 +40,119 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/web/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["LoginRequest"];
+                    "text/json": components["schemas"]["LoginRequest"];
+                    "application/*+json": components["schemas"]["LoginRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["WebSessionResponse"];
+                        "application/json": components["schemas"]["WebSessionResponse"];
+                        "text/json": components["schemas"]["WebSessionResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/web/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["WebSessionResponse"];
+                        "application/json": components["schemas"]["WebSessionResponse"];
+                        "text/json": components["schemas"]["WebSessionResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/web/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -498,229 +613,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organization/users": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: {
-                    search?: string;
-                    status?: components["schemas"]["UserStatus"];
-                    role?: components["schemas"]["UserRole"];
-                    product?: components["schemas"]["Product"];
-                    page?: number;
-                    pageSize?: number;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["UserResponsePagedResponse"];
-                        "application/json": components["schemas"]["UserResponsePagedResponse"];
-                        "text/json": components["schemas"]["UserResponsePagedResponse"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/organization/invitations": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["InvitationResponse"][];
-                        "application/json": components["schemas"]["InvitationResponse"][];
-                        "text/json": components["schemas"]["InvitationResponse"][];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["InviteUserRequest"];
-                    "text/json": components["schemas"]["InviteUserRequest"];
-                    "application/*+json": components["schemas"]["InviteUserRequest"];
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["InvitationResponse"];
-                        "application/json": components["schemas"]["InvitationResponse"];
-                        "text/json": components["schemas"]["InvitationResponse"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/organization/invitations/{invitationId}/resend": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    invitationId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/organization/invitations/{invitationId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    invitationId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/organization/users/{userId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    userId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["UpdateUserRequest"];
-                    "text/json": components["schemas"]["UpdateUserRequest"];
-                    "application/*+json": components["schemas"]["UpdateUserRequest"];
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["UserResponse"];
-                        "application/json": components["schemas"]["UserResponse"];
-                        "text/json": components["schemas"]["UserResponse"];
-                    };
-                };
-            };
-        };
-        trace?: never;
-    };
     "/api/v1/admin/organizations": {
         parameters: {
             query?: never;
@@ -987,6 +879,246 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organization/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    search?: string;
+                    status?: components["schemas"]["UserStatus"];
+                    role?: components["schemas"]["UserRole"];
+                    product?: components["schemas"]["Product"];
+                    page?: number;
+                    pageSize?: number;
+                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
+                    organizationId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["UserResponsePagedResponse"];
+                        "application/json": components["schemas"]["UserResponsePagedResponse"];
+                        "text/json": components["schemas"]["UserResponsePagedResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organization/invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
+                    organizationId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["InvitationResponse"][];
+                        "application/json": components["schemas"]["InvitationResponse"][];
+                        "text/json": components["schemas"]["InvitationResponse"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: {
+                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
+                    organizationId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["InviteUserRequest"];
+                    "text/json": components["schemas"]["InviteUserRequest"];
+                    "application/*+json": components["schemas"]["InviteUserRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["InvitationResponse"];
+                        "application/json": components["schemas"]["InvitationResponse"];
+                        "text/json": components["schemas"]["InvitationResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organization/invitations/{invitationId}/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: {
+                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
+                    organizationId?: string;
+                };
+                header?: never;
+                path: {
+                    invitationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organization/invitations/{invitationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: {
+            parameters: {
+                query?: {
+                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
+                    organizationId?: string;
+                };
+                header?: never;
+                path: {
+                    invitationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organization/users/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: {
+            parameters: {
+                query?: {
+                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
+                    organizationId?: string;
+                };
+                header?: never;
+                path: {
+                    userId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["UpdateUserRequest"];
+                    "text/json": components["schemas"]["UpdateUserRequest"];
+                    "application/*+json": components["schemas"]["UpdateUserRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["UserResponse"];
+                        "application/json": components["schemas"]["UserResponse"];
+                        "text/json": components["schemas"]["UserResponse"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
     "/api/v1/plugin/grants": {
         parameters: {
             query?: never;
@@ -998,7 +1130,10 @@ export interface paths {
         put?: never;
         post: {
             parameters: {
-                query?: never;
+                query?: {
+                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
+                    organizationId?: string;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -1083,6 +1218,8 @@ export interface paths {
                 query?: {
                     includeInactive?: boolean;
                     asOf?: string;
+                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
+                    organizationId?: string;
                 };
                 header?: never;
                 path?: never;
@@ -1106,7 +1243,10 @@ export interface paths {
         put?: never;
         post: {
             parameters: {
-                query?: never;
+                query?: {
+                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
+                    organizationId?: string;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -1149,6 +1289,8 @@ export interface paths {
             parameters: {
                 query?: {
                     asOf?: string;
+                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
+                    organizationId?: string;
                 };
                 header?: never;
                 path: {
@@ -1178,7 +1320,10 @@ export interface paths {
         head?: never;
         patch: {
             parameters: {
-                query?: never;
+                query?: {
+                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
+                    organizationId?: string;
+                };
                 header?: never;
                 path: {
                     teamId: string;
@@ -1220,6 +1365,8 @@ export interface paths {
                 query?: {
                     includeHistory?: boolean;
                     asOf?: string;
+                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
+                    organizationId?: string;
                 };
                 header?: never;
                 path: {
@@ -1245,7 +1392,10 @@ export interface paths {
         put?: never;
         post: {
             parameters: {
-                query?: never;
+                query?: {
+                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
+                    organizationId?: string;
+                };
                 header?: never;
                 path: {
                     teamId: string;
@@ -1294,7 +1444,10 @@ export interface paths {
         head?: never;
         patch: {
             parameters: {
-                query?: never;
+                query?: {
+                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
+                    organizationId?: string;
+                };
                 header?: never;
                 path: {
                     teamId: string;
@@ -1341,6 +1494,8 @@ export interface paths {
                     search?: string;
                     page?: number;
                     pageSize?: number;
+                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
+                    organizationId?: string;
                 };
                 header?: never;
                 path?: never;
@@ -1382,6 +1537,8 @@ export interface paths {
             parameters: {
                 query?: {
                     full?: boolean;
+                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
+                    organizationId?: string;
                 };
                 header?: never;
                 path?: never;
@@ -1417,7 +1574,10 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
+                    organizationId?: string;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -1454,7 +1614,10 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
+                    organizationId?: string;
+                };
                 header?: never;
                 path: {
                     batchId: string;
@@ -1499,6 +1662,8 @@ export interface paths {
                     workforcePersonId?: string;
                     source?: components["schemas"]["ExternalWorkforceSource"];
                     search?: string;
+                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
+                    organizationId?: string;
                 };
                 header?: never;
                 path?: never;
@@ -1540,6 +1705,8 @@ export interface paths {
                     search?: string;
                     page?: number;
                     pageSize?: number;
+                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
+                    organizationId?: string;
                 };
                 header?: never;
                 path?: never;
@@ -1579,7 +1746,10 @@ export interface paths {
         put?: never;
         post: {
             parameters: {
-                query?: never;
+                query?: {
+                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
+                    organizationId?: string;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -1857,6 +2027,14 @@ export interface components {
         UserRole: "systemAdmin" | "organizationAdmin" | "user";
         /** @enum {string} */
         UserStatus: "active" | "suspended" | "archived";
+        WebSessionResponse: {
+            accessToken?: string | null;
+            /** Format: date-time */
+            accessTokenExpiresAt?: string;
+            /** Format: date-time */
+            sessionExpiresAt?: string;
+            user?: components["schemas"]["UserResponse"];
+        };
         WorkforceAdminHistoryResponse: {
             /** Format: date */
             from?: string;
