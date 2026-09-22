@@ -1,0 +1,10 @@
+.git
+.github
+.local
+desktop
+node_modules
+dist
+playwright-report
+test-results
+*.md
+

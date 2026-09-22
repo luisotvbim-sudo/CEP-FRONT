@@ -1,0 +1,13 @@
+[Unit]
+Description=Check CEP front main every day at 02:15 Sao Paulo
+
+[Timer]
+OnCalendar=*-*-* 02:15:00 America/Sao_Paulo
+AccuracySec=1min
+RandomizedDelaySec=0
+Persistent=false
+Unit=cep-front-update.service
+
+[Install]
+WantedBy=timers.target
+
