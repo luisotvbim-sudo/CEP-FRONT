@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ArrowRight, Plus, RefreshCw } from 'lucide-react'
 import type { AdminApi, Person } from './api'
+import { FormNotice } from '../components/FormNotice'
 import { invitationState, timestamp } from './format'
 import {
   Badge,
@@ -10,6 +11,7 @@ import {
   Pagination,
   QueryError,
   SearchBox,
+  useAction,
   useQuery,
 } from './ui'
 
@@ -26,6 +28,13 @@ export function PeoplePage({
   const [page, setPage] = useState(1)
   const list = useQuery(() => api.people(search, page), [api, search, page])
   const invitations = useQuery(() => api.invitations(), [api])
+  const [resendPerson, setResendPerson] = useState<Person | null>(null)
+  const [notice, setNotice] = useState('')
+  const resend = useAction()
+  const confirmation = useRef<HTMLElement>(null)
+  useEffect(() => {
+    if (resendPerson) confirmation.current?.focus()
+  }, [resendPerson])
   return (
     <>
       <PageHeading
@@ -37,6 +46,53 @@ export function PeoplePage({
           </button>
         }
       />
+      {notice && (
+        <div className="success-notice" role="status">
+          {notice}
+        </div>
+      )}
+      {resendPerson && (
+        <section
+          ref={confirmation}
+          tabIndex={-1}
+          className="admin-panel"
+          aria-label="Confirmar reenvio do convite"
+        >
+          <h2>Reenviar convite</h2>
+          <p>
+            Enviar um novo convite para <strong>{resendPerson.email}</strong>? O código anterior
+            será substituído e a validade será renovada por 48 horas.
+          </p>
+          <FormNotice error={resend.error} />
+          <div className="form-actions">
+            <button
+              className="secondary-button"
+              disabled={resend.pending}
+              onClick={() => setResendPerson(null)}
+            >
+              Cancelar
+            </button>
+            <button
+              className="primary-button compact"
+              disabled={resend.pending}
+              onClick={() =>
+                void resend.run(async () => {
+                  if (!resendPerson.invitationId) return
+                  await api.resendInvitation(resendPerson.invitationId)
+                  setNotice(
+                    'Novo convite colocado na fila de envio. Confira a entrega no serviço de e-mail.',
+                  )
+                  setResendPerson(null)
+                  list.reload()
+                  invitations.reload()
+                })
+              }
+            >
+              {resend.pending ? 'Reenviando…' : 'Confirmar reenvio'}
+            </button>
+          </div>
+        </section>
+      )}
       <div className="admin-panel">
         <div className="panel-toolbar">
           <SearchBox
@@ -105,6 +161,21 @@ export function PeoplePage({
                         <td>
                           <strong>{person.displayName || 'Nome indisponível'}</strong>
                           <small>{person.email || 'E-mail indisponível'}</small>
+                          <details className="record-details">
+                            <summary>Detalhes da pessoa</summary>
+                            <dl>
+                              <dt>ID interno</dt>
+                              <dd>{person.id}</dd>
+                              <dt>Conta vinculada</dt>
+                              <dd>{person.userId || 'Ainda não criada'}</dd>
+                              <dt>Criado em</dt>
+                              <dd>{timestamp(person.createdAt)}</dd>
+                              <dt>Última atualização</dt>
+                              <dd>{timestamp(person.updatedAt)}</dd>
+                              <dt>Convite aceito em</dt>
+                              <dd>{timestamp(person.invitationAcceptedAt)}</dd>
+                            </dl>
+                          </details>
                         </td>
                         <td>
                           {person.monday?.displayName || 'Indisponível'}
@@ -130,6 +201,21 @@ export function PeoplePage({
                           <button className="text-button" onClick={() => onHistory(person)}>
                             Ver histórico <ArrowRight size={14} />
                           </button>
+                          {status.label === 'Expirado' && person.invitationId && (
+                            <div>
+                              <button
+                                className="text-button"
+                                disabled={resend.pending}
+                                onClick={() => {
+                                  setResendPerson(person)
+                                  setNotice('')
+                                  resend.clear()
+                                }}
+                              >
+                                Reenviar convite
+                              </button>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     )

@@ -25,6 +25,8 @@ export function useQuery<T>(load: () => Promise<T>, keys: unknown[]) {
     return () => {
       active = false
     }
+    // Consumers supply explicit invalidation keys; the latest loader is read through its ref.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...keys, version])
   return { ...state, reload: () => setVersion((v) => v + 1) }
 }

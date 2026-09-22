@@ -102,6 +102,13 @@ export function InvitePage({
   const [confirmed, setConfirmed] = useState(false)
   const [success, setSuccess] = useState<string | null>(null)
   const action = useAction()
+  const differentProfiles =
+    monday &&
+    vr &&
+    ((!!monday.displayName &&
+      !!vr.displayName &&
+      monday.displayName.localeCompare(vr.displayName, 'pt-BR', { sensitivity: 'base' }) !== 0) ||
+      (!!monday.email && !!vr.email && monday.email.toLowerCase() !== vr.email.toLowerCase()))
   if (success)
     return (
       <>
@@ -221,6 +228,12 @@ export function InvitePage({
               />
             </div>
           </div>
+          {differentProfiles && (
+            <p className="inline-info">
+              Os perfis têm nome ou e-mail diferentes. Confira a correspondência e o endereço que
+              receberá o convite.
+            </p>
+          )}
           <label className="checkbox-row">
             <input
               type="checkbox"

@@ -73,6 +73,7 @@ export function HistoryPage({
   const [source, setSource] = useState<Source | ''>('')
   const [person, setPerson] = useState<Person | null>(initialPerson || null)
   const [search, setSearch] = useState('')
+  const [historySearch, setHistorySearch] = useState('')
   const [page, setPage] = useState(1)
   const [showPicker, setShowPicker] = useState(false)
   const [result, setResult] = useState<History | null>(null)
@@ -185,12 +186,23 @@ export function HistoryPage({
                   to,
                   source: source || undefined,
                   workforcePersonId: person?.id,
+                  search: historySearch.trim() || undefined,
                 }),
               ),
             )
           }}
         >
           <fieldset className="unframed" disabled={action.pending}>
+            <label htmlFor="history-search">Filtrar histórico por nome ou e-mail</label>
+            <input
+              id="history-search"
+              type="search"
+              value={historySearch}
+              onChange={(e) => {
+                setHistorySearch(e.target.value)
+                changed()
+              }}
+            />
             <div className="form-grid history-fields">
               <div>
                 <label htmlFor="history-from">De</label>

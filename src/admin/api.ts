@@ -33,6 +33,12 @@ export class AdminApi {
   invitations() {
     return this.client.request<Invitation[]>('GET', '/organization/invitations')
   }
+  resendInvitation(id: string) {
+    return this.client.request<void>(
+      'POST',
+      `/organization/invitations/${encodeURIComponent(id)}/resend`,
+    )
+  }
   identities(source: Source, search = '', page = 1) {
     return this.client.request<Paged<Identity>>(
       'GET',

@@ -21,6 +21,7 @@ const user = {
 let loginBody,
   logoutBody,
   refreshes = 0,
+  resends = 0,
   protectedCalls = 0
 const tokens = (number, lifetime = 900_000) => ({
   accessToken: `fixture-access-${number}`,
@@ -58,6 +59,13 @@ const server = createServer(async (req, res) => {
     assert.equal(req.headers.authorization, `Bearer fixture-access-${refreshes}`)
     protectedCalls++
     res.end('[]')
+  } else if (
+    url.pathname === '/api/v1/organization/invitations/90000000-0000-0000-0000-000000000001/resend'
+  ) {
+    assert.equal(req.method, 'POST')
+    assert.equal(req.headers.authorization, `Bearer fixture-access-${refreshes}`)
+    resends++
+    res.writeHead(204).end()
   } else res.writeHead(404).end()
 })
 await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
@@ -167,6 +175,30 @@ try {
         }),
     )
     assert.equal(denied.error.code, 'unsupported_route')
+    const resend = await page.evaluate(
+      () =>
+        new Promise((resolve) => {
+          const id = crypto.randomUUID()
+          const listener = (e) => {
+            if (e.data.id === id) {
+              window.chrome.webview.removeEventListener('message', listener)
+              resolve(e.data)
+            }
+          }
+          window.chrome.webview.addEventListener('message', listener)
+          window.chrome.webview.postMessage({
+            type: 'cep-auth',
+            id,
+            operation: 'api',
+            payload: {
+              method: 'POST',
+              path: '/organization/invitations/90000000-0000-0000-0000-000000000001/resend',
+            },
+          })
+        }),
+    )
+    assert.equal(resend.ok, true)
+    assert.equal(resends, 1)
     await close()
     page = await open()
     await page.getByRole('heading', { name: 'Pessoas', exact: true }).waitFor()

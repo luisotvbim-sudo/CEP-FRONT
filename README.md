@@ -5,7 +5,7 @@ Interface React + TypeScript compartilhada entre navegador e um executável Wind
 ## Funcionalidades implementadas
 
 - **Login:** autenticação, consulta de `/me`, renovação serializada de refresh token, logout, recuperação e redefinição de senha. A área de horas exige `organizationAdmin` e organização presente na sessão.
-- **Pessoas:** pesquisa e paginação das associações Monday/VR, estado do convite e atalho para histórico. Convites pendentes não comprovam entrega de e-mail. O estado complementar de revogação vem de `/organization/invitations`; quando não disponível, a tela não afirma que o convite continua válido.
+- **Pessoas:** pesquisa e paginação das associações Monday/VR, detalhes da pessoa, estado do convite, reenvio de convites expirados com confirmação e atalho para histórico. Convites pendentes não comprovam entrega de e-mail. O estado complementar de revogação vem de `/organization/invitations`; quando não disponível, a tela não afirma que o convite continua válido.
 - **Associar e convidar:** busca independente de perfis ativos e ainda não associados, seleção pelos IDs internos, confirmação humana da correspondência, nome/e-mail e convite com papel `User`, válido por 48 horas. A confirmação informa enfileiramento, não entrega.
 - **Sincronização:** coleta incremental ou reprocessamento de 60 dias, consulta periódica enquanto executa, resultados, contagens, cobertura e falhas separados por fonte. Sucesso parcial e integração desabilitada são explícitos; não há percentual fictício.
 - **Equipes:** cadastro, edição, ativação, pesquisa de contas ativas, vínculos de membros/gestores com vigência e encerramento. A função de gestor da equipe não muda o papel de acesso da conta.
@@ -89,7 +89,7 @@ Esse teste opcional verifica apenas rejeição de uma conta inexistente pela API
 ## Dependências para homologação
 
 1. Login manual de um responsável com conta `OrganizationAdmin` para testar consultas e alterações autorizadas na organização local.
-2. Monday/VR estão desabilitados no Docker local. Perfis, associação com dados reais e cobertura/histórico importados dependem de configuração segura dessas integrações no servidor. O frontend não habilita fontes nem recebe seus tokens.
+2. Na preparação inicial, Monday/VR estavam desabilitados no Docker local; confira a configuração atual antes da homologação. Perfis, associação com dados reais e cobertura/histórico importados dependem de configuração segura dessas integrações no servidor. O frontend não habilita fontes nem recebe seus tokens.
 3. Convites enfileirados podem ser inspecionados no Mailpit em `http://127.0.0.1:8025`. O envio/aceite real depende de perfis disponíveis e de um destinatário de teste autorizado. A tela pública de aceite de convite ainda é uma próxima etapa; esta entrega cobre a criação e acompanhamento administrativo.
 4. Comparação consolidada por turno, justificativas, aprovação do gestor e notificações não estão disponíveis na API principal e não foram simuladas.
 5. Publicação web, instalador e assinatura do executável ainda não foram executados.

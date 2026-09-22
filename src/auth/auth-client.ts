@@ -48,6 +48,8 @@ export function describeError(status: number, problem: ApiProblem): string {
     external_identities_required: 'Selecione um perfil Monday e um perfil VR Mais.',
     email_unavailable:
       'Este e-mail já possui uma conta ou convite pendente. Confira a lista de pessoas.',
+    invitation_not_found: 'Este convite não está disponível nesta organização. Atualize a lista.',
+    invitation_not_pending: 'Este convite já foi aceito ou revogado e não pode ser reenviado.',
     email_domain_not_allowed: 'O domínio deste e-mail não está autorizado para cadastro.',
     sync_already_running: 'Já existe uma sincronização em andamento. Acompanhe o resultado abaixo.',
     sync_not_found: 'Nenhuma sincronização foi iniciada.',

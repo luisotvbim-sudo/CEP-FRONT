@@ -13,7 +13,11 @@ test('people, search, invitation state and administrative accessibility', async 
   await expect.poll(() => calls.some((c) => c.path.includes('search=Ana'))).toBe(true)
   const scan = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()
   expect(scan.violations).toEqual([])
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+    ),
+  ).toBe(true)
   await page.evaluate(() => {
     const note = document.createElement('p')
     note.textContent = 'AMBIENTE DE TESTE — DADOS FICTÍCIOS'
@@ -228,6 +232,114 @@ test('administrative forms remain accessible in each section', async ({ page }) 
     expect(scan.violations.map((v) => ({ id: v.id, nodes: v.nodes.map((n) => n.target) }))).toEqual(
       [],
     )
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      ),
+    ).toBe(true)
   }
+})
+
+test('expired invitation requires confirmation before resending and refreshes its status', async ({
+  page,
+}) => {
+  const calls = await fixture(page)
+  let resent = false
+  const expired = '2020-01-01T00:00:00Z'
+  await page.route('**/organization/invitations', (route) =>
+    route.fulfill({
+      json: [
+        {
+          id: ids.invitation,
+          expiresAt: resent ? person.invitationExpiresAt : expired,
+          acceptedAt: null,
+          revokedAt: null,
+        },
+      ],
+    }),
+  )
+  await page.route('**/time-control/people?*', (route) =>
+    route.fulfill({
+      json: {
+        items: [{ ...person, invitationExpiresAt: resent ? person.invitationExpiresAt : expired }],
+        total: 1,
+        page: 1,
+        pageSize: 12,
+      },
+    }),
+  )
+  await page.route('**/organization/invitations/*/resend', (route) => {
+    expect(route.request().method()).toBe('POST')
+    expect(new URL(route.request().url()).pathname).toBe(
+      `/api/v1/organization/invitations/${ids.invitation}/resend`,
+    )
+    resent = true
+    return route.fulfill({ status: 204 })
+  })
+  await page.getByRole('button', { name: 'Atualizar', exact: true }).click()
+  await expect(page.getByText('Expirado', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Reenviar convite', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Confirmar reenvio do convite' })).toContainText(
+    person.email,
+  )
+  expect(resent).toBe(false)
+  await page.getByRole('button', { name: 'Confirmar reenvio' }).click()
+  await expect(page.getByRole('status')).toContainText('fila de envio')
+  await expect(page.getByText('Aguardando aceite', { exact: true })).toBeVisible()
+  expect(calls.filter((call) => call.path.endsWith('/people/invitations'))).toHaveLength(0)
+})
+
+test('resend conflict preserves support code and revoked invitation cannot be resent', async ({
+  page,
+}) => {
+  await fixture(page)
+  let revoked = false
+  await page.route('**/organization/invitations', (route) =>
+    route.fulfill({
+      json: [
+        {
+          id: ids.invitation,
+          expiresAt: '2020-01-01T00:00:00Z',
+          revokedAt: revoked ? '2020-01-02T00:00:00Z' : null,
+        },
+      ],
+    }),
+  )
+  await page.route('**/organization/invitations/*/resend', (route) => {
+    revoked = true
+    return route.fulfill({
+      status: 409,
+      json: { code: 'invitation_not_pending', correlationId: 'resend-trace' },
+    })
+  })
+  await page.getByRole('button', { name: 'Atualizar', exact: true }).click()
+  await page.getByRole('button', { name: 'Reenviar convite', exact: true }).click()
+  await page.getByRole('button', { name: 'Confirmar reenvio' }).click()
+  await expect(page.getByRole('alert')).toContainText('já foi aceito ou revogado')
+  await expect(page.getByRole('alert')).toContainText('resend-trace')
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+    ),
+  ).toBe(true)
+  await page.getByRole('button', { name: 'Cancelar', exact: true }).click()
+  await page.getByRole('button', { name: 'Atualizar', exact: true }).click()
+  await expect(page.getByText('Revogado', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Reenviar convite', exact: true })).toHaveCount(0)
+})
+
+test('history keeps the server-side person name/email search from main', async ({ page }) => {
+  const calls = await fixture(page)
+  await page.getByRole('button', { name: 'Histórico', exact: true }).click()
+  await page.getByLabel('Filtrar histórico por nome ou e-mail').fill('ana@example.invalid')
+  await page.getByRole('button', { name: 'Consultar histórico', exact: true }).click()
+  await expect
+    .poll(() =>
+      calls.some(
+        (call) =>
+          call.path.includes('/history?') &&
+          new URLSearchParams(call.path.split('?')[1]).get('search') === 'ana@example.invalid',
+      ),
+    )
+    .toBe(true)
 })
