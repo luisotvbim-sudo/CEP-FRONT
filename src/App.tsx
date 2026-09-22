@@ -1,34 +1,147 @@
-import { AuthProvider, useAuth } from "./features/auth/AuthProvider";
-import { LoginPage } from "./features/auth/LoginPage";
-import { AdminWorkforcePage } from "./features/workforce/pages/AdminWorkforcePage";
+import { useEffect, useState } from 'react'
+import { Check, LoaderCircle, LogOut } from 'lucide-react'
+import logo from './assets/conceito-logo.png'
+import { errorMessage, type AuthClient, type AuthError, type AuthSession } from './auth/auth-client'
+import { BrandPanel } from './components/BrandPanel'
+import { LoginForm } from './components/LoginForm'
+import { FormNotice } from './components/FormNotice'
+import { AdminShell } from './admin/AdminShell'
 
-function AppContent() {
-  const { session, initializing, logout } = useAuth();
+export function App({ client }: { client: AuthClient }) {
+  const [session, setSession] = useState<AuthSession | null>(null)
+  const [notice, setNotice] = useState<string>()
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState<AuthError | null>(null)
+  const [restoring, setRestoring] = useState(true)
 
-  if (initializing) {
-    return (
-      <main className="app-initializing" role="status">
-        <span className="brand__mark" aria-hidden="true"><span>C</span></span>
-        <span className="spinner" />
-        <p>Validando sua sessão…</p>
-      </main>
-    );
+  useEffect(() => {
+    let active = true
+    const stop = client.onExpired((failure) => {
+      if (active) {
+        setSession(null)
+        setNotice(
+          'Sua sessão expirou ou foi encerrada. Entre novamente.' +
+            (failure?.correlationId ? ` Código para suporte: ${failure.correlationId}` : ''),
+        )
+        setRestoring(false)
+      }
+    })
+    client
+      .restore()
+      .then(
+        (value) => {
+          if (active) setSession(value)
+        },
+        (failure) => {
+          if (active) setNotice(errorMessage(failure).message)
+        },
+      )
+      .finally(() => {
+        if (active) setRestoring(false)
+      })
+    return () => {
+      active = false
+      stop()
+    }
+  }, [client])
+
+  useEffect(() => {
+    document.title = session ? 'Administração · CEP Horas' : 'Entrar · CEP Horas'
+  }, [session, client])
+
+  async function logout() {
+    if (pending) return
+    setPending(true)
+    setError(null)
+    try {
+      await client.logout()
+      setSession(null)
+      setNotice('Você saiu da sua conta com segurança.')
+    } catch (failure) {
+      setError(errorMessage(failure))
+    } finally {
+      setPending(false)
+    }
   }
 
-  if (!session) return <LoginPage />;
-  if (session.user.role !== "organizationAdmin") {
+  if (restoring)
     return (
-      <main className="access-denied">
-        <span className="eyebrow">Acesso restrito</span>
-        <h1>Você não tem permissão para acessar esta área.</h1>
-        <p>A administração de integrações está disponível somente para administradores da organização.</p>
-        <button className="button button--primary" onClick={() => void logout()}>Voltar ao login</button>
+      <div className="startup-loading" role="status">
+        <LoaderCircle className="spin" /> Verificando sua sessão…
+      </div>
+    )
+  if (session?.user.role === 'organizationAdmin' && session.user.organizationId)
+    return (
+      <AdminShell
+        client={client}
+        session={session}
+        onLogout={() => {
+          setSession(null)
+          setNotice('Você saiu da sua conta com segurança.')
+        }}
+      />
+    )
+  return (
+    <div className="app-shell">
+      <header className="page-header">
+        <img src={logo} alt="Conceito Engenharia" width="1174" height="376" />
+        <div className="header-product">
+          <span className="header-divider" />
+          <span>
+            CEP <strong>Horas</strong>
+          </span>
+        </div>
+        <span className="header-caption">PORTAL DO COLABORADOR</span>
+      </header>
+      <main className="login-layout">
+        <BrandPanel />
+        <section className="form-panel" aria-label="Acesso ao CEP Horas">
+          {session ? (
+            <div className="login-content success-content" role="status">
+              <div className="form-symbol">
+                <Check size={26} />
+              </div>
+              <div className="eyebrow">ACESSO CONFIRMADO</div>
+              <h2>Olá, {session.user.displayName || 'bem-vindo'}.</h2>
+              <p>Você está conectado ao CEP Horas.</p>
+              <div className="account-summary">
+                <span>Conta conectada</span>
+                <strong>{session.user.email}</strong>
+              </div>
+              <p className="small-copy">
+                Acesso administrativo indisponível. Esta área exige o papel Administrador da
+                organização. Solicite orientação ao responsável pelo seu acesso.
+              </p>
+              <FormNotice error={error} />
+              <button className="primary-button" onClick={logout} disabled={pending}>
+                {pending ? (
+                  <>
+                    <LoaderCircle className="spin" size={18} /> Saindo…
+                  </>
+                ) : (
+                  <>
+                    Sair da conta <LogOut size={18} />
+                  </>
+                )}
+              </button>
+            </div>
+          ) : (
+            <LoginForm
+              client={client}
+              onLogin={(value) => {
+                setNotice(undefined)
+                setError(null)
+                setSession(value)
+              }}
+              notice={notice}
+            />
+          )}
+        </section>
       </main>
-    );
-  }
-  return <AdminWorkforcePage />;
-}
-
-export function App() {
-  return <AuthProvider><AppContent /></AuthProvider>;
+      <footer className="page-footer">
+        <span>© {new Date().getFullYear()} Conceito Engenharia</span>
+        <span>Feito para conectar pessoas, projetos e tempo.</span>
+      </footer>
+    </div>
+  )
 }

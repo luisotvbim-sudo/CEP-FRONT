@@ -1,0 +1,6 @@
+node_modules
+dist
+.local
+src/auth/api-schema.d.ts
+docs/openapi.json
+pnpm-lock.yaml
