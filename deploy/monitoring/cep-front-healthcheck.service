@@ -10,7 +10,7 @@ User=root
 ExecStart=/usr/local/sbin/cep-front-healthcheck
 TimeoutStartSec=30s
 UMask=0077
-Environment=HEALTH_URL=https://app.cep.lat/healthz
+Environment=HEALTH_URL=https://cep.lat/healthz
 StandardOutput=journal
 StandardError=journal
 

@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 container=cep-front-production-web-1
-health_url=${HEALTH_URL:-https://app.cep.lat/healthz}
+health_url=${HEALTH_URL:-https://cep.lat/healthz}
 state=$(docker inspect --format '{{.State.Status}}' "$container" 2>/dev/null || true)
 health=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$container" 2>/dev/null || true)
 http_status=$(curl --silent --show-error --max-time 10 --output /dev/null --write-out '%{http_code}' "$health_url" || true)
