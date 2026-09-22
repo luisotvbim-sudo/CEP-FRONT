@@ -1,376 +1,95 @@
-# Contexto para o front-end — CEP Horas
+# CEP Horas — administração web e desktop
 
-Atualizado em 20/09/2026.
+Interface React + TypeScript compartilhada entre navegador e um executável Windows WPF/WebView2, com paleta laranja/cinza e logomarca oficial da Conceito Engenharia.
 
-Este documento é o briefing de implementação do front-end da aplicação desktop **CEP Horas**. Ele deve ser lido antes de escrever código. A especificação funcional completa continua em [`docs/conciliacao-horas/especificacao-funcional.md`](conciliacao-horas/especificacao-funcional.md).
+## Funcionalidades implementadas
 
-## 1. Objetivo do produto
+- **Login:** autenticação, consulta de `/me`, renovação serializada de refresh token, logout, recuperação e redefinição de senha. A área de horas exige `organizationAdmin` e organização presente na sessão.
+- **Pessoas:** pesquisa e paginação das associações Monday/VR, estado do convite e atalho para histórico. Convites pendentes não comprovam entrega de e-mail. O estado complementar de revogação vem de `/organization/invitations`; quando não disponível, a tela não afirma que o convite continua válido.
+- **Associar e convidar:** busca independente de perfis ativos e ainda não associados, seleção pelos IDs internos, confirmação humana da correspondência, nome/e-mail e convite com papel `User`, válido por 48 horas. A confirmação informa enfileiramento, não entrega.
+- **Sincronização:** coleta incremental ou reprocessamento de 60 dias, consulta periódica enquanto executa, resultados, contagens, cobertura e falhas separados por fonte. Sucesso parcial e integração desabilitada são explícitos; não há percentual fictício.
+- **Equipes:** cadastro, edição, ativação, pesquisa de contas ativas, vínculos de membros/gestores com vigência e encerramento. A função de gestor da equipe não muda o papel de acesso da conta.
+- **Histórico:** consulta bruta por pessoa, fonte e período de até 60 dias inclusivos. Durações recebidas em segundos são apresentadas em horas/minutos/segundos, sem converter `null` em zero. Datas com horário usam `America/Sao_Paulo`; datas civis mantêm o dia informado pela API.
 
-O CEP Horas permite que uma pessoa compare, por dia e por período, as horas registradas em atividades do **Monday** com as horas registradas no **VR Mais**.
+Todas as chamadas usam o [OpenAPI versionado](docs/openapi.json). A base administrativa é `/api/v1/organization/time-control`. A organização não é escolhida nem enviada pelo frontend: é determinada pela sessão no backend. Dados simulados existem somente nos testes.
 
-A primeira entrega é uma consulta pessoal simples. Ela deve responder:
+O [briefing antigo](docs/briefing-consulta-inicial.md) é histórico e não orienta a integração atual. `/api/v1/time-logs` não existe no contrato e não é chamado.
 
-- Quantas horas foram registradas em cada fonte?
-- Qual é a diferença entre Monday e VR Mais?
-- Em quais dias há algo que precisa ser revisto?
-- Quais atividades, sessões, batidas e turnos formam cada total?
+## Executar no navegador
 
-A aplicação compara registros; uma diferença não comprova falta, baixa produtividade, hora extra ou irregularidade.
-
-## 2. Decisões já tomadas
-
-- O produto é uma aplicação desktop para Windows.
-- A interface é React incorporada ao desktop por WebView2.
-- O MVP abre diretamente na consulta, **sem tela de login**, porque ainda não há usuários cadastrados.
-- A VM define qual funcionário pode ser consultado. O front-end não envia e não permite escolher e-mail, matrícula ou identificador de funcionário.
-- Os tokens do Monday e do VR Mais permanecem exclusivamente na VM.
-- O front-end nunca recebe, persiste ou exibe esses tokens.
-- No computador do usuário ficam apenas os resultados dos períodos que ele consultou.
-- O cache local deve ser protegido pelo Windows para o usuário atual, expirar em 24 horas e poder ser apagado pela interface.
-- O período máximo de uma consulta é de 31 dias, com datas inclusivas.
-- O fuso de apresentação é `America/Sao_Paulo`.
-- A convenção da diferença é: **Monday menos VR Mais**.
-
-## 3. Situação real do repositório
-
-A branch `main` possui hoje o backend de organizações, usuários, auditoria e equipes de controle de ponto. Ela ainda **não possui** o endpoint de consulta Monday/VR nem o projeto do desktop.
-
-Para o front funcionar com dados reais, o backend precisa receber antes ou junto da integração:
-
-```http
-GET /api/v1/time-logs?from=YYYY-MM-DD&to=YYYY-MM-DD
-```
-
-O código desse endpoint e um protótipo desktop foram preparados separadamente, mas não estão aplicados à `main`. Não simular que a integração está disponível em produção e não chamar diretamente as APIs do Monday ou do VR Mais a partir do front-end.
-
-Enquanto o endpoint não estiver disponível, o front pode ser construído com um adaptador de dados mockados que respeite exatamente o contrato deste documento.
-
-### 3.1. Como o agente consulta o Swagger
-
-Com a CEP API executando localmente em modo `Development`, estes endereços ficam disponíveis:
-
-- Interface Swagger: `http://127.0.0.1:8080/swagger`
-- Contrato OpenAPI JSON: `http://127.0.0.1:8080/swagger/v1/swagger.json`
-
-O repositório do front mantém também uma cópia em `docs/openapi.json`. Antes de implementar ou alterar uma integração, o agente deve ler esse arquivo e não inventar endpoints, parâmetros ou respostas que não estejam nele.
-
-Para atualizar a cópia usando a API local:
+Pré-requisitos: Node.js 22.12+ ou 24 e pnpm.
 
 ```powershell
-.\scripts\sync-openapi.ps1
+pnpm install --frozen-lockfile
+pnpm dev
 ```
 
-O Swagger consegue iniciar sem PostgreSQL, mas nesse cenário serve apenas para documentação: chamadas que acessam dados falharão. Para testar os fluxos reais, é necessário iniciar o PostgreSQL, aplicar as migrations e então executar a API.
+Abra `http://127.0.0.1:5173`. O proxy Vite encaminha `/api` para `http://127.0.0.1:8080`, sem presumir CORS liberado. Para outro destino, copie `.env.example` para `.env` e ajuste `CEP_API_URL`.
 
-## 4. Arquitetura esperada
+Use uma conta existente `OrganizationAdmin`. Não há credenciais fixas ou cadastro público. Solicite a senha ao responsável e insira-a na interface; não a grave em scripts, código, capturas ou Git. Confira `/health/ready`: Swagger acessível sozinho não comprova conexão com o banco.
 
-```text
-React no WebView2
-        |
-        | mensagens JSON pelo bridge nativo
-        v
-Host desktop WPF
-        |-- consulta a CEP API por HTTPS
-        |-- protege o cache com DPAPI/CurrentUser
-        |-- aplica expiração de 24 horas
-        v
-CEP API na VM
-        |-- identifica o funcionário fixado na configuração da VM
-        |-- usa os tokens mantidos na VM
-        |-- consulta Monday e VR Mais
+## Executável Windows
+
+Pré-requisitos adicionais: .NET SDK 10 e Microsoft Edge WebView2 Runtime.
+
+```powershell
+pnpm build
+dotnet run --project desktop/CepHoras.Desktop -c Debug
 ```
 
-No build de produção, os assets do React devem ser empacotados localmente. Não carregar React, fontes, scripts ou estilos por CDN.
+Debug usa a API local por padrão. O executável está em `desktop/CepHoras.Desktop/bin/Debug/net10.0-windows/CepHoras.exe`. A pasta inteira, incluindo `wwwroot`, é necessária; não distribua apenas o `.exe`.
 
-O React deve depender de uma interface de dados pequena, e não diretamente de `fetch`, para permitir:
-
-1. um adaptador do bridge WebView2 em produção;
-2. um adaptador mockado no navegador durante o desenvolvimento;
-3. testes de componentes sem o executável desktop.
-
-Operações mínimas do bridge:
-
-```ts
-type DesktopBridge = {
-  ready(): Promise<{ mode: "anonymous"; displayName: string }>;
-  query(input: { from: string; to: string }): Promise<QueryResult>;
-  clearCache(): Promise<void>;
-};
+```powershell
+pnpm build
+dotnet publish desktop/CepHoras.Desktop -c Release -r win-x64 --self-contained false
 ```
 
-Não criar operação de login no MVP.
+Release usa `https://api.cep.lat` por padrão. `CEP_API_URL` substitui o destino; HTTP só é permitido em loopback. O host usa origem virtual HTTPS para assets locais, valida a origem das mensagens e permite apenas operações documentadas. Links HTTPS de atividades, acionados pelo usuário, abrem no navegador externo. Navegação interna para outras origens e permissões são bloqueadas; DevTools e menus de contexto são desativados em Release. Instalador, assinatura, atualização automática e publicação são etapas posteriores.
 
-## 5. Contrato de consulta
+## Sessão e segurança
 
-O endpoint recebe `from` e `to` no formato `YYYY-MM-DD`. As propriedades JSON usam `camelCase` e os enums também são serializados em `camelCase`.
+`AuthClient` separa componentes do transporte. `HttpAuthClient` usa o proxy de mesma origem no navegador; `DesktopAuthClient` usa o bridge WPF. Os dois renovam antes da expiração ou após um 401 e serializam a rotação para impedir uso concorrente do mesmo refresh token. Falha ou resposta perdida na renovação exige novo login, sem reapresentar o token antigo. Falhas de rede em operações de gravação não causam repetição automática.
 
-```ts
-type TimeLogSession = {
-  itemId: string;
-  itemName: string;
-  itemUrl: string | null;
-  startedAt: string;
-  endedAt: string | null;
-  durationSeconds: number;
-  running: boolean;
-  manual: boolean;
-};
+- **Navegador:** access/refresh tokens ficam apenas em memória, sem localStorage, sessionStorage ou IndexedDB. Recarregar/fechar exige novo login; cada aba possui sua sessão. Persistência web futura exige um BFF com cookie `HttpOnly`, `Secure` e proteção CSRF, não tokens gravados pelo JavaScript.
+- **Desktop:** access token fica no host nativo. Refresh token é criptografado por Windows DPAPI (`CurrentUser`) em `%LOCALAPPDATA%/Conceito/CepHoras/Sessions`, separado pela origem da API. O processo impede outra instância de disputar o mesmo arquivo. A retomada rotaciona o token e revalida `/me`. O logout revoga a sessão e remove o arquivo. O token antigo é removido antes da rotação para evitar replay após interrupção.
+- **Bridge:** devolve metadados da sessão e resultados permitidos, nunca tokens. A lista de rotas permitidas é validada no host. O servidor continua responsável pela autorização e pelo isolamento entre organizações.
 
-type TimeLogShift = {
-  index: number;
-  start: string;
-  end: string;
-  pointSeconds: number;
-  mondaySeconds: number | null;
-  differenceSeconds: number | null;
-};
+`ProblemDetails` é tratado por `code`; `correlationId` é preservado para suporte. Estados de carregamento, ausência de dados, falha de conexão, acesso negado, sessão expirada, associação duplicada e integração desabilitada são apresentados na interface.
 
-type TimeLogDay = {
-  date: string;
-  mondaySeconds: number | null;
-  vrSeconds: number | null;
-  differenceSeconds: number | null;
-  state: "comparable" | "provisional" | "review" | "missing" | "no_records" | string;
-  reasons: string[];
-  timeCards: string[];
-  sessions: TimeLogSession[];
-  shifts: TimeLogShift[];
-};
+Para publicar na web, sirva `dist/` por HTTPS e configure proxy de mesma origem para `/api`, preservando as regras de proxy confiável da CEP API. Vite é desenvolvimento/prévia. Não abra por `file://`. O build inclui CSP sem scripts de terceiros; fontes e logo são locais. Tokens Monday/VR pertencem exclusivamente ao backend.
 
-type TimeLogResponse = {
-  from: string;
-  to: string;
-  timeZone: string;
-  fetchedAt: string;
-  days: TimeLogDay[];
-  summary: {
-    comparedDays: number;
-    excludedDays: number;
-    mondaySeconds: number | null;
-    vrSeconds: number | null;
-    differenceSeconds: number | null;
-    absoluteDifferenceSeconds: number | null;
-  };
-  warnings: string[];
-};
+## Contrato e validação
 
-type QueryResult = {
-  source: "api" | "local-cache";
-  cachedAt: string;
-  warning?: string;
-  data: TimeLogResponse;
-};
+Antes de adaptar integrações:
+
+```powershell
+./scripts/sync-openapi.ps1
+pnpm types:api
 ```
 
-Exemplo reduzido:
+Tipos gerados: `src/auth/api-schema.d.ts`.
 
-```json
-{
-  "source": "api",
-  "cachedAt": "2026-09-20T13:10:00Z",
-  "data": {
-    "from": "2026-09-18",
-    "to": "2026-09-18",
-    "timeZone": "America/Sao_Paulo",
-    "fetchedAt": "2026-09-20T13:10:00Z",
-    "days": [
-      {
-        "date": "2026-09-18",
-        "mondaySeconds": 27000,
-        "vrSeconds": 28800,
-        "differenceSeconds": -1800,
-        "state": "review",
-        "reasons": [],
-        "timeCards": ["08:00", "12:00", "13:00", "17:00"],
-        "sessions": [],
-        "shifts": []
-      }
-    ],
-    "summary": {
-      "comparedDays": 1,
-      "excludedDays": 0,
-      "mondaySeconds": 27000,
-      "vrSeconds": 28800,
-      "differenceSeconds": -1800,
-      "absoluteDifferenceSeconds": 1800
-    },
-    "warnings": []
-  }
-}
+```powershell
+pnpm test
+pnpm build
+pnpm exec playwright install chromium
+pnpm test:e2e
+dotnet build desktop/CepHoras.Desktop -c Debug
+node scripts/test-desktop.mjs
 ```
 
-Valores `null` significam dado desconhecido ou não calculável. Nunca convertê-los para zero.
+Os testes unitários cobrem autenticação, rotação concorrente, falha de renovação, contratos de erro, datas e durações. Playwright cobre login e administração em desktop/celular, com fixtures isoladas e verificação automática de acessibilidade. O teste do executável usa WPF/WebView2 real e servidor HTTP descartável para verificar chamadas protegidas, rotação única, DPAPI, retomada após reiniciar, isolamento dos tokens, bloqueio de rotas e logout. Capturas/perfis de teste ficam em `.local`, ignorada pelo Git. As capturas administrativas com dados fictícios são identificadas.
 
-Erros da API seguem `application/problem+json` e podem conter:
-
-```ts
-type ApiProblem = {
-  status?: number;
-  title?: string;
-  detail?: string;
-  code?: string;
-  correlationId?: string;
-  errors?: Record<string, string[]>;
-};
+```powershell
+node scripts/test-desktop.mjs --live
 ```
 
-O front deve mostrar uma mensagem compreensível e, quando existir, preservar o `correlationId` para suporte técnico.
+Esse teste opcional verifica apenas rejeição de uma conta inexistente pela API local através do host real; não utiliza conta real nem envia e-mail. Não equivale à validação autenticada dos fluxos administrativos.
 
-## 6. Telas e componentes do MVP
+## Dependências para homologação
 
-### Cabeçalho
-
-- Marca `CEP Horas`.
-- Área atual `Minha jornada`.
-- Identificação discreta como `Consulta direta` ou `Perfil definido na VM`.
-- Não mostrar botão “Entrar” ou “Sair” no modo sem autenticação.
-
-### Introdução
-
-- Título: `Seus registros de horas`.
-- Texto curto: `Compare as atividades registradas no Monday com as batidas do VR Mais.`
-- Selo de consulta protegida.
-
-### Filtro de período
-
-- Campos `De` e `Até`.
-- Iniciar com ontem nas duas datas, calculado no fuso de São Paulo.
-- Botão `Consultar período`.
-- Validar data inicial posterior à final.
-- Validar limite máximo de 31 dias antes de enviar.
-- Bloquear envio duplicado enquanto a consulta estiver em andamento.
-
-### Resumo do período
-
-Quatro cards:
-
-1. Horas no Monday.
-2. Horas no VR Mais.
-3. Diferença líquida, com a legenda `Monday menos VR`.
-4. Divergência absoluta, sem cancelamento entre dias.
-
-Mostrar também quantos dias foram comparados e quantos foram excluídos.
-
-### Tabela diária
-
-Colunas:
-
-- Data.
-- Monday.
-- VR Mais.
-- Diferença.
-- Situação.
-- Ação `Detalhes`.
-
-Estados devem usar cor, texto e forma; nunca depender somente de cor. Rótulos iniciais:
-
-| Valor | Rótulo |
-|---|---|
-| `comparable` | Comparável |
-| `provisional` | Provisório |
-| `review` | Revisar |
-| `missing` | Sem base |
-| `no_records` | Sem registros |
-
-### Detalhes do dia
-
-Abrir no contexto da mesma tela, sem perder filtros. Exibir em duas áreas:
-
-- Atividades do Monday: nome, horário inicial/final, duração, manual/em andamento e link HTTPS quando disponível.
-- VR Mais: batidas reconhecidas, turnos, total do ponto, Monday alocado ao turno e diferença.
-
-Exibir os motivos de revisão em linguagem humana. Motivos conhecidos inicialmente:
-
-| Código | Texto |
-|---|---|
-| `open_session` | relógio aberto |
-| `cross_midnight_session` | sessão atravessa meia-noite |
-| `vr_missing_or_unrecognized` | VR ausente ou não reconhecido |
-| `current_or_future_day` | dia atual ou futuro |
-| `no_records_in_both_sources` | sem registros nas duas fontes |
-
-Códigos desconhecidos devem ser exibidos de forma segura e não podem quebrar a tela.
-
-### Origem e cache
-
-- Informar `Dados atualizados pela VM` quando `source` for `api`.
-- Informar `Cache local protegido` quando `source` for `local-cache`.
-- Mostrar a data/hora da consulta na fonte e a data/hora do cache.
-- Oferecer a ação `Limpar dados locais`, com confirmação e retorno de sucesso/erro.
-- Se a API estiver indisponível e houver cache válido, mostrar o cache com aviso claro.
-
-## 7. Formatação e regras visuais
-
-- Durações devem aparecer como `07:30` ou `07:30:15`; totais podem ultrapassar 24 horas.
-- Diferenças positivas usam `+`; negativas usam `−`.
-- Junto do valor, deixar claro que o sinal representa Monday menos VR Mais.
-- Nunca formatar 7 horas e 30 minutos como `7,30`.
-- Datas aparecem em português do Brasil, mas são enviadas à API como `YYYY-MM-DD`.
-- O visual deve seguir a identidade já aprovada: fundo creme muito claro, cards brancos, laranja como ação principal, cinzas quentes e tipografia limpa.
-- A janela é redimensionável. Tabelas podem ter rolagem horizontal em larguras menores, sem cortar ações essenciais.
-- Estados de foco devem ser visíveis e toda ação deve funcionar por teclado.
-- Respeitar `prefers-reduced-motion`.
-
-## 8. Estados obrigatórios
-
-Implementar e testar:
-
-- inicialização do desktop;
-- vazio antes da primeira consulta;
-- carregamento;
-- consulta concluída com dados;
-- período válido sem registros;
-- dados parciais ou provisórios;
-- cache local;
-- erro de validação;
-- API indisponível sem cache;
-- erro inesperado com `correlationId`;
-- falha ao limpar cache.
-
-Não deixar a tela em branco em nenhum desses casos.
-
-## 9. Segurança e privacidade
-
-- Não colocar tokens, senhas, chaves, e-mail fixo ou credenciais nos arquivos do React.
-- Não registrar o corpo completo das respostas no console em produção.
-- Não usar `localStorage` ou `IndexedDB` para os registros de horas no build desktop.
-- O host nativo é responsável pelo cache protegido e pela comunicação HTTPS.
-- Aceitar links de atividade somente quando o esquema for `https`.
-- Desabilitar DevTools e menus de contexto no build de produção do WebView2.
-- Usar política de conteúdo restritiva e assets locais.
-- Como o modo atual não tem autenticação, a API deve ficar restrita por rede/VPN e retornar apenas o funcionário fixado na VM. Esse modo não deve permitir escolher outra pessoa.
-- Quando contas forem criadas, desativar o acesso anônimo no backend antes de habilitar login no front.
-
-## 10. Fora do escopo desta primeira tela
-
-- Editar registros no Monday ou no VR Mais.
-- Escolher outro funcionário.
-- Criar usuários ou equipes.
-- Ranking de pessoas e painel gerencial.
-- Aprovar justificativas.
-- Notificações externas.
-- Folha de pagamento, banco de horas ou cálculo oficial de horas extras.
-- Armazenar tokens de integração na máquina do usuário.
-
-Essas capacidades podem ser adicionadas em etapas posteriores conforme a especificação funcional completa.
-
-## 11. Critérios de aceite
-
-O front do MVP está pronto quando:
-
-1. Abre diretamente em `Minha jornada`, sem login.
-2. Permite consultar um intervalo inclusivo de até 31 dias.
-3. Mostra totais, diferença líquida e divergência absoluta sem tratar `null` como zero.
-4. Mostra todos os dias e permite inspecionar as fontes que compõem cada total.
-5. Explica visualmente o sinal da diferença.
-6. Diferencia dados online, cache, dados provisórios, ausência de registros e erro.
-7. Não recebe nenhuma credencial do Monday ou do VR Mais.
-8. Não permite selecionar nem informar a identidade consultada.
-9. Mantém os filtros ao abrir e fechar detalhes.
-10. Funciona por teclado, tem foco visível e não depende apenas de cor.
-11. Possui testes do adaptador de dados, formatação de duração, validação do período e estados principais da interface.
-12. Gera um build com assets locais que pode ser carregado no WebView2.
-
-## 12. Instrução pronta para o agente de implementação
-
-> Implemente o front-end do CEP Horas seguindo integralmente este documento. Use React com TypeScript, componentes pequenos e uma camada de adaptação para o bridge do WebView2. O MVP deve abrir direto na consulta pessoal, sem login. Comece pelos tipos do contrato, adaptador mockado, formatação e validação; depois construa a tela e seus estados. Não chame Monday ou VR Mais diretamente, não inclua segredos e não invente endpoints. Se uma integração necessária ainda não existir na `main`, mantenha o mock isolado, documente o ponto de conexão e deixe o restante da interface funcional e testável.
+1. Login manual de um responsável com conta `OrganizationAdmin` para testar consultas e alterações autorizadas na organização local.
+2. Monday/VR estão desabilitados no Docker local. Perfis, associação com dados reais e cobertura/histórico importados dependem de configuração segura dessas integrações no servidor. O frontend não habilita fontes nem recebe seus tokens.
+3. Convites enfileirados podem ser inspecionados no Mailpit em `http://127.0.0.1:8025`. O envio/aceite real depende de perfis disponíveis e de um destinatário de teste autorizado. A tela pública de aceite de convite ainda é uma próxima etapa; esta entrega cobre a criação e acompanhamento administrativo.
+4. Comparação consolidada por turno, justificativas, aprovação do gestor e notificações não estão disponíveis na API principal e não foram simuladas.
+5. Publicação web, instalador e assinatura do executável ainda não foram executados.
