@@ -56,7 +56,7 @@ Release usa `https://api.cep.lat` por padrão. `CEP_API_URL` substitui o destino
 
 `ProblemDetails` é tratado por `code`; `correlationId` é preservado para suporte. Estados de carregamento, ausência de dados, falha de conexão, acesso negado, sessão expirada, associação duplicada e integração desabilitada são apresentados na interface.
 
-Para publicar na web, sirva `dist/` por HTTPS e configure proxy de mesma origem para `/api`, preservando as regras de proxy confiável da CEP API. Vite é desenvolvimento/prévia. Não abra por `file://`. O build inclui CSP sem scripts de terceiros; fontes e logo são locais. Tokens Monday/VR pertencem exclusivamente ao backend.
+Para publicar na web, use o contêiner e o Compose descritos em [`deploy/README.md`](deploy/README.md). O site usa `https://app.cep.lat`; o Nginx de borda encaminha `/api` diretamente à CEP API, mantendo a mesma origem no navegador. Vite é desenvolvimento/prévia. Não abra por `file://`. O build inclui CSP sem scripts de terceiros; fontes e logo são locais. Tokens Monday/VR pertencem exclusivamente ao backend.
 
 ## Contrato e validação
 

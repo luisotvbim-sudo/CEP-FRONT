@@ -1,0 +1,36 @@
+# Standalone front-end stack. The API stack owns the public edge and network.
+name: cep-front-production
+
+services:
+  web:
+    image: cep-front:${FRONT_IMAGE_TAG:-local}
+    build: .
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+      - /var/cache/nginx:size=32m,mode=0755
+      - /var/run:size=1m,mode=0755
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    mem_limit: 256m
+    networks:
+      edge:
+        aliases: [cep-front]
+    healthcheck:
+      test: [CMD-SHELL, "wget -q --spider http://127.0.0.1:8080/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  edge:
+    external: true
+    name: ${EDGE_NETWORK:-cep-api-production_frontend}
+
