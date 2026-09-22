@@ -24,6 +24,19 @@ jobs:
       - run: pnpm build
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:e2e
+      - name: Validate production scripts
+        run: bash -n deploy/nightly/deploy.sh deploy/nightly/install.sh deploy/monitoring/healthcheck.sh deploy/monitoring/install.sh
+      - name: Build and smoke-test production image
+        run: |
+          docker build -t cep-front:ci .
+          docker run --rm -d --name cep-front-ci --read-only --tmpfs /tmp --tmpfs /var/cache/nginx --tmpfs /var/run -p 127.0.0.1:18080:8080 cep-front:ci
+          trap 'docker rm -f cep-front-ci >/dev/null 2>&1 || true' EXIT
+          for attempt in {1..20}; do
+            if curl --fail --silent http://127.0.0.1:18080/healthz >/dev/null; then break; fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:18080/healthz
+          curl --fail --silent http://127.0.0.1:18080/ | grep -q '<div id="root"></div>'
 
   desktop:
     runs-on: windows-latest

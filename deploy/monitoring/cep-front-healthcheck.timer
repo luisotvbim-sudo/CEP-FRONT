@@ -1,0 +1,13 @@
+[Unit]
+Description=Monitor CEP front every five minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+AccuracySec=30s
+Persistent=true
+Unit=cep-front-healthcheck.service
+
+[Install]
+WantedBy=timers.target
+
