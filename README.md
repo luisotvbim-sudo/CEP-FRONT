@@ -53,7 +53,16 @@ pnpm build
 dotnet publish desktop/CepHoras.Desktop -c Release -r win-x64 --self-contained false
 ```
 
-Release usa `https://api.cep.lat` por padrão. `CEP_API_URL` substitui o destino; HTTP só é permitido em loopback. O host usa origem virtual HTTPS para assets locais, valida a origem das mensagens e permite apenas operações documentadas. Links HTTPS de atividades, acionados pelo usuário, abrem no navegador externo. Navegação interna para outras origens e permissões são bloqueadas; DevTools e menus de contexto são desativados em Release. Instalador, assinatura, atualização automática e publicação são etapas posteriores.
+Release usa `https://api.cep.lat` por padrão. `CEP_API_URL` substitui o destino; HTTP só é permitido em loopback. O host usa origem virtual HTTPS para assets locais, valida a origem das mensagens e permite apenas operações documentadas. Links HTTPS de atividades, acionados pelo usuário, abrem no navegador externo. Navegação interna para outras origens e permissões são bloqueadas; DevTools e menus de contexto são desativados em Release.
+
+Para instalar o pacote publicado no perfil Windows atual, sem privilégio de administrador:
+
+```powershell
+dotnet publish desktop/CepHoras.Desktop -c Release -r win-x64 --self-contained false -o .local/package/CEP-Horas-win-x64
+./scripts/install-desktop.ps1
+```
+
+O script valida o pacote e os arquivos copiados, instala em `%LOCALAPPDATA%/Programs/Conceito/CEP Horas` e cria o atalho `CEP Horas` no menu Iniciar. Ele se recusa a substituir uma instalação ou um atalho existente. A distribuição ainda requer .NET Desktop Runtime 10 e Microsoft Edge WebView2 Runtime. Este é um instalador local de teste, não um instalador EXE/MSIX assinado; atualização automática, inicialização com o Windows, execução em bandeja e notificações aguardam implementação e contrato de backend.
 
 ## Sessão e segurança
 
@@ -100,4 +109,4 @@ Esse teste opcional verifica apenas rejeição de uma conta inexistente pela API
 2. Na preparação inicial, Monday/VR estavam desabilitados no Docker local; confira a configuração atual antes da homologação. Perfis, associação com dados reais e cobertura/histórico importados dependem de configuração segura dessas integrações no servidor. O frontend não habilita fontes nem recebe seus tokens.
 3. Convites enfileirados podem ser inspecionados no Mailpit em `http://127.0.0.1:8025`. O envio/aceite real depende de perfis disponíveis e de um destinatário de teste autorizado. A tela pública de aceite aguarda um contrato web seguro: o endpoint atual retorna refresh token no corpo e não deve ser ligado diretamente ao React.
 4. Comparação consolidada por turno, justificativas, decisão do líder e notificações não estão disponíveis na API principal e não foram simuladas.
-5. As novas telas operacionais e administrativas foram verificadas com contrato e mocks de navegador; ainda exigem homologação autenticada com contas de Membro, Líder e Coordenador na API real. Publicação web, instalador e assinatura do executável ainda não foram executados.
+5. As novas telas operacionais e administrativas foram verificadas com contrato e mocks de navegador. A instalação local de teste e o acesso autenticado de Coordenador foram verificados em Windows; Membro e Líder ainda exigem homologação com contas próprias. Publicação web, instalador distribuível assinado e assinatura do executável ainda não foram executados.
