@@ -33,8 +33,8 @@ export function validatePeriod(from: string, to: string): string | null {
     new Date(s).toISOString().slice(0, 10) === s
   if (!valid(from) || !valid(to) || to < from)
     return 'Informe datas válidas, com início anterior ou igual ao fim.'
-  if ((Date.parse(to) - Date.parse(from)) / 86400000 + 1 > 60)
-    return 'O período pode ter até 60 dias, incluindo a data inicial e a final.'
+  if ((Date.parse(to) - Date.parse(from)) / 86400000 + 1 > 90)
+    return 'O período pode ter até 90 dias, incluindo a data inicial e a final.'
   return null
 }
 export function invitationState(person: Person, invitation?: Invitation, now = Date.now()) {

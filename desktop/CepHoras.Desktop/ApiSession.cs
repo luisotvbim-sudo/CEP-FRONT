@@ -177,7 +177,10 @@ internal sealed class ApiSession : IDisposable
         if (path.Contains('\\') || path.Contains('#')) return false;
         var route = path.Split('?')[0];
         if (route == "/admin/organizations" && method is "GET" or "POST") return true;
-        if (method == "GET" && route is "/me" or "/organization/users" or "/organization/invitations") return true;
+        if (method == "GET" && route is "/me" or "/organization/users" or "/organization/invitations" or "/organization/audit") return true;
+        if (method == "POST" && route == "/organization/invitations") return true;
+        if (method == "PATCH" && route.StartsWith("/organization/users/", StringComparison.Ordinal) &&
+            Guid.TryParseExact(route["/organization/users/".Length..], "D", out _)) return true;
         if (method == "POST" && Regex.IsMatch(route, "^/organization/invitations/[0-9a-fA-F-]{36}/resend$")) return true;
         const string prefix = "/organization/time-control/";
         if (!route.StartsWith(prefix, StringComparison.Ordinal)) return false;

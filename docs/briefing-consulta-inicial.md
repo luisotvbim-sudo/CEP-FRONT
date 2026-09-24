@@ -4,7 +4,7 @@
 
 Atualizado em 20/09/2026.
 
-Este documento é o briefing de implementação do front-end da aplicação desktop **CEP Horas**. Ele deve ser lido antes de escrever código. A especificação funcional completa continua em [`docs/conciliacao-horas/especificacao-funcional.md`](conciliacao-horas/especificacao-funcional.md).
+Este documento preserva o briefing inicial da aplicação desktop **CEP Horas** e não orienta novas implementações. A fonte de verdade atual está em [`docs/produto/especificacao-funcional.md`](produto/especificacao-funcional.md); as diferenças entre o contrato-alvo do front e o backend disponível estão em [`docs/compatibilidade-backend.md`](compatibilidade-backend.md).
 
 ## 1. Objetivo do produto
 
@@ -54,12 +54,12 @@ Com a CEP API executando localmente em modo `Development`, estes endereços fica
 - Interface Swagger: `http://127.0.0.1:8080/swagger`
 - Contrato OpenAPI JSON: `http://127.0.0.1:8080/swagger/v1/swagger.json`
 
-O repositório do front mantém também uma cópia em `docs/openapi.json`. Antes de implementar ou alterar uma integração, o agente deve ler esse arquivo e não inventar endpoints, parâmetros ou respostas que não estejam nele.
+O repositório do front mantém o contrato realmente exposto pelo backend em `docs/openapi-backend-current.json` e o contrato-alvo histórico em `docs/openapi.json`. Antes de alterar uma integração, o agente deve consultar o snapshot real e o relatório `docs/compatibilidade-backend.md`; recursos exclusivos do contrato-alvo continuam como dependências pendentes.
 
 Para atualizar a cópia usando a API local:
 
 ```powershell
-.\scripts\sync-openapi.ps1
+.\scripts\sync-openapi.ps1 -OutputPath .\docs\openapi-backend-current.json
 ```
 
 O Swagger consegue iniciar sem PostgreSQL, mas nesse cenário serve apenas para documentação: chamadas que acessam dados falharão. Para testar os fluxos reais, é necessário iniciar o PostgreSQL, aplicar as migrations e então executar a API.

@@ -16,7 +16,7 @@ import {
   useQuery,
 } from './ui'
 
-function RecordDetails({ record }: { record: TimeRecord }) {
+export function RecordDetails({ record }: { record: TimeRecord }) {
   let details: { timeCards?: unknown; manual?: boolean; running?: boolean } = {}
   try {
     const value: unknown = JSON.parse(record.detailsJson || '{}')
@@ -253,7 +253,7 @@ export function HistoryPage({
             </div>
           </fieldset>
           <p className="muted">
-            Até 60 dias inclusivos. Datas e horários apresentados em São Paulo.
+            Até 90 dias inclusivos. Datas e horários apresentados em São Paulo.
           </p>
           <FormNotice error={validation || action.error} />
         </form>

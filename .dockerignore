@@ -1,10 +1,20 @@
 .git
 .github
 .local
+.env
+.env.*
 desktop
 node_modules
 dist
+coverage
 playwright-report
 test-results
+docs
+tests
+scripts
+deploy/nightly
+deploy/monitoring
+deploy/production.env.example
+*.log
 *.md
 

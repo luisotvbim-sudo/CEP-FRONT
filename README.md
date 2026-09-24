@@ -2,16 +2,25 @@
 
 Interface React + TypeScript compartilhada entre navegador e um executável Windows WPF/WebView2, com paleta laranja/cinza e logomarca oficial da Conceito Engenharia.
 
+## Fonte de verdade e compatibilidade
+
+- A [especificação funcional](docs/produto/especificacao-funcional.md) define a visão do produto, os perfis Coordenador, Líder e Membro e distingue o que está entregue, parcial e planejado.
+- O [snapshot OpenAPI do backend atual](docs/openapi-backend-current.json) registra o contrato realmente exposto pela branch `codex/integracao-monday-vrmais` da CEP API.
+- O [relatório de compatibilidade](docs/compatibilidade-backend.md) registra o alinhamento atual e separa o que já existe no backend das telas ainda pendentes no front.
+- `docs/openapi.json` originou o cliente atual e está alinhado em rotas e schemas com o snapshot real.
+
 ## Funcionalidades implementadas
 
-- **Login:** autenticação, consulta de `/me`, renovação serializada de refresh token, logout, recuperação e redefinição de senha. A área de horas aceita `organizationAdmin` na organização da sessão e `systemAdmin` com seleção explícita de organização.
+- **Login:** desktop e navegador usam autenticação, `/me`, refresh rotativo, logout, recuperação e redefinição de senha disponíveis na API atual. No navegador, o refresh fica em cookie protegido e não é exposto ao React.
 - **Pessoas:** pesquisa e paginação das associações Monday/VR, detalhes da pessoa, estado do convite, reenvio de convites expirados com confirmação e atalho para histórico. Convites pendentes não comprovam entrega de e-mail. O estado complementar de revogação vem de `/organization/invitations`; quando não disponível, a tela não afirma que o convite continua válido.
 - **Associar e convidar:** busca de perfis ativos e ainda não associados, atualização de nome/e-mail ao trocar a seleção, sugestão entre Monday e VR nos dois sentidos por e-mail exato e único, seleção pelos IDs internos e confirmação humana da correspondência, nome/e-mail e convite com papel `User`, válido por 48 horas. A confirmação informa enfileiramento, não entrega.
-- **Sincronização:** coleta incremental ou reprocessamento de 60 dias, consulta periódica enquanto executa, resultados, contagens, cobertura e falhas separados por fonte. Sucesso parcial e integração desabilitada são explícitos; não há percentual fictício.
-- **Equipes:** cadastro, edição, ativação, pesquisa de contas ativas, vínculos de membros/gestores com vigência e encerramento. A função de gestor da equipe não muda o papel de acesso da conta.
-- **Histórico:** consulta bruta por pessoa, fonte e período de até 60 dias inclusivos. Durações recebidas em segundos são apresentadas em horas/minutos/segundos, sem converter `null` em zero. Datas com horário usam `America/Sao_Paulo`; datas civis mantêm o dia informado pela API.
+- **Sincronização:** atualização normal dos últimos 7 dias ou reprocessamento administrativo de até 90 dias, consulta periódica enquanto executa, resultados, contagens, cobertura e falhas separados por fonte. Sucesso parcial e integração desabilitada são explícitos; não há percentual fictício.
+- **Times:** cadastro, edição, ativação, pesquisa de contas ativas e vínculos de membros/líderes com vigência e encerramento. A área operacional de Líder consulta somente os times geridos devolvidos pela API e associa pessoas pelo `userId`.
+- **Histórico:** consulta bruta por pessoa, fonte e período de até 90 dias inclusivos. Durações recebidas em segundos são apresentadas em horas/minutos/segundos, sem converter `null` em zero. Datas com horário usam `America/Sao_Paulo`; datas civis mantêm o dia informado pela API.
+- **Membro/Líder:** navegação pessoal, histórico bruto, estado da última tentativa de atualização própria e sincronização normal de 7 dias. Líder também consulta pessoas dos times geridos; ausência de vínculo ou registro não é exibida como zero horas.
+- **Usuários e auditoria:** Coordenador e `SystemAdmin` com organização selecionada consultam usuários, alteram nome/papel/situação preservando produtos, criam convites administrativos e leem eventos administrativos. Alteração de acesso revoga sessões.
 
-Todas as chamadas usam o [OpenAPI versionado](docs/openapi.json). A base administrativa é `/api/v1/organization/time-control`. Para `organizationAdmin`, a organização é determinada pela sessão. Para `systemAdmin`, a interface lista as organizações e envia `organizationId` na query de cada operação; o backend valida o contexto e mantém o ator real na auditoria. Dados simulados existem somente nos testes.
+O código atual foi gerado a partir do [contrato](docs/openapi.json). A base é `/api/v1/organization/time-control`. O Coordenador administra a organização inteira; o `systemAdmin` seleciona explicitamente uma organização; Líder e Membro recebem respostas filtradas pelo backend. Dados simulados existem somente nos testes.
 
 O [briefing antigo](docs/briefing-consulta-inicial.md) é histórico e não orienta a integração atual. `/api/v1/time-logs` não existe no contrato e não é chamado.
 
@@ -26,7 +35,7 @@ pnpm dev
 
 Abra `http://127.0.0.1:5173`. O proxy Vite encaminha `/api` para `http://127.0.0.1:8080`, sem presumir CORS liberado. Para outro destino, copie `.env.example` para `.env` e ajuste `CEP_API_URL`.
 
-Use uma conta existente `OrganizationAdmin`. Não há credenciais fixas ou cadastro público. Solicite a senha ao responsável e insira-a na interface; não a grave em scripts, código, capturas ou Git. Confira `/health/ready`: Swagger acessível sozinho não comprova conexão com o banco.
+Use uma conta existente no navegador ou no executável desktop. Não há credenciais fixas ou cadastro público. Solicite a senha ao responsável e insira-a na interface; não a grave em scripts, código, capturas ou Git. Confira `/health/ready`: Swagger acessível sozinho não comprova conexão com o banco.
 
 ## Executável Windows
 
@@ -50,24 +59,23 @@ Release usa `https://api.cep.lat` por padrão. `CEP_API_URL` substitui o destino
 
 `AuthClient` separa componentes do transporte. `HttpAuthClient` usa o proxy de mesma origem no navegador; `DesktopAuthClient` usa o bridge WPF. Os dois renovam antes da expiração ou após um 401 e serializam a rotação para impedir uso concorrente do mesmo refresh token. Falha ou resposta perdida na renovação exige novo login, sem reapresentar o token antigo. Falhas de rede em operações de gravação não causam repetição automática.
 
-- **Navegador:** a API guarda o refresh token em cookie `HttpOnly`, protegido com Data Protection, `SameSite=Strict`, `Secure` em HTTPS e vencimento absoluto de até sete dias desde o login. Recarregar, fechar/reabrir e abrir outra aba retomam a sessão por `POST /auth/web/refresh`; access token fica apenas em memória. Login/logout usam `/auth/web/login` e `/auth/web/logout`. O backend exige origem correspondente ao Host do proxy e `X-CEP-Web-Session: 1` contra CSRF. HTTP é permitido somente em loopback fora de produção. Web Locks serializa login, refresh e logout entre abas; BroadcastChannel propaga encerramento/troca de conta. Nenhum token é gravado por JavaScript. Após resposta perdida, somente um marcador de falha sem identidade é salvo em localStorage para impedir replay ao recarregar, até novo login. Logout e revogação encerram o acesso antes dos sete dias.
+- **Navegador:** o refresh token fica em cookie `HttpOnly`, protegido com Data Protection, `SameSite=Strict`, `Secure` em HTTPS e vencimento absoluto de até sete dias. A retomada usa `POST /auth/web/refresh`; login/logout usam `/auth/web/login` e `/auth/web/logout`. Web Locks serializa operações entre abas e BroadcastChannel propaga encerramento/troca de conta.
 - **Desktop:** access token fica no host nativo. Refresh token é criptografado por Windows DPAPI (`CurrentUser`) em `%LOCALAPPDATA%/Conceito/CepHoras/Sessions`, separado pela origem da API. O processo impede outra instância de disputar o mesmo arquivo. A retomada rotaciona o token e revalida `/me`. O logout revoga a sessão e remove o arquivo. O token antigo é removido antes da rotação para evitar replay após interrupção.
 - **Bridge:** devolve metadados da sessão e resultados permitidos, nunca tokens. A lista de rotas permitidas é validada no host. O servidor continua responsável pela autorização e pelo isolamento entre organizações.
 
 `ProblemDetails` é tratado por `code`; `correlationId` é preservado para suporte. Estados de carregamento, ausência de dados, falha de conexão, acesso negado, sessão expirada, associação duplicada e integração desabilitada são apresentados na interface.
 
-Para publicar na web, sirva `dist/` por HTTPS e configure proxy de mesma origem para `/api`, preservando `Host`, `Origin`, `Cookie` e `Set-Cookie`, sem cache nas rotas de sessão e respeitando as regras de proxy confiável da CEP API. Publique a API com `/auth/web/*` antes deste frontend. As chaves Data Protection do servidor precisam persistir entre atualizações. Vite é desenvolvimento/prévia. Não abra por `file://`. O build inclui CSP sem scripts de terceiros; fontes e logo são locais. Tokens Monday/VR pertencem exclusivamente ao backend.
+Para publicar na web, sirva `dist/` por HTTPS e configure proxy de mesma origem para `/api`, preservando `Host`, `Origin`, `Cookie` e `Set-Cookie`, sem cache nas rotas de sessão e respeitando as regras de proxy confiável da CEP API. As chaves Data Protection do servidor precisam persistir entre atualizações. Vite é desenvolvimento/prévia. Não abra por `file://`. O build inclui CSP sem scripts de terceiros; fontes e logo são locais. Tokens Monday/VR pertencem exclusivamente ao backend.
 
 ## Contrato e validação
 
-Antes de adaptar integrações:
+Antes de adaptar integrações, atualize o contrato real:
 
 ```powershell
-./scripts/sync-openapi.ps1
-pnpm types:api
+./scripts/sync-openapi.ps1 -OutputPath ./docs/openapi-backend-current.json
 ```
 
-Tipos gerados: `src/auth/api-schema.d.ts`.
+Compare o snapshot real com `docs/openapi.json`. Quando rotas ou schemas mudarem, execute `pnpm types:api` e adapte cliente e testes no mesmo trabalho. Tipos gerados: `src/auth/api-schema.d.ts`.
 
 ```powershell
 pnpm test
@@ -88,8 +96,8 @@ Esse teste opcional verifica apenas rejeição de uma conta inexistente pela API
 
 ## Dependências para homologação
 
-1. Login manual de um responsável com conta `OrganizationAdmin` para testar consultas e alterações autorizadas na organização local.
+1. Login manual no navegador e no executável desktop com uma conta de homologação para validar cookies, retomada, rotação e logout contra o ambiente publicado.
 2. Na preparação inicial, Monday/VR estavam desabilitados no Docker local; confira a configuração atual antes da homologação. Perfis, associação com dados reais e cobertura/histórico importados dependem de configuração segura dessas integrações no servidor. O frontend não habilita fontes nem recebe seus tokens.
-3. Convites enfileirados podem ser inspecionados no Mailpit em `http://127.0.0.1:8025`. O envio/aceite real depende de perfis disponíveis e de um destinatário de teste autorizado. A tela pública de aceite de convite ainda é uma próxima etapa; esta entrega cobre a criação e acompanhamento administrativo.
-4. Comparação consolidada por turno, justificativas, aprovação do gestor e notificações não estão disponíveis na API principal e não foram simuladas.
-5. Publicação web, instalador e assinatura do executável ainda não foram executados.
+3. Convites enfileirados podem ser inspecionados no Mailpit em `http://127.0.0.1:8025`. O envio/aceite real depende de perfis disponíveis e de um destinatário de teste autorizado. A tela pública de aceite aguarda um contrato web seguro: o endpoint atual retorna refresh token no corpo e não deve ser ligado diretamente ao React.
+4. Comparação consolidada por turno, justificativas, decisão do líder e notificações não estão disponíveis na API principal e não foram simuladas.
+5. As novas telas operacionais e administrativas foram verificadas com contrato e mocks de navegador; ainda exigem homologação autenticada com contas de Membro, Líder e Coordenador na API real. Publicação web, instalador e assinatura do executável ainda não foram executados.

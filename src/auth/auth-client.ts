@@ -50,18 +50,25 @@ export function describeError(status: number, problem: ApiProblem): string {
       'Este e-mail já possui uma conta ou convite pendente. Confira a lista de pessoas.',
     invitation_not_found: 'Este convite não está disponível nesta organização. Atualize a lista.',
     invitation_not_pending: 'Este convite já foi aceito ou revogado e não pode ser reenviado.',
+    last_organization_admin: 'Este é o último coordenador ativo da organização. Promova outro coordenador antes de alterar seu acesso.',
+    user_not_found: 'Esta conta não está mais disponível na organização. Atualize a lista.',
+    invalid_display_name: 'Informe um nome válido para o usuário.',
     email_domain_not_allowed: 'O domínio deste e-mail não está autorizado para cadastro.',
-    sync_already_running: 'Já existe uma sincronização em andamento. Acompanhe o resultado abaixo.',
+    sync_already_running: 'Já existe uma sincronização em andamento. Aguarde e consulte novamente; você só pode acompanhar lotes que solicitou.',
+    sync_scope_empty: 'Não há pessoas no seu escopo com identidades ativas nas duas fontes. Peça ao coordenador para conferir vínculos e associações.',
+    full_sync_forbidden: 'A carga completa é restrita à coordenação. Use a atualização dos últimos 7 dias.',
+    monday_responsible_column_unavailable: 'A coluna de responsável do Monday não está disponível. Peça ao coordenador para revisar a configuração da fonte.',
+    monday_multiple_responsibles: 'Há item do Monday com mais de um responsável. Corrija a atribuição na origem e atualize novamente.',
     sync_not_found: 'Nenhuma sincronização foi iniciada.',
-    team_name_unavailable: 'Já existe uma equipe com esse nome.',
+    team_name_unavailable: 'Já existe um time com esse nome.',
     team_assignment_overlap:
       'Já existe um vínculo para essa pessoa e função em um período sobreposto.',
     team_assignment_already_ended: 'Este vínculo já possui data de encerramento. Atualize a lista.',
     invalid_assignment_period:
       'Confira as datas de vigência. O fim não pode ser anterior ao início.',
-    team_inactive: 'Ative a equipe antes de adicionar vínculos.',
+    team_inactive: 'Ative o time antes de adicionar vínculos.',
     user_inactive: 'Esta conta está inativa e não pode receber um vínculo.',
-    history_period_too_large: 'Selecione um intervalo de até 60 dias, incluindo as duas datas.',
+    history_period_too_large: 'Selecione um intervalo de até 90 dias, incluindo as duas datas.',
     invalid_history_period: 'Informe um período válido para a consulta.',
     session_expired: 'Sua sessão expirou ou foi revogada. Entre novamente.',
     web_origin_invalid:
@@ -77,7 +84,7 @@ export function describeError(status: number, problem: ApiProblem): string {
   if (status === 401 || problem.code === 'invalid_credentials')
     return 'E-mail ou senha inválidos, ou acesso indisponível. Confira seus dados e tente novamente.'
   if (status === 403)
-    return 'Sua conta não tem acesso no momento. Entre em contato com o administrador.'
+    return 'Sua conta não tem acesso no momento. Entre em contato com o coordenador.'
   if (status === 400) return 'Confira os dados informados e tente novamente.'
   return 'Não foi possível acessar o serviço. Tente novamente em instantes.'
 }
@@ -279,7 +286,11 @@ export class HttpAuthClient implements AuthClient {
   }
 
   async request<T>(method: 'GET' | 'POST' | 'PATCH', path: string, body?: object): Promise<T> {
-    if (!path.startsWith('/organization/') && path.split('?')[0] !== '/admin/organizations' && path !== '/me')
+    if (
+      !path.startsWith('/organization/') &&
+      path.split('?')[0] !== '/admin/organizations' &&
+      path !== '/me'
+    )
       throw new Error('Unsupported API route')
     if (this.refreshFlight) await this.refreshFlight
     if (!this.accessToken || this.expiresAt <= Date.now() + 30_000) await this.refresh()

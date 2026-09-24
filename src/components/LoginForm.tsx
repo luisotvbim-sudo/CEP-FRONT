@@ -132,7 +132,7 @@ export function LoginForm({
         <p>
           Ainda não tem acesso?
           <br />
-          <span>Solicite um convite ao administrador da sua organização.</span>
+          <span>Solicite um convite ao coordenador da sua organização.</span>
         </p>
       </div>
       <div className="privacy-note">

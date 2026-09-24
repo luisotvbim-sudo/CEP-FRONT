@@ -36,8 +36,8 @@ export function TeamsPage({ api }: { api: AdminApi }) {
   return (
     <>
       <PageHeading
-        title="Equipes"
-        description="Organize membros e gestores, preservando a vigência de cada vínculo."
+        title="Times"
+        description="Organize membros e líderes, preservando a vigência de cada vínculo."
       />
       <form
         className="admin-panel create-team"
@@ -52,7 +52,7 @@ export function TeamsPage({ api }: { api: AdminApi }) {
         }}
       >
         <div>
-          <label htmlFor="team-name">Nome da nova equipe</label>
+          <label htmlFor="team-name">Nome do novo time</label>
           <input
             id="team-name"
             required
@@ -65,7 +65,7 @@ export function TeamsPage({ api }: { api: AdminApi }) {
         </div>
         <button className="primary-button compact" disabled={action.pending || !name.trim()}>
           <Plus size={17} />
-          {action.pending ? 'Cadastrando…' : 'Cadastrar equipe'}
+          {action.pending ? 'Cadastrando…' : 'Cadastrar time'}
         </button>
         <FormNotice error={action.error} />
       </form>
@@ -77,12 +77,12 @@ export function TeamsPage({ api }: { api: AdminApi }) {
               checked={includeInactive}
               onChange={(e) => setIncludeInactive(e.target.checked)}
             />{' '}
-            Incluir equipes inativas
+            Incluir times inativos
           </label>
           <label className="date-inline">
             Vínculos em{' '}
             <input
-              aria-label="Data de referência das equipes"
+              aria-label="Data de referência dos times"
               type="date"
               required
               value={asOf}
@@ -98,8 +98,8 @@ export function TeamsPage({ api }: { api: AdminApi }) {
         ) : (
           !list.error &&
           (!list.data?.length ? (
-            <Empty title="Nenhuma equipe cadastrada">
-              <p>Cadastre uma equipe para organizar os vínculos.</p>
+            <Empty title="Nenhum time cadastrado">
+              <p>Cadastre um time para organizar os vínculos.</p>
             </Empty>
           ) : (
             <div className="team-grid">
@@ -118,7 +118,7 @@ export function TeamsPage({ api }: { api: AdminApi }) {
                     {team.isActive ? 'Ativa' : 'Inativa'}
                   </Badge>
                   <span>
-                    {team.activeMembers ?? 0} membros · {team.activeManagers ?? 0} gestores em{' '}
+                    {team.activeMembers ?? 0} membros · {team.activeManagers ?? 0} líderes em{' '}
                     {date(asOf)}
                   </span>
                 </button>
@@ -157,11 +157,11 @@ function TeamDetail({ api, team, onBack }: { api: AdminApi; team: Team; onBack()
   return (
     <>
       <button className="text-button" onClick={onBack}>
-        <ArrowLeft size={15} /> Todas as equipes
+        <ArrowLeft size={15} /> Todos os times
       </button>
       <PageHeading
-        title={team.name || 'Equipe'}
-        description="Gerencie as informações da equipe e a vigência de membros e gestores."
+        title={team.name || 'Time'}
+        description="Gerencie as informações do time e a vigência de membros e líderes."
       />
       {notice && (
         <div className="success-notice" role="status">
@@ -175,13 +175,13 @@ function TeamDetail({ api, team, onBack }: { api: AdminApi; team: Team; onBack()
           void edit.run(async () => {
             const result = await api.updateTeam(team.id!, name.trim(), enabled)
             setSavedActive(result.isActive === true)
-            setNotice('Equipe atualizada.')
+            setNotice('Time atualizado.')
             list.reload()
           })
         }}
       >
         <div>
-          <label htmlFor="edit-team-name">Nome da equipe</label>
+          <label htmlFor="edit-team-name">Nome do time</label>
           <input
             id="edit-team-name"
             required
@@ -198,10 +198,10 @@ function TeamDetail({ api, team, onBack }: { api: AdminApi; team: Team; onBack()
             onChange={(e) => setEnabled(e.target.checked)}
             disabled={edit.pending}
           />{' '}
-          Equipe ativa
+          Time ativo
         </label>
         <button className="secondary-button" disabled={edit.pending || !name.trim()}>
-          {edit.pending ? 'Salvando…' : 'Salvar equipe'}
+          {edit.pending ? 'Salvando…' : 'Salvar time'}
         </button>
         <FormNotice error={edit.error} />
       </form>
@@ -246,7 +246,7 @@ function TeamDetail({ api, team, onBack }: { api: AdminApi; team: Team; onBack()
                 <thead>
                   <tr>
                     <th>Pessoa</th>
-                    <th>Função na equipe</th>
+                    <th>Função no time</th>
                     <th>Início</th>
                     <th>Fim inclusivo</th>
                     <th>Ação</th>
@@ -259,7 +259,7 @@ function TeamDetail({ api, team, onBack }: { api: AdminApi; team: Team; onBack()
                         <strong>{a.userDisplayName}</strong>
                         <small>{a.userEmail}</small>
                       </td>
-                      <td>{a.role === 'manager' ? 'Gestor' : 'Membro'}</td>
+                      <td>{a.role === 'manager' ? 'Líder' : 'Membro'}</td>
                       <td>{date(a.effectiveFrom)}</td>
                       <td>{a.effectiveTo ? date(a.effectiveTo) : 'Sem data de fim'}</td>
                       <td>
@@ -331,9 +331,9 @@ function TeamDetail({ api, team, onBack }: { api: AdminApi; team: Team; onBack()
         </form>
       )}
       <section className="admin-panel">
-        <h2>Adicionar membro ou gestor</h2>
+        <h2>Adicionar membro ou líder</h2>
         {!savedActive ? (
-          <p className="inline-info">Ative e salve a equipe para adicionar vínculos.</p>
+          <p className="inline-info">Ative e salve o time para adicionar vínculos.</p>
         ) : (
           <>
             <SearchBox
@@ -398,14 +398,14 @@ function TeamDetail({ api, team, onBack }: { api: AdminApi; team: Team; onBack()
               <fieldset className="unframed" disabled={assign.pending}>
                 <div className="form-grid three">
                   <div>
-                    <label htmlFor="assignment-role">Função na equipe</label>
+                    <label htmlFor="assignment-role">Função no time</label>
                     <select
                       id="assignment-role"
                       value={role}
                       onChange={(e) => setRole(e.target.value as 'member' | 'manager')}
                     >
                       <option value="member">Membro</option>
-                      <option value="manager">Gestor</option>
+                      <option value="manager">Líder</option>
                     </select>
                   </div>
                   <div>
@@ -429,7 +429,10 @@ function TeamDetail({ api, team, onBack }: { api: AdminApi; team: Team; onBack()
                     />
                   </div>
                 </div>
-                <p className="muted">A função na equipe não altera o papel de acesso da conta.</p>
+                <p className="muted">
+                  O vínculo de líder vigente já limita o acesso a times, pessoas e histórico na API.
+                  As telas operacionais de gestão são apresentadas apenas a quem lidera um time.
+                </p>
                 <FormNotice error={assign.error} />
                 <button className="primary-button compact" disabled={!user?.id || assign.pending}>
                   {assign.pending ? 'Salvando vínculo…' : 'Adicionar vínculo'}

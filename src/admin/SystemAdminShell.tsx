@@ -77,7 +77,7 @@ export function SystemAdminShell({
         products: ['revit', 'zwcad'],
       })
       setShowCreate(false)
-      setNotice('Organização criada. O convite do administrador foi colocado na fila de envio.')
+      setNotice('Organização criada. O convite do coordenador foi colocado na fila de envio.')
       reload(1)
     } catch (failure) {
       setError(errorMessage(failure))
@@ -103,7 +103,7 @@ export function SystemAdminShell({
       <div className="admin-main">
         <header className="admin-header">
           <div>
-            <strong>CEP Horas · Administrador global</strong>
+            <strong>CEP Horas · Administração técnica da plataforma</strong>
             <p>{session.user.displayName}</p>
           </div>
           <button
@@ -158,12 +158,11 @@ export function SystemAdminShell({
                 />
               </label>
               <label>
-                E-mail do administrador da organização
+                E-mail do coordenador da organização
                 <input name="email" type="email" required maxLength={320} disabled={pending} />
               </label>
               <p>
-                Ao criar, será enviado um convite para este administrador, com acesso a Revit e
-                ZWCAD.
+                Ao criar, será enviado um convite para este coordenador, com acesso a Revit e ZWCAD.
               </p>
               <button className="primary-button" disabled={pending}>
                 {pending ? 'Criando…' : 'Criar e convidar'}

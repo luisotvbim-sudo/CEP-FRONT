@@ -22,6 +22,9 @@ let loginBody,
   logoutBody,
   refreshes = 0,
   resends = 0,
+  audits = 0,
+  userPatches = 0,
+  adminInvites = 0,
   protectedCalls = 0
 const tokens = (number, lifetime = 900_000) => ({
   accessToken: `fixture-access-${number}`,
@@ -55,6 +58,20 @@ const server = createServer(async (req, res) => {
     assert.equal(req.headers.authorization, `Bearer fixture-access-${refreshes}`)
     protectedCalls++
     res.end(JSON.stringify({ items: [], total: 0, page: 1, pageSize: 12 }))
+  } else if (url.pathname === '/api/v1/organization/audit') {
+    assert.equal(req.method, 'GET')
+    assert.equal(req.headers.authorization, `Bearer fixture-access-${refreshes}`)
+    audits++
+    res.end('[]')
+  } else if (url.pathname === `/api/v1/organization/users/${user.id}`) {
+    assert.equal(req.method, 'PATCH')
+    assert.equal(req.headers.authorization, `Bearer fixture-access-${refreshes}`)
+    userPatches++
+    res.end(JSON.stringify({ ...user, ...body }))
+  } else if (url.pathname === '/api/v1/organization/invitations' && req.method === 'POST') {
+    assert.equal(req.headers.authorization, `Bearer fixture-access-${refreshes}`)
+    adminInvites++
+    res.writeHead(201).end(JSON.stringify({ id: '90000000-0000-0000-0000-000000000002', email: body.email, role: body.role }))
   } else if (url.pathname === '/api/v1/organization/invitations') {
     assert.equal(req.headers.authorization, `Bearer fixture-access-${refreshes}`)
     protectedCalls++
@@ -112,6 +129,19 @@ async function close() {
     child.kill()
     await exited
   }
+}
+async function bridgeApi(page, payload) {
+  return page.evaluate((request) => new Promise((resolve) => {
+    const id = crypto.randomUUID()
+    const listener = (event) => {
+      if (event.data.id === id) {
+        window.chrome.webview.removeEventListener('message', listener)
+        resolve(event.data)
+      }
+    }
+    window.chrome.webview.addEventListener('message', listener)
+    window.chrome.webview.postMessage({ type: 'cep-auth', id, operation: 'api', payload: request })
+  }), payload)
 }
 try {
   let page = await open()
@@ -175,6 +205,13 @@ try {
         }),
     )
     assert.equal(denied.error.code, 'unsupported_route')
+    assert.equal((await bridgeApi(page, { method: 'GET', path: '/organization/audit?pageSize=50' })).ok, true)
+    assert.equal((await bridgeApi(page, { method: 'PATCH', path: `/organization/users/${user.id}`, body: { displayName: user.displayName, role: user.role, status: user.status, products: [] } })).ok, true)
+    assert.equal((await bridgeApi(page, { method: 'POST', path: '/organization/invitations', body: { email: 'new@example.invalid', role: 'organizationAdmin', products: [] } })).ok, true)
+    assert.equal((await bridgeApi(page, { method: 'PATCH', path: '/organization/users/not-a-guid', body: {} })).error.code, 'unsupported_route')
+    assert.equal(audits, 1)
+    assert.equal(userPatches, 1)
+    assert.equal(adminInvites, 1)
     const resend = await page.evaluate(
       () =>
         new Promise((resolve) => {

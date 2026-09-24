@@ -6,7 +6,13 @@ import { date, sourceLabel, syncLabels, timestamp } from './format'
 import { Badge, Empty, Loading, PageHeading, QueryError } from './ui'
 import { FormNotice } from '../components/FormNotice'
 
-export function SyncPage({ api }: { api: AdminApi }) {
+const sourceAdvice: Record<string, string> = {
+  monday_responsible_column_unavailable: 'Peça ao coordenador para revisar a coluna de responsável configurada no Monday.',
+  monday_multiple_responsibles: 'Há item com vários responsáveis. Corrija a atribuição na origem antes de atualizar novamente.',
+  monday_invalid_configuration: 'Peça ao coordenador para revisar a configuração do Monday no servidor.',
+}
+
+export function SyncPage({ api, allowFull = true }: { api: AdminApi; allowFull?: boolean }) {
   const [batch, setBatch] = useState<Sync | null>(null)
   const [loading, setLoading] = useState(true)
   const [starting, setStarting] = useState(false)
@@ -83,8 +89,14 @@ export function SyncPage({ api }: { api: AdminApi }) {
       revision.current++
       previousBatch.current = undefined
       if (active.current) {
-        setError(errorMessage(failure))
-        await refresh()
+        const problem = errorMessage(failure)
+        setError(problem)
+        // A member's /latest only exposes their own batches. A conflict may belong to
+        // somebody else, so showing their previous batch as the current one is misleading.
+        if (!allowFull && problem.code === 'sync_already_running') {
+          setBatch(null)
+          setLoading(false)
+        } else await refresh()
       }
     } finally {
       inFlight.current = false
@@ -117,15 +129,19 @@ export function SyncPage({ api }: { api: AdminApi }) {
             A coleta é feita pela API. Uma falha no Monday não descarta o resultado válido do VR
             Mais, e vice-versa.
           </p>
-          <label className="checkbox-row">
-            <input
-              type="checkbox"
-              checked={full}
-              onChange={(e) => setFull(e.target.checked)}
-              disabled={running}
-            />
-            <span>Reprocessar os últimos 60 dias</span>
-          </label>
+          {allowFull ? (
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={full}
+                onChange={(e) => setFull(e.target.checked)}
+                disabled={running}
+              />
+              <span>Reprocessar até 90 dias e diretórios (carga administrativa)</span>
+            </label>
+          ) : (
+            <p className="muted">A atualização normal reavalia os últimos 7 dias da sua pessoa e das pessoas dos times que você lidera, quando houver.</p>
+          )}
         </div>
         <button
           className="primary-button compact"
@@ -133,7 +149,7 @@ export function SyncPage({ api }: { api: AdminApi }) {
           onClick={() => void start()}
         >
           <RefreshCw size={17} className={running ? 'spin' : ''} />
-          {running ? 'Coleta em andamento…' : 'Iniciar sincronização'}
+          {running ? 'Coleta em andamento…' : allowFull && full ? 'Reprocessar até 90 dias' : 'Atualizar últimos 7 dias'}
         </button>
       </div>
       <FormNotice error={error} />
@@ -148,8 +164,10 @@ export function SyncPage({ api }: { api: AdminApi }) {
         <Loading />
       ) : !batch && !running && !pollError ? (
         <div className="admin-panel">
-          <Empty title="Nenhuma sincronização registrada">
-            <p>Inicie a coleta para verificar a disponibilidade das fontes e importar os perfis.</p>
+          <Empty title={error?.code === 'sync_already_running' ? 'Outra atualização está em andamento' : 'Nenhuma sincronização registrada'}>
+            <p>{error?.code === 'sync_already_running'
+              ? 'Aguarde e tente novamente. Seu histórico anterior não foi atualizado por esta tentativa.'
+              : 'Inicie a coleta para verificar a disponibilidade das fontes e importar os perfis.'}</p>
           </Empty>
         </div>
       ) : (
@@ -216,13 +234,14 @@ export function SyncPage({ api }: { api: AdminApi }) {
                           item.errorCode && (
                             <div className="inline-info">
                               {item.errorMessage || 'A fonte não concluiu a coleta.'}
+                              {item.errorCode && sourceAdvice[item.errorCode] && <p>{sourceAdvice[item.errorCode]}</p>}
                               <small>Código: {item.errorCode}</small>
                             </div>
                           )
                         )}
                         <dl className="source-metrics">
                           <div>
-                            <dt>Perfis recebidos</dt>
+                            <dt>Perfis recebidos nesta tentativa</dt>
                             <dd>{item.receivedCount ?? '—'}</dd>
                           </div>
                           <div>
@@ -261,13 +280,18 @@ export function SyncPage({ api }: { api: AdminApi }) {
                                 : 'Nenhuma cobertura informada'}
                             </p>
                             <small>
-                              Diretório:{' '}
+                              Retrato do escopo processado:{' '}
                               {item.completeSnapshot
-                                ? 'retrato completo informado'
-                                : 'retrato completo não confirmado'}
+                                ? 'completo nesta tentativa'
+                                : 'não confirmado'}
                             </small>
                           </div>
                         </div>
+                        {item.receivedCount === 0 && (
+                          <p className="page-footnote">
+                            Zero perfis recebidos não confirma diretório vazio: ele pode não ter sido consultado nesta tentativa.
+                          </p>
+                        )}
                         <p className="page-footnote">
                           Conclusão da tentativa: {timestamp(item.completedAt)}
                         </p>

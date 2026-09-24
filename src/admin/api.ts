@@ -11,6 +11,7 @@ export type Assignment = Schema['TeamAssignmentResponse']
 export type TimeRecord = Schema['WorkforceTimeRecordResponse']
 export type Invitation = Schema['InvitationResponse']
 export type User = Schema['UserResponse']
+export type AuditEvent = Schema['AuditEventResponse']
 export type Paged<T> = { items?: T[] | null; total?: number; page?: number; pageSize?: number }
 export type History = Schema['WorkforceAdminHistoryResponse']
 
@@ -33,11 +34,20 @@ export class AdminApi {
       : path
     return this.client.request<T>(method, scoped, body)
   }
-  people(search = '', page = 1) {
+  people(search = '', page = 1, pageSize = 12) {
     return this.request<Paged<Person>>(
       'GET',
-      `${root}/people${query({ search, page, pageSize: 12 })}`,
+      `${root}/people${query({ search, page, pageSize })}`,
     )
+  }
+  async visiblePeople() {
+    const pageSize = 100
+    const first = await this.people('', 1, pageSize)
+    const pages = Math.ceil((first.total ?? first.items?.length ?? 0) / pageSize)
+    const rest = pages > 1
+      ? await Promise.all(Array.from({ length: pages - 1 }, (_, i) => this.people('', i + 2, pageSize)))
+      : []
+    return [first, ...rest].flatMap((result) => result.items ?? [])
   }
   invitations() {
     return this.request<Invitation[]>('GET', '/organization/invitations')
@@ -90,6 +100,18 @@ export class AdminApi {
       'GET',
       `/organization/users${query({ search, page, pageSize: 12, status: 'active' })}`,
     )
+  }
+  organizationUsers(search = '', status?: Schema['UserStatus'], page = 1) {
+    return this.request<Paged<User>>('GET', `/organization/users${query({ search, status, page, pageSize: 20 })}`)
+  }
+  updateUser(id: string, body: Schema['UpdateUserRequest']) {
+    return this.request<User>('PATCH', `/organization/users/${encodeURIComponent(id)}`, body)
+  }
+  inviteUser(body: Schema['InviteUserRequest']) {
+    return this.request<Invitation>('POST', '/organization/invitations', body)
+  }
+  audit(before?: string) {
+    return this.request<AuditEvent[]>('GET', `/organization/audit${query({ before, pageSize: 50 })}`)
   }
   assign(teamId: string, body: Schema['CreateTeamAssignmentRequest']) {
     return this.request<Assignment>(

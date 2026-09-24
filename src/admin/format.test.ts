@@ -7,9 +7,9 @@ describe('administrative display rules', () => {
     expect(duration(0)).toBe('00:00')
     expect(duration(90061)).toBe('25:01:01')
   })
-  it('enforces an inclusive 60-day period and real dates', () => {
-    expect(validatePeriod('2026-01-01', '2026-03-01')).toBeNull()
-    expect(validatePeriod('2026-01-01', '2026-03-02')).not.toBeNull()
+  it('enforces an inclusive 90-day period and real dates', () => {
+    expect(validatePeriod('2026-01-01', '2026-03-31')).toBeNull()
+    expect(validatePeriod('2026-01-01', '2026-04-01')).not.toBeNull()
     expect(validatePeriod('2026-02-30', '2026-03-01')).not.toBeNull()
     expect(validatePeriod('2026-09-02', '2026-09-01')).not.toBeNull()
   })

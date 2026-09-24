@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { History, Link2, LogOut, RefreshCw, ShieldCheck, Users, UsersRound } from 'lucide-react'
+import { ClipboardList, History, Link2, LogOut, RefreshCw, ShieldCheck, UserRoundCog, Users, UsersRound } from 'lucide-react'
 import logo from '../assets/conceito-logo.png'
 import type { AuthClient, AuthSession } from '../auth/auth-client'
 import { FormNotice } from '../components/FormNotice'
@@ -9,16 +9,20 @@ import { InvitePage } from './InvitePage'
 import { SyncPage } from './SyncPage'
 import { TeamsPage } from './TeamsPage'
 import { HistoryPage } from './HistoryPage'
+import { UsersPage } from './UsersPage'
+import { AuditPage } from './AuditPage'
 import { useAction } from './ui'
 import './admin.css'
 
-type Page = 'people' | 'invite' | 'sync' | 'teams' | 'history'
+type Page = 'people' | 'invite' | 'sync' | 'teams' | 'history' | 'users' | 'audit'
 const navigation = [
   { id: 'people', label: 'Pessoas', icon: Users },
   { id: 'invite', label: 'Associar e convidar', icon: Link2 },
   { id: 'sync', label: 'Sincronização', icon: RefreshCw },
-  { id: 'teams', label: 'Equipes', icon: UsersRound },
+  { id: 'teams', label: 'Times', icon: UsersRound },
   { id: 'history', label: 'Histórico', icon: History },
+  { id: 'users', label: 'Usuários', icon: UserRoundCog },
+  { id: 'audit', label: 'Auditoria', icon: ClipboardList },
 ] as const
 
 export function AdminShell({
@@ -51,7 +55,7 @@ export function AdminShell({
           <span className="product-mark">C</span>
           <div>
             <strong>CEP Horas</strong>
-            <span>Administração</span>
+            <span>Coordenação</span>
           </div>
         </div>
         <div className="nav-label">ORGANIZAÇÃO</div>
@@ -71,8 +75,8 @@ export function AdminShell({
           <ShieldCheck size={18} />
           <span>
             {organization
-              ? 'Administrador global · organização selecionada'
-              : 'Acesso restrito à organização da sua sessão'}
+              ? 'Administrador técnico · organização selecionada'
+              : 'Acesso de coordenador restrito à organização da sessão'}
           </span>
         </div>
       </aside>
@@ -80,7 +84,7 @@ export function AdminShell({
         <header className="admin-header">
           <div>
             <span className="breadcrumb">
-              Administração <span>/</span>{' '}
+              Coordenação <span>/</span>{' '}
               <strong>{navigation.find((x) => x.id === page)?.label}</strong>
             </span>
             {organization && (
@@ -97,8 +101,8 @@ export function AdminShell({
               {session.user.displayName?.slice(0, 1).toUpperCase() || 'A'}
             </span>
             <div>
-              <strong>{session.user.displayName || 'Administrador'}</strong>
-              <span>{organization ? 'Administrador global' : 'Administrador da organização'}</span>
+              <strong>{session.user.displayName || 'Coordenador'}</strong>
+              <span>{organization ? 'Administrador técnico' : 'Coordenador da organização'}</span>
             </div>
             <button
               className="icon-button"
@@ -138,6 +142,8 @@ export function AdminShell({
           {page === 'sync' && <SyncPage api={api} />}
           {page === 'teams' && <TeamsPage api={api} />}
           {page === 'history' && <HistoryPage api={api} initialPerson={person} />}
+          {page === 'users' && <UsersPage api={api} />}
+          {page === 'audit' && <AuditPage api={api} />}
         </main>
         <footer className="admin-footer">
           <span>CEP Horas · Conceito Engenharia</span>

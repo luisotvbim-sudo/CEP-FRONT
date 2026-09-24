@@ -11,3 +11,5 @@ playwright-report/
 **/bin/
 **/obj/
 *.local
+debug.log
+.pnpm-store/

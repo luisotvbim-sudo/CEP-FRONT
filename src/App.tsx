@@ -7,6 +7,7 @@ import { LoginForm } from './components/LoginForm'
 import { FormNotice } from './components/FormNotice'
 import { AdminShell } from './admin/AdminShell'
 import { SystemAdminShell } from './admin/SystemAdminShell'
+import { UserShell } from './user/UserShell'
 
 export function App({ client }: { client: AuthClient }) {
   const [session, setSession] = useState<AuthSession | null>(null)
@@ -53,7 +54,7 @@ export function App({ client }: { client: AuthClient }) {
   }, [client])
 
   useEffect(() => {
-    document.title = session ? 'Administração · CEP Horas' : 'Entrar · CEP Horas'
+    document.title = session ? 'CEP Horas' : 'Entrar · CEP Horas'
   }, [session, client])
 
   async function logout() {
@@ -90,6 +91,17 @@ export function App({ client }: { client: AuthClient }) {
         }}
       />
     )
+  if (session?.user.role === 'user' && session.user.organizationId)
+    return (
+      <UserShell
+        client={client}
+        session={session}
+        onLogout={() => {
+          setSession(null)
+          setNotice('Você saiu da sua conta com segurança.')
+        }}
+      />
+    )
   return (
     <div className="app-shell">
       <header className="page-header">
@@ -118,8 +130,8 @@ export function App({ client }: { client: AuthClient }) {
                 <strong>{session.user.email}</strong>
               </div>
               <p className="small-copy">
-                Acesso administrativo indisponível. Esta área exige o papel Administrador da
-                organização. Solicite orientação ao responsável pelo seu acesso.
+                A área de membro e líder ainda não está disponível nesta versão. A área de
+                coordenação exige o papel Coordenador da organização.
               </p>
               <FormNotice error={error} />
               <button className="primary-button" onClick={logout} disabled={pending}>

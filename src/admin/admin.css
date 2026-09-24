@@ -18,6 +18,9 @@
   color: #303030;
   font-size: 13px;
 }
+.user-person-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-top: 18px; }
+.user-person-list .person-choice[aria-pressed='true'] { border-color: #c24e12; background: #fcf0e6; }
+.user-source-status { display: grid; gap: 12px; }
 .admin-sidebar {
   width: 236px;
   position: fixed;
