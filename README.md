@@ -64,6 +64,8 @@ dotnet publish desktop/CepHoras.Desktop -c Release -r win-x64 --self-contained f
 
 O script valida o pacote e os arquivos copiados, instala em `%LOCALAPPDATA%/Programs/Conceito/CEP Horas` e cria o atalho `CEP Horas` no menu Iniciar. Ele se recusa a substituir uma instalação ou um atalho existente. A distribuição ainda requer .NET Desktop Runtime 10 e Microsoft Edge WebView2 Runtime. Este é um instalador local de teste, não um instalador EXE/MSIX assinado; atualização automática, inicialização com o Windows, execução em bandeja e notificações aguardam implementação e contrato de backend.
 
+O [handoff do aplicativo Windows](docs/desktop-handoff.md) registra o estado testado, dependências de notificações, estratégia de atualização ainda pendente e os passos para continuar em outro computador.
+
 ## Sessão e segurança
 
 `AuthClient` separa componentes do transporte. `HttpAuthClient` usa o proxy de mesma origem no navegador; `DesktopAuthClient` usa o bridge WPF. Os dois renovam antes da expiração ou após um 401 e serializam a rotação para impedir uso concorrente do mesmo refresh token. Falha ou resposta perdida na renovação exige novo login, sem reapresentar o token antigo. Falhas de rede em operações de gravação não causam repetição automática.
