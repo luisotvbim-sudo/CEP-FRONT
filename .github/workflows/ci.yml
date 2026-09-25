@@ -56,3 +56,4 @@ jobs:
       - run: pnpm build
       - run: dotnet build desktop/CepHoras.Desktop -c Debug
       - run: dotnet build desktop/CepHoras.Desktop -c Release
+      - run: dotnet run --project desktop/CepHoras.Updates.Tests -c Release

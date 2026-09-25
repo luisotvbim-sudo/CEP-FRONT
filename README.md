@@ -62,7 +62,15 @@ dotnet publish desktop/CepHoras.Desktop -c Release -r win-x64 --self-contained f
 ./scripts/install-desktop.ps1
 ```
 
-O script valida o pacote e os arquivos copiados, instala em `%LOCALAPPDATA%/Programs/Conceito/CEP Horas` e cria o atalho `CEP Horas` no menu Iniciar. Ele se recusa a substituir uma instalação ou um atalho existente. A distribuição ainda requer .NET Desktop Runtime 10 e Microsoft Edge WebView2 Runtime. Este é um instalador local de teste, não um instalador EXE/MSIX assinado; atualização automática, inicialização com o Windows, execução em bandeja e notificações aguardam implementação e contrato de backend.
+O script valida o pacote e os arquivos copiados, instala em `%LOCALAPPDATA%/Programs/Conceito/CEP Horas` e cria o atalho `CEP Horas` no menu Iniciar. Ele se recusa a substituir uma instalação ou um atalho existente. Esse instalador local de teste **não recebe atualizações** e não migra automaticamente para MSIX.
+
+O caminho de atualização do desktop é um pacote MSIX assinado, distribuído como release pública no GitHub. O app MSIX consulta releases `desktop-vX.Y.Z.W` ao abrir e a cada 6 horas enquanto estiver aberto. Quando encontrar uma versão maior com o asset `CEP-Horas-win-x64.msix`, mostra “Atualizar” na própria janela; após o clique, verifica SHA-256 e identidade do pacote e abre o Instalador de Aplicativos do Windows. O Windows valida a assinatura antes da instalação. A checagem não roda no instalador local de teste nem no navegador. Para construir um pacote estrutural de teste, **não instalável nem distribuível**:
+
+```powershell
+./scripts/build-desktop-msix.ps1 -Publisher 'CN=Conceito Engenharia' -UnsignedForTest
+```
+
+Para distribuir, é necessário obter assinatura confiável, gerar o MSIX assinado com `-CertificateThumbprint`, validar a instalação/atualização em outro PC e publicar o asset em uma release estável com tag e versão correspondentes. Ainda não há certificado nem release desktop; portanto a atualização real **não está ativada**. O pacote atual é framework-dependent e exige .NET Desktop Runtime 10 e Microsoft Edge WebView2 Runtime. Inicialização com o Windows, execução em bandeja e notificações de negócio continuam pendentes; avisos de atualização são um mecanismo separado.
 
 O [handoff do aplicativo Windows](docs/desktop-handoff.md) registra o estado testado, dependências de notificações, estratégia de atualização ainda pendente e os passos para continuar em outro computador.
 

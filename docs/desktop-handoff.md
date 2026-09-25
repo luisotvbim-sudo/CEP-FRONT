@@ -25,7 +25,7 @@ dotnet publish desktop/CepHoras.Desktop -c Release -r win-x64 --self-contained f
 ## O que existe e foi testado
 
 - A interface React é compartilhada entre navegador e Windows WPF/WebView2; o host Release usa `https://api.cep.lat` por padrão. A sessão desktop guarda o refresh token com DPAPI no perfil Windows, fora da pasta do programa.
-- `scripts/install-desktop.ps1` instala o pacote Release por usuário em `%LOCALAPPDATA%/Programs/Conceito/CEP Horas`, confere hashes SHA-256 dos arquivos e cria atalho no menu Iniciar. Também aceita um bundle extraído com `install.ps1` e subpasta `app/`. O script não substitui uma instalação ou atalho existente; não é instalador assinado, desinstalador nem atualizador.
+- `scripts/install-desktop.ps1` instala o pacote Release por usuário em `%LOCALAPPDATA%/Programs/Conceito/CEP Horas`, confere hashes SHA-256 dos arquivos e cria atalho no menu Iniciar. Também aceita um bundle extraído com `install.ps1` e subpasta `app/`. O script não substitui uma instalação ou atalho existente; é legado de teste e não recebe atualização automática.
 - Em 24/09/2026, passaram `pnpm build`, `pnpm lint`, 18 testes unitários, `dotnet publish` Release framework-dependent e a verificação dos arquivos instalados. O executável instalado abriu em WebView2; após login real de Coordenador, Pessoas, Times e Usuários carregaram. Não foram gravadas credenciais no repositório.
 - O teste autenticado acima cobre apenas Coordenador. Membro e Líder ainda precisam de homologação com contas próprias, sem alterar seus escopos no cliente.
 - Este pacote exige .NET Desktop Runtime 10 e WebView2 Runtime no PC. Publicação autossuficiente (`--self-contained true`) não foi validada neste ambiente por indisponibilidade de acesso ao NuGet durante o teste.
@@ -48,17 +48,23 @@ O [`openapi-backend-current.json`](openapi-backend-current.json) deste repositó
 
 ## Atualização do aplicativo Windows
 
-O instalador atual é manual e deliberadamente recusa sobrescrever arquivos. **Não existe atualização automática.** O mecanismo de produção ainda depende da escolha do canal de distribuição:
+O usuário escolheu **instalação individual por link** e informou que ainda **não possui certificado de assinatura**. A implementação em progresso usa releases públicas deste repositório, sem endpoint novo na CEP API e sem executar o app na VM:
 
-1. Se os PCs forem gerenciados por TI/Intune, avaliar distribuição e atualização centralizadas por esse canal.
-2. Para instalação individual por link, avaliar MSIX assinado com arquivo `.appinstaller` publicado em HTTPS. O Windows oferece verificação de atualização ao iniciar e em segundo plano; assinatura e confiança do certificado são pré-requisitos. Referências: [atualização pelo App Installer](https://learn.microsoft.com/en-us/windows/msix/app-installer/auto-update-and-repair--overview) e [assinatura de MSIX](https://learn.microsoft.com/en-us/windows/msix/package/sign-msix-package-guide).
+1. `scripts/build-desktop-msix.ps1` gera um MSIX x64. Sem certificado, só permite um pacote marcado `UNSIGNED` para validação estrutural; com `-CertificateThumbprint`, o `Publisher` vem do certificado e o pacote é assinado. Nome e Publisher devem permanecer estáveis entre versões.
+2. Uma release desktop deve ter tag `desktop-vX.Y.Z.W` e asset `CEP-Horas-win-x64.msix`, assinado e com a mesma versão do manifesto. O pacote é público, pois o app consulta a API pública do GitHub sem guardar token.
+3. Apenas a instalação MSIX verifica releases ao abrir e a cada seis horas. A tela WPF avisa sobre uma versão maior. Ao clicar “Atualizar”, baixa o MSIX, confere o digest SHA-256 do GitHub e a identidade/versão do manifesto contra a instalação atual, e abre o Instalador de Aplicativos do Windows para confirmação e validação da assinatura. O processo em execução pode precisar ser fechado para concluir a troca.
+4. O instalador PowerShell atual não será sobrescrito por MSIX. A primeira migração deve ser planejada e testada; não prometer retomada automática da sessão DPAPI nessa passagem. Depois de instalada a primeira versão MSIX, as versões seguintes compartilham a mesma identidade.
 
-Isto é uma **proposta, não uma decisão ou implementação**. Antes de adotá-la, definir quem gerencia os PCs, política de assinatura, endereço de distribuição, versionamento, migração da instalação de teste, tratamento de app aberto, teste de atualização/recuperação e preservação da sessão DPAPI. Atualizações do desktop são independentes das publicações web/API na VM.
+O pacote MSIX sem assinatura foi gerado e inspecionado localmente, mas **não foi instalado**. O `Publisher` de teste (`CN=Conceito Engenharia`) é ilustrativo; a primeira distribuição deve usar o Subject do certificado real e mantê-lo nas próximas versões. Não há release desktop publicada nem certificado confiável: ainda não existe atualização ponta a ponta para usuários. Assinatura própria de teste exigiria confiar no certificado em cada PC; não foi aplicada. Para produção, obter assinatura confiável (por exemplo, Azure Artifact Signing ou certificado de código) e validar uma atualização real entre duas versões. O script atual assina por certificado com chave privada no repositório de certificados local; usar Azure Artifact Signing exigirá integrar esse serviço ao processo de build. [A Microsoft exige assinatura confiável para distribuição MSIX](https://learn.microsoft.com/en-us/windows/msix/package/sign-msix-package-guide). A documentação da Microsoft também informa que `ShowPrompt` do App Installer não mostra aviso em apps desktop WPF; por isso o aviso foi implementado na janela WPF, separado da instalação pelo Windows: [OnLaunch](https://learn.microsoft.com/en-us/uwp/schemas/appinstallerschema/element-onlaunch).
+
+Nesta etapa, as 16 verificações automatizadas do atualizador passaram, bem como build Debug/Release, lint, 18 testes web e a inspeção do pacote (identidade, versão, arquitetura, marcador e arquivos). O smoke test WPF/WebView2 atual não concluiu: o endpoint de depuração abriu com perfil isolado, mas a conexão Playwright/CDP foi encerrada. Portanto, a janela de atualização e a troca real entre duas versões assinadas **não foram homologadas visualmente**.
+
+Atualizações do desktop continuam independentes das publicações web/API na VM. Ainda falta definir política de assinatura, processo de release, migração do instalador de teste, tratamento de app aberto e validação em outro PC.
 
 ## Próximos passos seguros
 
-1. Confirmar com o responsável se os PCs usam Intune/gestão corporativa ou instalação individual.
+1. Obter assinatura confiável e definir quem pode publicar a release desktop; nunca distribuir o pacote `UNSIGNED`.
 2. Concluir e publicar o contrato de notificações no backend, com seleção de destinatários feita no servidor; só depois sincronizar o OpenAPI e integrar a interface.
 3. Implementar e testar bandeja, inicialização no Windows, recepção autorizada e aviso nativo, inclusive reconexão e notificações não lidas após ficar offline. A interface web deve consumir a mesma fonte de dados autorizada.
-4. Escolher e implementar o canal de atualização assinado; validar em um segundo PC antes de distribuir à equipe.
+4. Publicar duas versões MSIX assinadas em releases de teste e validar aviso, download, instalação, retomada e migração do instalador atual em um segundo PC antes de distribuir à equipe.
 5. Homologar Membro, Líder e Coordenador com contas de teste. Manter esta branch fora da `main` até haver decisão explícita de publicação, pois a VM monitora a `main`.
