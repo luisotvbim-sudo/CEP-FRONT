@@ -26,9 +26,13 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         Loaded += Initialize;
+        System.Windows.Application.Current.SessionEnding += OnSessionEnding;
         Closing += (_, args) => { if (!exiting && tray is not null) { args.Cancel = true; Hide(); } };
-        Closed += (_, _) => { closed = true; notificationTimer.Stop(); tray?.Dispose(); Browser.Dispose(); session?.Dispose(); };
+        Closed += (_, _) => { closed = true; System.Windows.Application.Current.SessionEnding -= OnSessionEnding; notificationTimer.Stop(); tray?.Dispose(); Browser.Dispose(); session?.Dispose(); };
     }
+
+    // Closing to tray must never interfere with Windows logoff or shutdown.
+    private void OnSessionEnding(object sender, SessionEndingCancelEventArgs args) => exiting = true;
 
     private async void Initialize(object sender, RoutedEventArgs e)
     {
