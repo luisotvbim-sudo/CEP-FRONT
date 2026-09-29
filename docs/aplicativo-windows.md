@@ -34,3 +34,13 @@ O bundle ZIP de teste contém `app/` e `install.ps1`, que instala no perfil Wind
 - A preparação do atualizador foi preservada. Não foi criada uma release pública nem escolhida uma nova política de assinatura.
 
 Referências: [popup da bandeja](https://learn.microsoft.com/en-us/dotnet/api/system.windows.forms.notifyicon.showballoontip?view=windowsdesktop-10.0), [tarefa de início MSIX](https://learn.microsoft.com/en-us/uwp/schemas/appxpackage/uapmanifestschema/element-desktop-startuptask).
+
+## Download público — versão de teste
+
+A página `/download` é pública e acessível pelo rodapé do login no navegador. Não solicita autenticação nem consulta a API. Mostra requisitos, uso portátil, instalação opcional, bandeja e a ausência de assinatura/atualização automática no ZIP.
+
+A primeira publicação usa a prerelease `desktop-v0.2.0.1-test`, com `CEP-Horas-Windows.zip` e `SHA256SUMS.txt`. O assembly é publicado com versão `0.2.0.1`. A tag de teste é ignorada pelo atualizador de MSIX; releases assinadas continuam usando `desktop-vX.Y.Z.W` e `CEP-Horas-win-x64.msix`.
+
+Antes de publicar outra versão: gerar Release em diretório novo, incluir a pasta inteira em `app/`, copiar `scripts/install-desktop.ps1` como `install.ps1`, incluir as instruções de uso e gerar SHA-256 do ZIP. Nunca incluir perfis WebView2, sessões, credenciais ou certificados. Publicar os arquivos da tag correspondente e atualizar os links da página no mesmo trabalho.
+
+O site em produção só passa a mostrar a página após o deploy web; criar a release disponibiliza imediatamente o arquivo no GitHub. Esta publicação não instala certificados nem altera os computadores dos destinatários.

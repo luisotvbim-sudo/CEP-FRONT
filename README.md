@@ -41,6 +41,8 @@ Use uma conta existente no navegador ou no executável desktop. Não há credenc
 
 ## Executável Windows
 
+A página pública `/download` apresenta o pacote Windows de teste, requisitos, instruções e links da release. Ela não inicia uma sessão nem consulta a API. O download usa uma tag fixa do GitHub para não confundir versões de teste com o MSIX assinado.
+
 A integração do instalador com bandeja, WebView2 e teste de popup nativo está descrita em [Aplicativo Windows](docs/aplicativo-windows.md). A distribuição assinada e a atualização real entre versões continuam pendentes.
 
 Pré-requisitos adicionais: .NET SDK 10 e Microsoft Edge WebView2 Runtime.
