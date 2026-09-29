@@ -26,6 +26,8 @@ O [briefing antigo](docs/briefing-consulta-inicial.md) é histórico e não orie
 
 ## Executar no navegador
 
+Uma [prévia isolada de análises e notificações](docs/previa-analises-notificacoes.md) está disponível em desenvolvimento em `http://127.0.0.1:5173/?preview=analysis`. As sete telas usam exemplos explicitamente identificados, sem API ou envios reais. O módulo não é incluído no build de produção.
+
 Pré-requisitos: Node.js 22.12+ ou 24 e pnpm.
 
 ```powershell
