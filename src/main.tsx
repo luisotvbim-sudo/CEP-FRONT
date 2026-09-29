@@ -6,13 +6,25 @@ import { App } from './App'
 import { HttpAuthClient } from './auth/auth-client'
 import { DesktopAuthClient } from './auth/desktop-auth-client'
 
-const client =
-  window.__CEP_DESKTOP__ && window.chrome?.webview
-    ? new DesktopAuthClient(window.chrome.webview)
-    : new HttpAuthClient()
+const root = createRoot(document.getElementById('root')!)
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App client={client} />
-  </StrictMode>,
-)
+// This preview is excluded by Vite from production, including its fixtures.
+if (import.meta.env.DEV && new URLSearchParams(location.search).get('preview') === 'analysis') {
+  void import('./preview/AnalysisPreview').then(({ AnalysisPreview }) => {
+    root.render(
+      <StrictMode>
+        <AnalysisPreview />
+      </StrictMode>,
+    )
+  })
+} else {
+  const client =
+    window.__CEP_DESKTOP__ && window.chrome?.webview
+      ? new DesktopAuthClient(window.chrome.webview)
+      : new HttpAuthClient()
+  root.render(
+    <StrictMode>
+      <App client={client} />
+    </StrictMode>,
+  )
+}

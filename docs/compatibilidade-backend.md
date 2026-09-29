@@ -26,6 +26,8 @@ O `SystemAdmin` continua sendo administração técnica. `organizationId` é obr
 
 ## Limite entre backend e interface
 
+- Em 29/09 foi criada uma [prévia isolada das sete telas de análises e notificações](previa-analises-notificacoes.md), somente em desenvolvimento. Ela não chama endpoints nem comprova homologação. Durante esta etapa, outro trabalho atualizou contratos e integração no mesmo checkout; a validação dessa integração é distinta da revisão visual.
+
 - A área administrativa de Coordenador e `SystemAdmin` possui interface no front, incluindo usuários e auditoria.
 - O transporte web agora possui contrato correspondente no backend, mas a publicação em produção ainda exige proxy HTTPS de mesma origem e persistência das chaves Data Protection.
 - O backend já aplica o escopo de Líder e Membro nas consultas atuais de times, pessoas e histórico.
