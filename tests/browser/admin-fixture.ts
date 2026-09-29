@@ -185,6 +185,7 @@ export async function fixture(page: Page, options: { role?: string; empty?: bool
                   workforcePersonId: url.searchParams.get('workforcePersonId') === ids.memberPerson ? ids.memberPerson : ids.person,
                   displayName: url.searchParams.get('workforcePersonId') === ids.memberPerson ? memberPerson.displayName : person.displayName,
                   email: url.searchParams.get('workforcePersonId') === ids.memberPerson ? memberPerson.email : person.email,
+                  days: [{ day: '2026-09-20', mondaySeconds: 0, vrSeconds: null, deltaSeconds: null, partial: false, issues: ['incomplete'] }],
                   records: [
                     {
                       id: 'record-1',

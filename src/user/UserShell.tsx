@@ -4,9 +4,9 @@ import logo from '../assets/conceito-logo.png'
 import { AuthError, type AuthClient, type AuthSession } from '../auth/auth-client'
 import { FormNotice } from '../components/FormNotice'
 import { AdminApi, type Assignment, type History as WorkforceHistory, type Person, type Source, type Team } from '../admin/api'
-import { RecordDetails } from '../admin/HistoryPage'
+import { DailyHistory } from '../admin/DailyHistory'
 import { SyncPage } from '../admin/SyncPage'
-import { date, duration, sourceLabel, syncLabels, timestamp, today, validatePeriod } from '../admin/format'
+import { date, sourceLabel, syncLabels, timestamp, today, validatePeriod } from '../admin/format'
 import { Badge, Empty, Loading, PageHeading, QueryError, useAction, useQuery } from '../admin/ui'
 import '../admin/admin.css'
 import { Analyses, Inbox, useNotificationApi, useOpenInbox } from '../notifications/Pages'
@@ -48,10 +48,6 @@ function HistoryView({ api, person, title }: { api: AdminApi; person: Person; ti
   const [result, setResult] = useState<WorkforceHistory | null>(null)
   const [validation, setValidation] = useState<AuthError | null>(null)
   const action = useAction()
-  const states: Record<string, string> = {
-    closed: 'Finalizado', running: 'Em andamento', reported: 'Informado pela fonte',
-    missing: 'Sem registro', unrecognized: 'Não reconhecido',
-  }
 
   function change() {
     setResult(null)
@@ -73,7 +69,7 @@ function HistoryView({ api, person, title }: { api: AdminApi; person: Person; ti
   const entry = result?.people?.find((value) => value.workforcePersonId === person.id)
   const records = entry?.records ?? []
   return <>
-    <PageHeading title={title} description="Registros brutos das fontes; ainda não há conciliação nem saldo oficial." />
+    <PageHeading title={title} description="Totais importados por dia. Expanda uma data para conferir as atividades e os registros de ponto." />
     <div className="admin-panel history-filters">
       <h2>{person.displayName || person.email || 'Pessoa associada'}</h2>
       <p className="muted">{person.email || 'E-mail indisponível'}</p>
@@ -99,15 +95,7 @@ function HistoryView({ api, person, title }: { api: AdminApi; person: Person; ti
       {records.length === 0 ? <div className="admin-panel"><Empty title="Nenhum registro importado neste período"><p>Isso não significa zero horas. Confira a associação e a atualização das fontes.</p></Empty></div> : (
         <section className="admin-panel">
           <h2>Registros de {entry?.displayName || person.displayName || 'pessoa associada'}</h2>
-          <div className="table-scroll"><table><thead><tr><th>Data</th><th>Fonte / atividade</th><th>Duração</th><th>Situação da fonte</th><th>Origem e horários</th></tr></thead><tbody>
-            {records.map((record, index) => <tr key={record.id ?? index}>
-              <td>{date(record.workDate)}</td>
-              <td><strong>{sourceLabel(record.source)}</strong><small>{record.title || 'Sem título informado'}</small></td>
-              <td className="duration-cell">{duration(record.durationSeconds)}</td>
-              <td><Badge tone={record.state === 'running' || record.durationSeconds == null ? 'warning' : 'neutral'}>{states[record.state || ''] || record.state || 'Indisponível'}</Badge></td>
-              <td><RecordDetails record={record} /></td>
-            </tr>)}
-          </tbody></table></div>
+          {entry && <DailyHistory person={entry} source={source} />}
         </section>
       )}
       <p className="page-footnote">Duração indisponível não foi convertida em zero. Não há conclusão trabalhista ou comparação oficial nesta consulta.</p>

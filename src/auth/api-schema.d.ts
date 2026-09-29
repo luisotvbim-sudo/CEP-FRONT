@@ -2711,6 +2711,7 @@ export interface components {
             displayName?: string | null;
             email?: string | null;
             records?: components["schemas"]["WorkforceTimeRecordResponse"][] | null;
+            days?: components["schemas"]["TimeAnalysisDay"][] | null;
         };
         WorkforcePersonResponse: {
             /** Format: uuid */

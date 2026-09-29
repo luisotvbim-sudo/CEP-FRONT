@@ -4158,6 +4158,13 @@
               "$ref": "#/components/schemas/WorkforceTimeRecordResponse"
             },
             "nullable": true
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimeAnalysisDay"
+            },
+            "nullable": true
           }
         },
         "additionalProperties": false

@@ -840,6 +840,29 @@
 .duration-cell {
   font-variant-numeric: tabular-nums;
 }
+.daily-history .day-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+  color: #a64919;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+.daily-history small { display: block; font-weight: normal; white-space: normal; }
+.daily-history th, .daily-history td { vertical-align: top; }
+.day-details > td { background: #f7f7f7; white-space: normal; }
+.day-sources { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.day-sources h3 { margin-top: 0; }
+.day-record { padding: 14px; margin-bottom: 10px; border: 1px solid #dedede; border-radius: 8px; background: #fff; overflow-wrap: anywhere; }
+.day-record .record-details { margin-top: 12px; }
+@media (max-width: 700px) {
+  .day-sources { grid-template-columns: 1fr; width: calc(100vw - 80px); max-width: 100%; }
+  .daily-history { min-width: 640px; }
+}
 .record-details {
   min-width: 160px;
   max-width: 350px;

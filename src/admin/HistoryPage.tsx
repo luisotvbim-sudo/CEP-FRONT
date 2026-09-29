@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { ExternalLink, Search } from 'lucide-react'
+import { Search } from 'lucide-react'
+import { DailyHistory } from './DailyHistory'
 import { AuthError } from '../auth/auth-client'
 import { FormNotice } from '../components/FormNotice'
-import type { AdminApi, History, Person, Source, TimeRecord } from './api'
-import { date, duration, httpsUrl, sourceLabel, timestamp, today, validatePeriod } from './format'
+import type { AdminApi, History, Person, Source } from './api'
+import { date, timestamp, today, validatePeriod } from './format'
 import {
   Badge,
   Empty,
@@ -15,51 +16,6 @@ import {
   useAction,
   useQuery,
 } from './ui'
-
-export function RecordDetails({ record }: { record: TimeRecord }) {
-  let details: { timeCards?: unknown; manual?: boolean; running?: boolean } = {}
-  try {
-    const value: unknown = JSON.parse(record.detailsJson || '{}')
-    if (value && typeof value === 'object') details = value
-  } catch {
-    /* Optional source details are not guaranteed to be JSON. */
-  }
-  const cards = Array.isArray(details.timeCards)
-    ? details.timeCards.filter((x): x is string => typeof x === 'string')
-    : []
-  const url = httpsUrl(record.url)
-  return (
-    <details className="record-details">
-      <summary>Detalhes do registro</summary>
-      <dl>
-        <div>
-          <dt>Início</dt>
-          <dd>{timestamp(record.startedAt)}</dd>
-        </div>
-        <div>
-          <dt>Fim</dt>
-          <dd>{timestamp(record.endedAt)}</dd>
-        </div>
-        <div>
-          <dt>Importado em</dt>
-          <dd>{timestamp(record.lastSyncedAt)}</dd>
-        </div>
-        <div>
-          <dt>Referência externa</dt>
-          <dd>{record.externalKey || 'Indisponível'}</dd>
-        </div>
-      </dl>
-      {cards.length > 0 && <p>Batidas informadas: {cards.join(' · ')}</p>}
-      {details.manual && <p>Lançamento manual informado pela fonte.</p>}
-      {details.running && <p>Cronômetro em andamento; duração provisória.</p>}
-      {url && (
-        <a href={url} target="_blank" rel="noopener noreferrer">
-          Abrir atividade <ExternalLink size={13} />
-        </a>
-      )}
-    </details>
-  )
-}
 
 export function HistoryPage({
   api,
@@ -80,13 +36,6 @@ export function HistoryPage({
   const [validation, setValidation] = useState<AuthError | null>(null)
   const people = useQuery(() => api.people(search, page), [api, search, page])
   const action = useAction()
-  const states: Record<string, string> = {
-    closed: 'Finalizado',
-    running: 'Em andamento',
-    reported: 'Informado pela fonte',
-    missing: 'Sem registro',
-    unrecognized: 'Não reconhecido',
-  }
   function changed() {
     setResult(null)
     setValidation(null)
@@ -96,7 +45,7 @@ export function HistoryPage({
     <>
       <PageHeading
         title="Histórico"
-        description="Consulte os registros brutos importados. Estes dados ainda não representam uma conciliação de horas."
+        description="Consulte os totais importados por dia e expanda para conferir os registros de cada fonte."
       />
       <div className="admin-panel history-filters">
         <div className="panel-toolbar">
@@ -295,49 +244,11 @@ export function HistoryPage({
                   </div>
                   <Badge>{p.records?.length} registros</Badge>
                 </div>
-                <div className="table-scroll">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Data</th>
-                        <th>Fonte / atividade</th>
-                        <th>Duração</th>
-                        <th>Situação da fonte</th>
-                        <th>Origem e horários</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {p.records?.map((record, j) => (
-                        <tr key={record.id ?? j}>
-                          <td>{date(record.workDate)}</td>
-                          <td>
-                            <strong>{sourceLabel(record.source)}</strong>
-                            <small>{record.title || 'Sem título informado'}</small>
-                          </td>
-                          <td className="duration-cell">{duration(record.durationSeconds)}</td>
-                          <td>
-                            <Badge
-                              tone={
-                                record.state === 'running' || record.durationSeconds == null
-                                  ? 'warning'
-                                  : 'neutral'
-                              }
-                            >
-                              {states[record.state || ''] || record.state || 'Indisponível'}
-                            </Badge>
-                          </td>
-                          <td>
-                            <RecordDetails record={record} />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <DailyHistory person={p} source={source} />
               </section>
             ))}
           <p className="page-footnote">
-            Duração indisponível não foi convertida em zero. Não há cálculo de diferença por turno,
+            Duração indisponível não foi convertida em zero. Os totais refletem os registros importados; não são saldo oficial. Não há
             justificativas ou aprovação nesta consulta.
           </p>
         </>
