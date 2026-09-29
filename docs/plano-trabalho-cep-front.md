@@ -1,5 +1,7 @@
 # Plano de trabalho do CEP-FRONT — CEP Horas
 
+> Entrega de 29/09/2026: [telas de análises, configurações globais e notificações](notificacoes-implementacao.md) integradas aos contratos reais da API e verificadas com fixtures. Inclui recuperação de pendentes, agrupamento de popups e bandeja Windows. Publicação/homologação real e instalador assinado são etapas separadas. Esta atualização prevalece sobre o plano histórico abaixo.
+
 Atualizado em 23/09/2026. Este arquivo orienta a próxima implementação no `CEP-FRONT`; **não** declara que as tarefas abaixo já foram executadas. O objetivo imediato é entregar as telas que a API atual sustenta e registrar, sem simulação em produção, as telas que dependem de novos contratos do backend.
 
 ## Fontes de verdade e limites

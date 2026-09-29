@@ -26,6 +26,9 @@ let loginBody,
   userPatches = 0,
   adminInvites = 0,
   protectedCalls = 0
+const notificationIds = Array.from({ length: 101 }, (_, i) => `a0000000-0000-0000-0000-${String(i + 1).padStart(12, '0')}`)
+const deliveredNotifications = new Set()
+const pendingPages = []
 const tokens = (number, lifetime = 900_000) => ({
   accessToken: `fixture-access-${number}`,
   refreshToken: `fixture-refresh-${number}`,
@@ -54,6 +57,19 @@ const server = createServer(async (req, res) => {
   } else if (url.pathname === '/api/v1/me') {
     assert.equal(req.headers.authorization, `Bearer fixture-access-${refreshes}`)
     res.end(JSON.stringify(user))
+  } else if (url.pathname === '/api/v1/me/notifications') {
+    assert.equal(req.headers.authorization, `Bearer fixture-access-${refreshes}`)
+    const pending = notificationIds.filter((id) => !deliveredNotifications.has(id))
+    const page = Number(url.searchParams.get('page') ?? 1)
+    const pageSize = Number(url.searchParams.get('pageSize') ?? 100)
+    pendingPages.push(page)
+    res.end(JSON.stringify({ items: pending.slice((page - 1) * pageSize, page * pageSize).map((id) => ({ id, readAt: null })), total: pending.length, page, pageSize }))
+  } else if (url.pathname === '/api/v1/me/notifications/received') {
+    assert.equal(req.method, 'POST')
+    assert.equal(req.headers.authorization, `Bearer fixture-access-${refreshes}`)
+    assert.ok(pendingPages.includes(2), 'collect every pending page before changing delivery state')
+    for (const id of body.ids) deliveredNotifications.add(id)
+    res.writeHead(204).end()
   } else if (url.pathname === '/api/v1/organization/time-control/people') {
     assert.equal(req.headers.authorization, `Bearer fixture-access-${refreshes}`)
     protectedCalls++
@@ -185,6 +201,14 @@ try {
     const encrypted = await readFile(path.join(sessionDirectory, files[0]))
     assert.ok(encrypted.length > 0)
     assert.equal(encrypted.includes(Buffer.from('fixture-refresh')), false)
+    for (let attempt = 0; attempt < 100 && deliveredNotifications.size < 101; attempt++)
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    assert.equal(deliveredNotifications.size, 101, 'the native host recovers every pending page')
+    assert.deepEqual(pendingPages.slice(0, 2), [1, 2])
+    const ledgers = (await readdir(sessionDirectory)).filter((file) => file.endsWith('.notifications'))
+    assert.equal(ledgers.length, 1)
+    const ledger = await readFile(path.join(sessionDirectory, ledgers[0]))
+    assert.equal(ledger.includes(Buffer.from(notificationIds[0])), false, 'receipt ledger is DPAPI protected')
     const denied = await page.evaluate(
       () =>
         new Promise((resolve) => {
@@ -241,6 +265,7 @@ try {
     await page.getByRole('heading', { name: 'Pessoas', exact: true }).waitFor()
     await page.getByRole('heading', { name: 'Sua lista de pessoas começa aqui' }).waitFor()
     assert.equal(refreshes, 2, 'restore must rotate the persisted token exactly once')
+    assert.equal(deliveredNotifications.size, 101, 'restart must not create duplicate deliveries')
     await page.getByRole('button', { name: 'Sair da conta' }).click()
     await page.getByRole('heading', { name: 'Bom ter você aqui.' }).waitFor()
     assert.equal(logoutBody.refreshToken, 'fixture-refresh-2')

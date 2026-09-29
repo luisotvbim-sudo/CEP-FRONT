@@ -28,6 +28,13 @@ internal sealed class ApiSession : IDisposable
     private DateTimeOffset accessExpiry;
     private JsonElement user;
     private long generation;
+    internal Guid? CurrentUserId => accessToken is not null && user.ValueKind == JsonValueKind.Object && user.TryGetProperty("id", out var id) && id.TryGetGuid(out var value) ? value : null;
+    internal string NotificationStorePath(Guid userId) => sessionFile + "." + userId.ToString("N") + ".notifications";
+    internal async Task<JsonElement> NotificationRequest(string method, string path, object? body = null)
+    {
+        var result = await Request(JsonSerializer.SerializeToElement(new { method, path, body }, Json));
+        return result is JsonElement value ? value : default;
+    }
 
     public ApiSession(Uri api)
     {
@@ -74,6 +81,8 @@ internal sealed class ApiSession : IDisposable
         {
             if (accessToken is not null) return Metadata();
             if (!File.Exists(sessionFile)) return null;
+            if (!System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable())
+                throw new ApiFailure(503, "connection_failed");
             try
             {
                 var data = ProtectedData.Unprotect(File.ReadAllBytes(sessionFile), entropy, DataProtectionScope.CurrentUser);
@@ -90,6 +99,7 @@ internal sealed class ApiSession : IDisposable
             user = await Send("GET", "/me", token: accessToken);
             return Metadata();
         }
+        catch (ApiFailure failure) when (failure.Status == 503 && failure.Code == "connection_failed") { throw; }
         catch (Exception exception) { Clear(); throw new ApiFailure(401, "session_expired", (exception as ApiFailure)?.CorrelationId); }
         finally { gate.Release(); }
     }
@@ -176,6 +186,11 @@ internal sealed class ApiSession : IDisposable
     {
         if (path.Contains('\\') || path.Contains('#')) return false;
         var route = path.Split('?')[0];
+        if (route == "/time-control/settings" && method is "GET" or "PATCH") return true;
+        if (route == "/time-control/notification-schedules" && method is "GET" or "POST") return true;
+        if (Regex.IsMatch(route, "^/time-control/notification-schedules/[0-9a-fA-F-]{36}$") && method is "PATCH" or "DELETE") return true;
+        if (route == "/me/notifications" && method == "GET") return true;
+        if (method == "POST" && (route == "/me/notifications/received" || Regex.IsMatch(route, "^/me/notifications/[0-9a-fA-F-]{36}/read$"))) return true;
         if (route == "/admin/organizations" && method is "GET" or "POST") return true;
         if (method == "GET" && route is "/me" or "/organization/users" or "/organization/invitations" or "/organization/audit") return true;
         if (method == "POST" && route == "/organization/invitations") return true;
@@ -188,8 +203,8 @@ internal sealed class ApiSession : IDisposable
         const string id = "[0-9a-fA-F-]{36}";
         return method switch
         {
-            "GET" => relative is "people" or "external-identities" or "history" or "teams" or "synchronizations/latest" || Regex.IsMatch(relative, $"^(synchronizations/{id}|teams/{id}(/assignments)?)$"),
-            "POST" => relative is "people/invitations" or "synchronizations" or "teams" || Regex.IsMatch(relative, $"^teams/{id}/assignments$"),
+            "GET" => relative is "people" or "external-identities" or "history" or "teams" or "synchronizations/latest" or "analyses" or "notification-dispatches" or "notification-dispatches/preview" || Regex.IsMatch(relative, $"^(synchronizations/{id}|teams/{id}(/assignments)?)$"),
+            "POST" => relative is "people/invitations" or "synchronizations" or "teams" or "notification-dispatches" || Regex.IsMatch(relative, $"^teams/{id}/assignments$"),
             "PATCH" => Regex.IsMatch(relative, $"^teams/{id}(/assignments/{id}/end)?$"),
             _ => false
         };

@@ -10,6 +10,7 @@ import { FormNotice } from '../components/FormNotice'
 import { AdminShell } from './AdminShell'
 import type { Paged } from './api'
 import './admin.css'
+import { Inbox, NotificationSettings, useNotificationApi, useOpenInbox } from '../notifications/Pages'
 
 type Organization = components['schemas']['OrganizationResponse']
 
@@ -32,6 +33,9 @@ export function SystemAdminShell({
   const [error, setError] = useState<AuthError | null>(null)
   const [notice, setNotice] = useState('')
   const [showCreate, setShowCreate] = useState(false)
+  const [globalPage, setGlobalPage] = useState<'settings' | 'inbox' | null>(null)
+  const notifications = useNotificationApi(client)
+  useOpenInbox(() => { if (!selected) setGlobalPage('inbox') })
 
   useEffect(() => {
     let active = true
@@ -86,6 +90,11 @@ export function SystemAdminShell({
     }
   }
 
+  if (globalPage && !selected)
+    return <div className="admin-app system-admin-app"><div className="admin-main"><main className="admin-content">
+      <button className="secondary-button" onClick={() => setGlobalPage(null)}>Voltar às organizações</button>
+      {globalPage === 'settings' ? <NotificationSettings api={notifications} /> : <Inbox api={notifications} />}
+    </main></div></div>
   if (selected)
     return (
       <AdminShell
@@ -128,6 +137,7 @@ export function SystemAdminShell({
         <main className="admin-content">
           <h1>Organizações</h1>
           <p>Selecione a organização que deseja administrar. Seu acesso global permanece ativo.</p>
+          <div className="button-row"><button className="secondary-button" onClick={() => setGlobalPage('settings')}>Configurações globais</button><button className="secondary-button" onClick={() => setGlobalPage('inbox')}>Minhas notificações</button></div>
           <FormNotice error={error} />
           {notice && <p role="status">{notice}</p>}
           <button className="text-button" onClick={() => reload()} disabled={loading}>

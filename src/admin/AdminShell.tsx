@@ -13,8 +13,9 @@ import { UsersPage } from './UsersPage'
 import { AuditPage } from './AuditPage'
 import { useAction } from './ui'
 import './admin.css'
+import { Analyses, Inbox, NotificationSettings, SendNotification, useNotificationApi, useOpenInbox } from '../notifications/Pages'
 
-type Page = 'people' | 'invite' | 'sync' | 'teams' | 'history' | 'users' | 'audit'
+type Page = 'people' | 'invite' | 'sync' | 'teams' | 'history' | 'users' | 'audit' | 'notifications' | 'settings' | 'send' | 'analyses'
 const navigation = [
   { id: 'people', label: 'Pessoas', icon: Users },
   { id: 'invite', label: 'Associar e convidar', icon: Link2 },
@@ -23,6 +24,10 @@ const navigation = [
   { id: 'history', label: 'Histórico', icon: History },
   { id: 'users', label: 'Usuários', icon: UserRoundCog },
   { id: 'audit', label: 'Auditoria', icon: ClipboardList },
+  { id: 'notifications', label: 'Minhas notificações', icon: ClipboardList },
+  { id: 'analyses', label: 'Análises e erros', icon: History },
+  { id: 'send', label: 'Enviar aviso', icon: ClipboardList },
+  { id: 'settings', label: 'Configurações globais', icon: ShieldCheck },
 ] as const
 
 export function AdminShell({
@@ -39,6 +44,8 @@ export function AdminShell({
   onChangeOrganization?(): void
 }) {
   const api = useMemo(() => new AdminApi(client, organization?.id), [client, organization?.id])
+  const notifications = useNotificationApi(client, organization?.id)
+  useOpenInbox(() => setPage('notifications'))
   const [page, setPage] = useState<Page>('people')
   const [person, setPerson] = useState<Person | null>(null)
   const action = useAction()
@@ -144,6 +151,10 @@ export function AdminShell({
           {page === 'history' && <HistoryPage api={api} initialPerson={person} />}
           {page === 'users' && <UsersPage api={api} />}
           {page === 'audit' && <AuditPage api={api} />}
+          {page === 'notifications' && <Inbox api={notifications} />}
+          {page === 'settings' && <NotificationSettings api={notifications} />}
+          {page === 'send' && <SendNotification api={notifications} peopleApi={api} />}
+          {page === 'analyses' && <Analyses api={notifications} peopleApi={api} />}
         </main>
         <footer className="admin-footer">
           <span>CEP Horas · Conceito Engenharia</span>

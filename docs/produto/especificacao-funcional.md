@@ -1,5 +1,7 @@
 # Conciliação de horas — especificação funcional do produto
 
+> Atualização de 29/09/2026: [contrato aprovado](../contrato-analises-notificacoes.md) e [implementação de análises/notificações](../notificacoes-implementacao.md). Configurações globais, tolerância diária inicial de 30 minutos nos dois sentidos, agendas, envio manual, central e resultados do motor único estão integrados nesta entrega. A matriz de 23/09 abaixo é histórica para essas capacidades. Justificativas, decisões e exportações continuam planejadas.
+
 Versão 1.1 · 23/09/2026 · Fonte de verdade funcional para produto e engenharia
 
 **Status: produto em construção.** Este documento consolida a visão do CEP Horas, registra o que já existe no backend e diferencia explicitamente capacidades entregues, parciais e planejadas. O [manual de uso proposto](manual.html) descreve a experiência esperada com dados fictícios; ele não comprova que uma funcionalidade esteja implementada.
