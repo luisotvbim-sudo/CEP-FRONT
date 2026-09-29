@@ -116,6 +116,7 @@ async function open() {
         ...process.env,
         CEP_API_URL: live ? 'http://127.0.0.1:8080' : `http://127.0.0.1:${port}`,
         CEP_SESSION_DIR: sessionDirectory,
+        CEP_DESKTOP_TESTING: '1',
         WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-address=127.0.0.1 --remote-debugging-port=${cdpPort}`,
         WEBVIEW2_USER_DATA_FOLDER: path.join(working, 'profile'),
       },
@@ -158,6 +159,19 @@ async function bridgeApi(page, payload) {
     window.chrome.webview.addEventListener('message', listener)
     window.chrome.webview.postMessage({ type: 'cep-auth', id, operation: 'api', payload: request })
   }), payload)
+}
+async function nativeAction(page, action) {
+  await page.evaluate((value) => window.chrome.webview.postMessage({ type: 'cep-desktop-test', action: value }), action)
+}
+async function nativeEvents() {
+  return (await readFile(path.join(sessionDirectory, 'native-ui.events'), 'utf8').catch(() => '')).split(/\r?\n/)
+}
+async function waitNativeEvent(value) {
+  for (let attempt = 0; attempt < 50; attempt++) {
+    if ((await nativeEvents()).includes(value)) return
+    await new Promise((resolve) => setTimeout(resolve, 100))
+  }
+  assert.fail(`Missing native event: ${value}`)
 }
 try {
   let page = await open()
@@ -209,6 +223,16 @@ try {
     assert.equal(ledgers.length, 1)
     const ledger = await readFile(path.join(sessionDirectory, ledgers[0]))
     assert.equal(ledger.includes(Buffer.from(notificationIds[0])), false, 'receipt ledger is DPAPI protected')
+    await waitNativeEvent('notification-summary-requested')
+    await nativeAction(page, 'hide')
+    await waitNativeEvent('hidden-to-tray')
+    assert.equal(child.exitCode, null, 'closing the window must keep the app running in the tray')
+    await nativeAction(page, 'popup')
+    await waitNativeEvent('test-popup-requested')
+    await nativeAction(page, 'open-inbox')
+    await waitNativeEvent('opened-inbox')
+    await page.getByRole('heading', { name: 'Minhas notificações', exact: true }).waitFor()
+    await page.getByRole('button', { name: 'Pessoas', exact: true }).click()
     const denied = await page.evaluate(
       () =>
         new Promise((resolve) => {
@@ -270,6 +294,14 @@ try {
     await page.getByRole('heading', { name: 'Bom ter você aqui.' }).waitFor()
     assert.equal(logoutBody.refreshToken, 'fixture-refresh-2')
     assert.equal((await readdir(sessionDirectory)).filter((f) => f.endsWith('.dat')).length, 0)
+    console.log((await nativeEvents()).includes('popup-shown-by-windows')
+      ? 'PASS: Windows reported that the native popup was shown.'
+      : 'NOTE: native popup requested; Windows did not report display (notification policy may suppress it).')
+    await nativeAction(page, 'exit')
+    if (child.exitCode === null) await Promise.race([
+      new Promise((resolve) => child.once('exit', resolve)),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Sair did not terminate the desktop')), 5000)),
+    ])
     console.log(
       'PASS: real WPF/WebView2 admin, protected API, single refresh, DPAPI restart/restore, route allowlist, token isolation and logout against disposable fixture.',
     )

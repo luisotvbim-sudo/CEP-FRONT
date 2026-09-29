@@ -28,7 +28,8 @@ export default defineConfig(({ mode }) => {
         },
       },
     ],
-    base: './',
+    // Both HTTPS production and the WebView2 virtual host serve assets at the root.
+    base: '/',
     server: {
       host: '127.0.0.1',
       port: 5173,
