@@ -52,3 +52,6 @@ Com a API local em execução no modo `Development`:
 ```
 
 Depois da atualização, comparar rotas, parâmetros e schemas antes de regenerar o cliente.
+
+## Ativação de convite — 29/09/2026
+Implementada na branch codex/invitation-activation. Veja [o contrato](contrato-ativacao-convite.md). Os snapshots foram obtidos do Swagger real e os tipos regenerados. Implantar o backend antes do frontend; esta implementação local ainda não foi publicada.

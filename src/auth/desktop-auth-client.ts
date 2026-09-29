@@ -5,6 +5,7 @@ import {
   type AuthSession,
   type Credentials,
   type ResetPassword,
+  type ActivateInvitation,
 } from './auth-client'
 
 type BridgeEvent = {
@@ -97,7 +98,17 @@ export class DesktopAuthClient implements AuthClient {
     })
   }
   restore() {
-    return (this.restoring ??= this.call<AuthSession | null>('restore', {}, 45_000).finally(() => { this.restoring = null }))
+    return (this.restoring ??= this.call<AuthSession | null>('restore', {}, 45_000).finally(() => {
+      this.restoring = null
+    }))
+  }
+  activateInvitation(input: ActivateInvitation) {
+    return this.call<void>('activate-invitation', {
+      ...input,
+      email: input.email.trim(),
+      code: input.code.trim(),
+      displayName: input.displayName.trim(),
+    })
   }
   onExpired(listener: (error?: AuthError) => void) {
     this.listeners.add(listener)

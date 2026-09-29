@@ -8,6 +8,7 @@ import {
 } from '../auth/auth-client'
 import { FormNotice } from './FormNotice'
 import { RecoveryDialog } from './RecoveryDialog'
+import { InvitationDialog } from './InvitationDialog'
 
 export function LoginForm({
   client,
@@ -24,6 +25,9 @@ export function LoginForm({
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<AuthError | null>(null)
   const [recovering, setRecovering] = useState(false)
+  const [activating, setActivating] = useState(
+    () => new URLSearchParams(window.location.search).get('convite') === '1',
+  )
   const inFlight = useRef(false)
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -135,12 +139,32 @@ export function LoginForm({
           <span>Solicite um convite ao coordenador da sua organização.</span>
         </p>
       </div>
+      <button
+        type="button"
+        className="text-button"
+        disabled={pending}
+        onClick={() => setActivating(true)}
+      >
+        Recebi um convite
+      </button>
       <div className="privacy-note">
         <LockKeyhole size={13} aria-hidden="true" />
         <span>Seu acesso é pessoal. Não compartilhe sua senha.</span>
       </div>
       {recovering && (
         <RecoveryDialog client={client} initialEmail={email} onClose={() => setRecovering(false)} />
+      )}
+      {activating && (
+        <InvitationDialog
+          client={client}
+          initialEmail={email}
+          onClose={() => {
+            setActivating(false)
+            const url = new URL(window.location.href)
+            url.searchParams.delete('convite')
+            window.history.replaceState(null, '', url)
+          }}
+        />
       )}
     </div>
   )

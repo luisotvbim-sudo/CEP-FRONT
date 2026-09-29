@@ -56,6 +56,7 @@ internal sealed class ApiSession : IDisposable
         "forgot" => await Anonymous("/auth/password/forgot", new { email = payload.GetProperty("email").GetString()?.Trim() }),
         "reset" => await Anonymous("/auth/password/reset", new { email = payload.GetProperty("email").GetString()?.Trim(), code = payload.GetProperty("code").GetString()?.Trim(), newPassword = payload.GetProperty("newPassword").GetString() }),
         "api" => await Request(payload),
+        "activate-invitation" => await Anonymous("/auth/invitations/activate", new { email = payload.GetProperty("email").GetString()?.Trim(), code = payload.GetProperty("code").GetString()?.Trim(), displayName = payload.GetProperty("displayName").GetString()?.Trim(), password = payload.GetProperty("password").GetString() }),
         _ => throw new ApiFailure(400, "unsupported_operation")
     };
 

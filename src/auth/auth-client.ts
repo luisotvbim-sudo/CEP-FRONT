@@ -4,6 +4,12 @@ export type User = components['schemas']['UserResponse']
 type TokenResponse = components['schemas']['WebSessionResponse']
 export type Credentials = { email: string; password: string }
 export type ResetPassword = { email: string; code: string; newPassword: string }
+export type ActivateInvitation = {
+  email: string
+  code: string
+  displayName: string
+  password: string
+}
 export type AuthSession = { user: User; expiresAt: string }
 
 // The UI consumes this interface in the browser and in WebView2.
@@ -13,6 +19,7 @@ export interface AuthClient {
   logout(): Promise<void>
   requestPasswordReset(email: string): Promise<void>
   resetPassword(input: ResetPassword): Promise<void>
+  activateInvitation(input: ActivateInvitation): Promise<void>
   restore(): Promise<AuthSession | null>
   request<T>(method: 'GET' | 'POST' | 'PATCH' | 'DELETE', path: string, body?: object): Promise<T>
   onExpired(listener: (error?: AuthError) => void): () => void
@@ -40,13 +47,24 @@ export function errorMessage(error: unknown): AuthError {
 
 export function describeError(status: number, problem: ApiProblem): string {
   const messages: Record<string, string> = {
-    configuration_conflict: 'Outro administrador alterou esta configuração. Recarregue a versão atual antes de salvar novamente.',
-    schedule_time_conflict: 'Já existe um agendamento nesse horário. Edite o agendamento existente ou escolha outro horário.',
+    invalid_invitation:
+      'Convite inválido, expirado ou já utilizado. Confira o código mais recente ou solicite um novo ao administrador.',
+    invalid_password: 'A senha não atende aos requisitos. Use entre 12 e 200 caracteres.',
+    email_already_exists:
+      'Este e-mail já possui uma conta. Volte para entrar ou recuperar sua senha.',
+    organization_inactive: 'A organização está indisponível. Procure o administrador.',
+    configuration_conflict:
+      'Outro administrador alterou esta configuração. Recarregue a versão atual antes de salvar novamente.',
+    schedule_time_conflict:
+      'Já existe um agendamento nesse horário. Edite o agendamento existente ou escolha outro horário.',
     schedule_not_found: 'Este agendamento foi excluído. Atualize a lista.',
     invalid_schedule: 'Informe um horário com precisão de minutos e uma mensagem válida.',
-    notification_scope_empty: 'Não há contas ativas associadas às fontes nesse escopo. Confira as pessoas e os vínculos.',
-    notification_cooldown: 'Aguarde um minuto antes de solicitar outro envio. O envio anterior continua no histórico.',
-    notification_request_conflict: 'Este identificador de envio já foi usado para outro conteúdo. Confira o histórico e prepare uma nova mensagem.',
+    notification_scope_empty:
+      'Não há contas ativas associadas às fontes nesse escopo. Confira as pessoas e os vínculos.',
+    notification_cooldown:
+      'Aguarde um minuto antes de solicitar outro envio. O envio anterior continua no histórico.',
+    notification_request_conflict:
+      'Este identificador de envio já foi usado para outro conteúdo. Confira o histórico e prepare uma nova mensagem.',
     notification_not_found: 'A notificação não está disponível para sua conta. Atualize a central.',
     invalid_analysis_period: 'Selecione um período de análise disponível.',
     invalid_analysis_issue: 'Selecione um tipo de ocorrência disponível.',
@@ -61,15 +79,21 @@ export function describeError(status: number, problem: ApiProblem): string {
       'Este e-mail já possui uma conta ou convite pendente. Confira a lista de pessoas.',
     invitation_not_found: 'Este convite não está disponível nesta organização. Atualize a lista.',
     invitation_not_pending: 'Este convite já foi aceito ou revogado e não pode ser reenviado.',
-    last_organization_admin: 'Este é o último coordenador ativo da organização. Promova outro coordenador antes de alterar seu acesso.',
+    last_organization_admin:
+      'Este é o último coordenador ativo da organização. Promova outro coordenador antes de alterar seu acesso.',
     user_not_found: 'Esta conta não está mais disponível na organização. Atualize a lista.',
     invalid_display_name: 'Informe um nome válido para o usuário.',
     email_domain_not_allowed: 'O domínio deste e-mail não está autorizado para cadastro.',
-    sync_already_running: 'Já existe uma sincronização em andamento. Aguarde e consulte novamente; você só pode acompanhar lotes que solicitou.',
-    sync_scope_empty: 'Não há pessoas no seu escopo com identidades ativas nas duas fontes. Peça ao coordenador para conferir vínculos e associações.',
-    full_sync_forbidden: 'A carga completa é restrita à coordenação. Use a atualização dos últimos 7 dias.',
-    monday_responsible_column_unavailable: 'A coluna de responsável do Monday não está disponível. Peça ao coordenador para revisar a configuração da fonte.',
-    monday_multiple_responsibles: 'Há item do Monday com mais de um responsável. Corrija a atribuição na origem e atualize novamente.',
+    sync_already_running:
+      'Já existe uma sincronização em andamento. Aguarde e consulte novamente; você só pode acompanhar lotes que solicitou.',
+    sync_scope_empty:
+      'Não há pessoas no seu escopo com identidades ativas nas duas fontes. Peça ao coordenador para conferir vínculos e associações.',
+    full_sync_forbidden:
+      'A carga completa é restrita à coordenação. Use a atualização dos últimos 7 dias.',
+    monday_responsible_column_unavailable:
+      'A coluna de responsável do Monday não está disponível. Peça ao coordenador para revisar a configuração da fonte.',
+    monday_multiple_responsibles:
+      'Há item do Monday com mais de um responsável. Corrija a atribuição na origem e atualize novamente.',
     sync_not_found: 'Nenhuma sincronização foi iniciada.',
     team_name_unavailable: 'Já existe um time com esse nome.',
     team_assignment_overlap:
@@ -296,7 +320,11 @@ export class HttpAuthClient implements AuthClient {
     return this.refreshFlight
   }
 
-  async request<T>(method: 'GET' | 'POST' | 'PATCH' | 'DELETE', path: string, body?: object): Promise<T> {
+  async request<T>(
+    method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
+    path: string,
+    body?: object,
+  ): Promise<T> {
     if (
       !path.startsWith('/organization/') &&
       !/^\/time-control\/(settings|notification-schedules(?:\/[0-9a-f-]{36})?)(\?|$)/i.test(path) &&
@@ -372,6 +400,15 @@ export class HttpAuthClient implements AuthClient {
       ...input,
       email: input.email.trim(),
       code: input.code.trim(),
+    })
+  }
+
+  async activateInvitation(input: ActivateInvitation): Promise<void> {
+    await this.post('/auth/invitations/activate', {
+      ...input,
+      email: input.email.trim(),
+      code: input.code.trim(),
+      displayName: input.displayName.trim(),
     })
   }
 }
