@@ -41,6 +41,8 @@ Use uma conta existente no navegador ou no executável desktop. Não há credenc
 
 ## Executável Windows
 
+A integração do instalador com bandeja, WebView2 e teste de popup nativo está descrita em [Aplicativo Windows](docs/aplicativo-windows.md). A distribuição assinada e a atualização real entre versões continuam pendentes.
+
 Pré-requisitos adicionais: .NET SDK 10 e Microsoft Edge WebView2 Runtime.
 
 ```powershell
@@ -55,7 +57,26 @@ pnpm build
 dotnet publish desktop/CepHoras.Desktop -c Release -r win-x64 --self-contained false
 ```
 
-Release usa `https://api.cep.lat` por padrão. `CEP_API_URL` substitui o destino; HTTP só é permitido em loopback. O host usa origem virtual HTTPS para assets locais, valida a origem das mensagens e permite apenas operações documentadas. Links HTTPS de atividades, acionados pelo usuário, abrem no navegador externo. Navegação interna para outras origens e permissões são bloqueadas; DevTools e menus de contexto são desativados em Release. Instalador, assinatura, atualização automática e publicação são etapas posteriores.
+Release usa `https://api.cep.lat` por padrão. `CEP_API_URL` substitui o destino; HTTP só é permitido em loopback. O host usa origem virtual HTTPS para assets locais, valida a origem das mensagens e permite apenas operações documentadas. Links HTTPS de atividades, acionados pelo usuário, abrem no navegador externo. Navegação interna para outras origens e permissões são bloqueadas; DevTools e menus de contexto são desativados em Release.
+
+Para instalar o pacote publicado no perfil Windows atual, sem privilégio de administrador:
+
+```powershell
+dotnet publish desktop/CepHoras.Desktop -c Release -r win-x64 --self-contained false -o .local/package/CEP-Horas-win-x64
+./scripts/install-desktop.ps1
+```
+
+O script valida o pacote e os arquivos copiados, instala em `%LOCALAPPDATA%/Programs/Conceito/CEP Horas` e cria o atalho `CEP Horas` no menu Iniciar. Ele se recusa a substituir uma instalação ou um atalho existente. Esse instalador local de teste **não recebe atualizações** e não migra automaticamente para MSIX.
+
+O caminho de atualização do desktop é um pacote MSIX assinado, distribuído como release pública no GitHub. O app MSIX consulta releases `desktop-vX.Y.Z.W` ao abrir e a cada 6 horas enquanto estiver aberto. Quando encontrar uma versão maior com o asset `CEP-Horas-win-x64.msix`, mostra “Atualizar” na própria janela; após o clique, verifica SHA-256 e identidade do pacote e abre o Instalador de Aplicativos do Windows. O Windows valida a assinatura antes da instalação. A checagem não roda no instalador local de teste nem no navegador. Para construir um pacote estrutural de teste, **não instalável nem distribuível**:
+
+```powershell
+./scripts/build-desktop-msix.ps1 -Publisher 'CN=Conceito Engenharia' -UnsignedForTest
+```
+
+Para distribuir, é necessário obter assinatura confiável, gerar o MSIX assinado com `-CertificateThumbprint`, validar a instalação/atualização em outro PC e publicar o asset em uma release estável com tag e versão correspondentes. Ainda não há certificado nem release desktop; portanto a atualização real **não está ativada**. O pacote atual é framework-dependent e exige .NET Desktop Runtime 10 e Microsoft Edge WebView2 Runtime. Inicialização com o Windows, execução em bandeja e notificações de negócio continuam pendentes; avisos de atualização são um mecanismo separado.
+
+O [handoff do aplicativo Windows](docs/desktop-handoff.md) registra o estado testado, dependências de notificações, estratégia de atualização ainda pendente e os passos para continuar em outro computador.
 
 ## Sessão e segurança
 
@@ -102,4 +123,4 @@ Esse teste opcional verifica apenas rejeição de uma conta inexistente pela API
 2. Na preparação inicial, Monday/VR estavam desabilitados no Docker local; confira a configuração atual antes da homologação. Perfis, associação com dados reais e cobertura/histórico importados dependem de configuração segura dessas integrações no servidor. O frontend não habilita fontes nem recebe seus tokens.
 3. Convites enfileirados podem ser inspecionados no Mailpit em `http://127.0.0.1:8025`. O envio/aceite real depende de perfis disponíveis e de um destinatário de teste autorizado. A tela pública de aceite aguarda um contrato web seguro: o endpoint atual retorna refresh token no corpo e não deve ser ligado diretamente ao React.
 4. Comparação consolidada por turno, justificativas, decisão do líder e notificações não estão disponíveis na API principal e não foram simuladas.
-5. As novas telas operacionais e administrativas foram verificadas com contrato e mocks de navegador; ainda exigem homologação autenticada com contas de Membro, Líder e Coordenador na API real. Publicação web, instalador e assinatura do executável ainda não foram executados.
+5. As novas telas operacionais e administrativas foram verificadas com contrato e mocks de navegador. A instalação local de teste e o acesso autenticado de Coordenador foram verificados em Windows; Membro e Líder ainda exigem homologação com contas próprias. Publicação web, instalador distribuível assinado e assinatura do executável ainda não foram executados.
