@@ -61,7 +61,8 @@ export function PeoplePage({
           <h2>Reenviar convite</h2>
           <p>
             Enviar um novo convite para <strong>{resendPerson.email}</strong>? O código anterior
-            será substituído e a validade será renovada por 48 horas.
+            será substituído e a validade será renovada por 48 horas. O e-mail incluirá o link para
+            ativar a conta e criar a senha. Confirme somente se a pessoa precisa de um novo convite.
           </p>
           <FormNotice error={resend.error} />
           <div className="form-actions">
@@ -80,7 +81,7 @@ export function PeoplePage({
                   if (!resendPerson.invitationId) return
                   await api.resendInvitation(resendPerson.invitationId)
                   setNotice(
-                    'Novo convite colocado na fila de envio. Confira a entrega no serviço de e-mail.',
+                    'Novo convite com link de ativação colocado na fila de envio. Isso não confirma a entrega do e-mail.',
                   )
                   setResendPerson(null)
                   list.reload()
@@ -201,21 +202,26 @@ export function PeoplePage({
                           <button className="text-button" onClick={() => onHistory(person)}>
                             Ver histórico <ArrowRight size={14} />
                           </button>
-                          {status.label === 'Expirado' && person.invitationId && (
-                            <div>
-                              <button
-                                className="text-button"
-                                disabled={resend.pending}
-                                onClick={() => {
-                                  setResendPerson(person)
-                                  setNotice('')
-                                  resend.clear()
-                                }}
-                              >
-                                Reenviar convite
-                              </button>
-                            </div>
-                          )}
+                          {invitation &&
+                            !person.userId &&
+                            !person.invitationAcceptedAt &&
+                            !invitation.acceptedAt &&
+                            !invitation.revokedAt &&
+                            person.invitationId && (
+                              <div>
+                                <button
+                                  className="text-button"
+                                  disabled={resend.pending}
+                                  onClick={() => {
+                                    setResendPerson(person)
+                                    setNotice('')
+                                    resend.clear()
+                                  }}
+                                >
+                                  Reenviar convite
+                                </button>
+                              </div>
+                            )}
                         </td>
                       </tr>
                     )
