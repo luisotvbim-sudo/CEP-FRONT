@@ -16,7 +16,6 @@ export interface paths {
                 query?: {
                     before?: string;
                     pageSize?: number;
-                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
                     organizationId?: string;
                 };
                 header?: never;
@@ -40,119 +39,6 @@ export interface paths {
         };
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/web/login": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["LoginRequest"];
-                    "text/json": components["schemas"]["LoginRequest"];
-                    "application/*+json": components["schemas"]["LoginRequest"];
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["WebSessionResponse"];
-                        "application/json": components["schemas"]["WebSessionResponse"];
-                        "text/json": components["schemas"]["WebSessionResponse"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/web/refresh": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["WebSessionResponse"];
-                        "application/json": components["schemas"]["WebSessionResponse"];
-                        "text/json": components["schemas"]["WebSessionResponse"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/web/logout": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
         delete?: never;
         options?: never;
         head?: never;
@@ -284,7 +170,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/auth/invitations/accept": {
+    "/api/v1/auth/web/login": {
         parameters: {
             query?: never;
             header?: never;
@@ -302,9 +188,9 @@ export interface paths {
             };
             requestBody?: {
                 content: {
-                    "application/json": components["schemas"]["AcceptInvitationRequest"];
-                    "text/json": components["schemas"]["AcceptInvitationRequest"];
-                    "application/*+json": components["schemas"]["AcceptInvitationRequest"];
+                    "application/json": components["schemas"]["LoginRequest"];
+                    "text/json": components["schemas"]["LoginRequest"];
+                    "application/*+json": components["schemas"]["LoginRequest"];
                 };
             };
             responses: {
@@ -314,9 +200,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["TokenResponse"];
-                        "application/json": components["schemas"]["TokenResponse"];
-                        "text/json": components["schemas"]["TokenResponse"];
+                        "text/plain": components["schemas"]["WebSessionResponse"];
+                        "application/json": components["schemas"]["WebSessionResponse"];
+                        "text/json": components["schemas"]["WebSessionResponse"];
                     };
                 };
             };
@@ -327,7 +213,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/auth/password/forgot": {
+    "/api/v1/auth/web/refresh": {
         parameters: {
             query?: never;
             header?: never;
@@ -343,20 +229,18 @@ export interface paths {
                 path?: never;
                 cookie?: never;
             };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["ForgotPasswordRequest"];
-                    "text/json": components["schemas"]["ForgotPasswordRequest"];
-                    "application/*+json": components["schemas"]["ForgotPasswordRequest"];
-                };
-            };
+            requestBody?: never;
             responses: {
                 /** @description OK */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "text/plain": components["schemas"]["WebSessionResponse"];
+                        "application/json": components["schemas"]["WebSessionResponse"];
+                        "text/json": components["schemas"]["WebSessionResponse"];
+                    };
                 };
             };
         };
@@ -366,7 +250,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/auth/password/reset": {
+    "/api/v1/auth/web/logout": {
         parameters: {
             query?: never;
             header?: never;
@@ -382,16 +266,10 @@ export interface paths {
                 path?: never;
                 cookie?: never;
             };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["ResetPasswordRequest"];
-                    "text/json": components["schemas"]["ResetPasswordRequest"];
-                    "application/*+json": components["schemas"]["ResetPasswordRequest"];
-                };
-            };
+            requestBody?: never;
             responses: {
-                /** @description OK */
-                200: {
+                /** @description No Content */
+                204: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -432,6 +310,49 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/invitations/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["AcceptInvitationRequest"];
+                    "text/json": components["schemas"]["AcceptInvitationRequest"];
+                    "application/*+json": components["schemas"]["AcceptInvitationRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TokenResponse"];
+                        "application/json": components["schemas"]["TokenResponse"];
+                        "text/json": components["schemas"]["TokenResponse"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -895,7 +816,6 @@ export interface paths {
                     product?: components["schemas"]["Product"];
                     page?: number;
                     pageSize?: number;
-                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
                     organizationId?: string;
                 };
                 header?: never;
@@ -935,7 +855,6 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
-                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
                     organizationId?: string;
                 };
                 header?: never;
@@ -961,7 +880,6 @@ export interface paths {
         post: {
             parameters: {
                 query?: {
-                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
                     organizationId?: string;
                 };
                 header?: never;
@@ -1007,7 +925,6 @@ export interface paths {
         post: {
             parameters: {
                 query?: {
-                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
                     organizationId?: string;
                 };
                 header?: never;
@@ -1046,7 +963,6 @@ export interface paths {
         delete: {
             parameters: {
                 query?: {
-                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
                     organizationId?: string;
                 };
                 header?: never;
@@ -1087,7 +1003,6 @@ export interface paths {
         patch: {
             parameters: {
                 query?: {
-                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
                     organizationId?: string;
                 };
                 header?: never;
@@ -1117,6 +1032,84 @@ export interface paths {
                 };
             };
         };
+        trace?: never;
+    };
+    "/api/v1/auth/password/forgot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["ForgotPasswordRequest"];
+                    "text/json": components["schemas"]["ForgotPasswordRequest"];
+                    "application/*+json": components["schemas"]["ForgotPasswordRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/password/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["ResetPasswordRequest"];
+                    "text/json": components["schemas"]["ResetPasswordRequest"];
+                    "application/*+json": components["schemas"]["ResetPasswordRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/plugin/grants": {
@@ -1206,7 +1199,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organization/time-control/teams": {
+    "/api/v1/organization/time-control/analyses": {
         parameters: {
             query?: never;
             header?: never;
@@ -1216,10 +1209,13 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
-                    includeInactive?: boolean;
-                    asOf?: string;
-                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
                     organizationId?: string;
+                    workforcePersonId?: string;
+                    period?: components["schemas"]["AnalysisPeriod"];
+                    day?: string;
+                    issue?: string;
+                    page?: number;
+                    pageSize?: number;
                 };
                 header?: never;
                 path?: never;
@@ -1233,82 +1229,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["WorkforceTeamResponse"][];
-                        "application/json": components["schemas"]["WorkforceTeamResponse"][];
-                        "text/json": components["schemas"]["WorkforceTeamResponse"][];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post: {
-            parameters: {
-                query?: {
-                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
-                    organizationId?: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["CreateWorkforceTeamRequest"];
-                    "text/json": components["schemas"]["CreateWorkforceTeamRequest"];
-                    "application/*+json": components["schemas"]["CreateWorkforceTeamRequest"];
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["WorkforceTeamResponse"];
-                        "application/json": components["schemas"]["WorkforceTeamResponse"];
-                        "text/json": components["schemas"]["WorkforceTeamResponse"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/organization/time-control/teams/{teamId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: {
-                    asOf?: string;
-                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
-                    organizationId?: string;
-                };
-                header?: never;
-                path: {
-                    teamId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["WorkforceTeamResponse"];
-                        "application/json": components["schemas"]["WorkforceTeamResponse"];
-                        "text/json": components["schemas"]["WorkforceTeamResponse"];
+                        "text/plain": components["schemas"]["TimeReportResponsePagedResponse"];
+                        "application/json": components["schemas"]["TimeReportResponsePagedResponse"];
+                        "text/json": components["schemas"]["TimeReportResponsePagedResponse"];
                     };
                 };
             };
@@ -1318,39 +1241,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch: {
-            parameters: {
-                query?: {
-                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
-                    organizationId?: string;
-                };
-                header?: never;
-                path: {
-                    teamId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["UpdateWorkforceTeamRequest"];
-                    "text/json": components["schemas"]["UpdateWorkforceTeamRequest"];
-                    "application/*+json": components["schemas"]["UpdateWorkforceTeamRequest"];
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["WorkforceTeamResponse"];
-                        "application/json": components["schemas"]["WorkforceTeamResponse"];
-                        "text/json": components["schemas"]["WorkforceTeamResponse"];
-                    };
-                };
-            };
-        };
+        patch?: never;
         trace?: never;
     };
     "/api/v1/organization/time-control/teams/{teamId}/assignments": {
@@ -1365,7 +1256,6 @@ export interface paths {
                 query?: {
                     includeHistory?: boolean;
                     asOf?: string;
-                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
                     organizationId?: string;
                 };
                 header?: never;
@@ -1393,7 +1283,6 @@ export interface paths {
         post: {
             parameters: {
                 query?: {
-                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
                     organizationId?: string;
                 };
                 header?: never;
@@ -1445,7 +1334,6 @@ export interface paths {
         patch: {
             parameters: {
                 query?: {
-                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
                     organizationId?: string;
                 };
                 header?: never;
@@ -1478,6 +1366,570 @@ export interface paths {
         };
         trace?: never;
     };
+    "/api/v1/organization/time-control/teams": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    includeInactive?: boolean;
+                    asOf?: string;
+                    organizationId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["WorkforceTeamResponse"][];
+                        "application/json": components["schemas"]["WorkforceTeamResponse"][];
+                        "text/json": components["schemas"]["WorkforceTeamResponse"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: {
+                    organizationId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["CreateWorkforceTeamRequest"];
+                    "text/json": components["schemas"]["CreateWorkforceTeamRequest"];
+                    "application/*+json": components["schemas"]["CreateWorkforceTeamRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["WorkforceTeamResponse"];
+                        "application/json": components["schemas"]["WorkforceTeamResponse"];
+                        "text/json": components["schemas"]["WorkforceTeamResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organization/time-control/teams/{teamId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    asOf?: string;
+                    organizationId?: string;
+                };
+                header?: never;
+                path: {
+                    teamId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["WorkforceTeamResponse"];
+                        "application/json": components["schemas"]["WorkforceTeamResponse"];
+                        "text/json": components["schemas"]["WorkforceTeamResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: {
+            parameters: {
+                query?: {
+                    organizationId?: string;
+                };
+                header?: never;
+                path: {
+                    teamId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["UpdateWorkforceTeamRequest"];
+                    "text/json": components["schemas"]["UpdateWorkforceTeamRequest"];
+                    "application/*+json": components["schemas"]["UpdateWorkforceTeamRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["WorkforceTeamResponse"];
+                        "application/json": components["schemas"]["WorkforceTeamResponse"];
+                        "text/json": components["schemas"]["WorkforceTeamResponse"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/organization/time-control/notification-dispatches/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    period?: components["schemas"]["AnalysisPeriod"];
+                    userId?: string;
+                    organizationId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TimeDispatchPreviewResponse"];
+                        "application/json": components["schemas"]["TimeDispatchPreviewResponse"];
+                        "text/json": components["schemas"]["TimeDispatchPreviewResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organization/time-control/notification-dispatches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    organizationId?: string;
+                    page?: number;
+                    pageSize?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TimeDispatchResponsePagedResponse"];
+                        "application/json": components["schemas"]["TimeDispatchResponsePagedResponse"];
+                        "text/json": components["schemas"]["TimeDispatchResponsePagedResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: {
+                    organizationId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["SendTimeNotificationRequest"];
+                    "text/json": components["schemas"]["SendTimeNotificationRequest"];
+                    "application/*+json": components["schemas"]["SendTimeNotificationRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TimeDispatchResponse"];
+                        "application/json": components["schemas"]["TimeDispatchResponse"];
+                        "text/json": components["schemas"]["TimeDispatchResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    unreadOnly?: boolean;
+                    pendingOnly?: boolean;
+                    page?: number;
+                    pageSize?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TimeNotificationResponsePagedResponse"];
+                        "application/json": components["schemas"]["TimeNotificationResponsePagedResponse"];
+                        "text/json": components["schemas"]["TimeNotificationResponsePagedResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/notifications/received": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["ReceiveTimeNotificationsRequest"];
+                    "text/json": components["schemas"]["ReceiveTimeNotificationsRequest"];
+                    "application/*+json": components["schemas"]["ReceiveTimeNotificationsRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/notifications/{id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/time-control/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TimeSettingsResponse"];
+                        "application/json": components["schemas"]["TimeSettingsResponse"];
+                        "text/json": components["schemas"]["TimeSettingsResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["UpdateTimeSettingsRequest"];
+                    "text/json": components["schemas"]["UpdateTimeSettingsRequest"];
+                    "application/*+json": components["schemas"]["UpdateTimeSettingsRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TimeSettingsResponse"];
+                        "application/json": components["schemas"]["TimeSettingsResponse"];
+                        "text/json": components["schemas"]["TimeSettingsResponse"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/time-control/notification-schedules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TimeScheduleResponse"][];
+                        "application/json": components["schemas"]["TimeScheduleResponse"][];
+                        "text/json": components["schemas"]["TimeScheduleResponse"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["TimeScheduleRequest"];
+                    "text/json": components["schemas"]["TimeScheduleRequest"];
+                    "application/*+json": components["schemas"]["TimeScheduleRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TimeScheduleResponse"];
+                        "application/json": components["schemas"]["TimeScheduleResponse"];
+                        "text/json": components["schemas"]["TimeScheduleResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/time-control/notification-schedules/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: {
+            parameters: {
+                query?: {
+                    version?: string;
+                };
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["TimeScheduleRequest"];
+                    "text/json": components["schemas"]["TimeScheduleRequest"];
+                    "application/*+json": components["schemas"]["TimeScheduleRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TimeScheduleResponse"];
+                        "application/json": components["schemas"]["TimeScheduleResponse"];
+                        "text/json": components["schemas"]["TimeScheduleResponse"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
     "/api/v1/organization/time-control/external-identities": {
         parameters: {
             query?: never;
@@ -1494,7 +1946,6 @@ export interface paths {
                     search?: string;
                     page?: number;
                     pageSize?: number;
-                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
                     organizationId?: string;
                 };
                 header?: never;
@@ -1537,7 +1988,6 @@ export interface paths {
             parameters: {
                 query?: {
                     full?: boolean;
-                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
                     organizationId?: string;
                 };
                 header?: never;
@@ -1575,7 +2025,6 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
-                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
                     organizationId?: string;
                 };
                 header?: never;
@@ -1615,7 +2064,6 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
-                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
                     organizationId?: string;
                 };
                 header?: never;
@@ -1662,7 +2110,6 @@ export interface paths {
                     workforcePersonId?: string;
                     source?: components["schemas"]["ExternalWorkforceSource"];
                     search?: string;
-                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
                     organizationId?: string;
                 };
                 header?: never;
@@ -1705,7 +2152,6 @@ export interface paths {
                     search?: string;
                     page?: number;
                     pageSize?: number;
-                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
                     organizationId?: string;
                 };
                 header?: never;
@@ -1747,7 +2193,6 @@ export interface paths {
         post: {
             parameters: {
                 query?: {
-                    /** @description Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization. */
                     organizationId?: string;
                 };
                 header?: never;
@@ -1792,6 +2237,8 @@ export interface components {
             password?: string | null;
             client?: components["schemas"]["ClientInfo"];
         };
+        /** @enum {string} */
+        AnalysisPeriod: "daily" | "weekly" | "sprint" | "previousDay";
         AuditEventResponse: {
             /** Format: uuid */
             id?: string;
@@ -1913,6 +2360,10 @@ export interface components {
         LogoutRequest: {
             refreshToken?: string | null;
         };
+        /** @enum {string} */
+        NotificationDispatchStatus: "pending" | "completed" | "failed";
+        /** @enum {string} */
+        NotificationScheduleKind: "previousDay" | "lunch" | "endOfDay";
         OrganizationResponse: {
             /** Format: uuid */
             id?: string;
@@ -1940,6 +2391,9 @@ export interface components {
         };
         /** @enum {string} */
         Product: "revit" | "zwcad";
+        ReceiveTimeNotificationsRequest: {
+            ids?: string[] | null;
+        };
         RefreshRequest: {
             refreshToken?: string | null;
         };
@@ -1947,6 +2401,14 @@ export interface components {
             email?: string | null;
             code?: string | null;
             newPassword?: string | null;
+        };
+        SendTimeNotificationRequest: {
+            /** Format: uuid */
+            requestId?: string;
+            /** Format: uuid */
+            userId?: string | null;
+            message?: string | null;
+            period?: components["schemas"]["AnalysisPeriod"];
         };
         SessionResponse: {
             /** Format: uuid */
@@ -1981,6 +2443,157 @@ export interface components {
         };
         /** @enum {string} */
         TeamAssignmentRole: "member" | "manager";
+        TimeAnalysisDay: {
+            /** Format: date */
+            day?: string;
+            /** Format: int64 */
+            vrSeconds?: number | null;
+            /** Format: int64 */
+            mondaySeconds?: number | null;
+            /** Format: int64 */
+            deltaSeconds?: number | null;
+            partial?: boolean;
+            issues?: string[] | null;
+        };
+        TimeAnalysisResponse: {
+            /** Format: date */
+            from?: string;
+            /** Format: date */
+            to?: string;
+            /** Format: date-time */
+            cutoff?: string;
+            /** Format: int32 */
+            toleranceMinutes?: number;
+            days?: components["schemas"]["TimeAnalysisDay"][] | null;
+            /** Format: int64 */
+            vrSeconds?: number | null;
+            /** Format: int64 */
+            mondaySeconds?: number | null;
+            /** Format: int64 */
+            deltaSeconds?: number | null;
+            /** Format: int64 */
+            absoluteDivergenceSeconds?: number | null;
+            hasIssues?: boolean;
+            /** Format: uuid */
+            settingsVersion?: string;
+            sources?: components["schemas"]["TimeAnalysisSourceResponse"][] | null;
+        };
+        TimeAnalysisSourceResponse: {
+            source?: components["schemas"]["ExternalWorkforceSource"];
+            status?: string | null;
+            errorCode?: string | null;
+            /** Format: date-time */
+            observedAt?: string;
+        };
+        TimeDispatchPreviewResponse: {
+            /** Format: date */
+            from?: string;
+            /** Format: date */
+            to?: string;
+            /** Format: date-time */
+            cutoff?: string;
+            /** Format: int32 */
+            recipientCount?: number;
+        };
+        TimeDispatchResponse: {
+            /** Format: uuid */
+            id?: string;
+            status?: components["schemas"]["NotificationDispatchStatus"];
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            completedAt?: string | null;
+            /** Format: int32 */
+            recipientCount?: number;
+            errorCode?: string | null;
+            period?: components["schemas"]["AnalysisPeriod"];
+            message?: string | null;
+            /** Format: uuid */
+            userId?: string | null;
+        };
+        TimeDispatchResponsePagedResponse: {
+            items?: components["schemas"]["TimeDispatchResponse"][] | null;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            pageSize?: number;
+            /** Format: int64 */
+            total?: number;
+        };
+        TimeNotificationResponse: {
+            /** Format: uuid */
+            id?: string;
+            message?: string | null;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            readAt?: string | null;
+            /** Format: date-time */
+            deliveredAt?: string | null;
+            analysis?: components["schemas"]["TimeAnalysisResponse"];
+        };
+        TimeNotificationResponsePagedResponse: {
+            items?: components["schemas"]["TimeNotificationResponse"][] | null;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            pageSize?: number;
+            /** Format: int64 */
+            total?: number;
+        };
+        TimeReportResponse: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            workforcePersonId?: string;
+            /** Format: uuid */
+            userId?: string;
+            displayName?: string | null;
+            /** Format: date-time */
+            createdAt?: string;
+            analysis?: components["schemas"]["TimeAnalysisResponse"];
+        };
+        TimeReportResponsePagedResponse: {
+            items?: components["schemas"]["TimeReportResponse"][] | null;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            pageSize?: number;
+            /** Format: int64 */
+            total?: number;
+        };
+        TimeScheduleRequest: {
+            /** Format: time */
+            localTime?: string;
+            message?: string | null;
+            kind?: components["schemas"]["NotificationScheduleKind"];
+            isEnabled?: boolean;
+            /** Format: uuid */
+            version?: string | null;
+        };
+        TimeScheduleResponse: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: time */
+            localTime?: string;
+            message?: string | null;
+            kind?: components["schemas"]["NotificationScheduleKind"];
+            isEnabled?: boolean;
+            /** Format: uuid */
+            version?: string;
+        };
+        TimeSettingsResponse: {
+            /** Format: int32 */
+            toleranceMinutes?: number;
+            timeZoneId?: string | null;
+            automaticEnabled?: boolean;
+            /** Format: uuid */
+            version?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+            /** Format: uuid */
+            updatedByUserId?: string | null;
+        };
         TokenResponse: {
             accessToken?: string | null;
             /** Format: date-time */
@@ -1992,6 +2605,13 @@ export interface components {
         };
         UpdateProfileRequest: {
             displayName?: string | null;
+        };
+        UpdateTimeSettingsRequest: {
+            /** Format: uuid */
+            version?: string;
+            /** Format: int32 */
+            toleranceMinutes?: number;
+            automaticEnabled?: boolean;
         };
         UpdateUserRequest: {
             displayName?: string | null;

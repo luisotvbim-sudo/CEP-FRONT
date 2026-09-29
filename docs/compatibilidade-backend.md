@@ -1,5 +1,7 @@
 # Compatibilidade entre CEP-FRONT e CEP-API
 
+> Entrega de 29/09/2026: [análises e notificações implementadas](notificacoes-implementacao.md), com contrato real nos dois snapshots OpenAPI e tipos regenerados. Configurações/agendas são globais; envios e análises respeitam o escopo da API. Tolerância inicial: 30 minutos nos dois sentidos. Implantar primeiro o backend correspondente. O retrato de 23/09 abaixo é histórico e não descreve as novas capacidades.
+
 Atualizado em 23/09/2026.
 
 Referências desta revisão:

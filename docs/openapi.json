@@ -31,7 +31,6 @@
           {
             "name": "organizationId",
             "in": "query",
-            "description": "Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization.",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -67,95 +66,6 @@
                 }
               }
             }
-          }
-        }
-      }
-    },
-    "/api/v1/auth/web/login": {
-      "post": {
-        "tags": [
-          "Auth"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/LoginRequest"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/LoginRequest"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/LoginRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/WebSessionResponse"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WebSessionResponse"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WebSessionResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/auth/web/refresh": {
-      "post": {
-        "tags": [
-          "Auth"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/WebSessionResponse"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WebSessionResponse"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WebSessionResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/auth/web/logout": {
-      "post": {
-        "tags": [
-          "Auth"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
           }
         }
       }
@@ -287,10 +197,111 @@
         }
       }
     },
-    "/api/v1/auth/invitations/accept": {
+    "/api/v1/auth/web/login": {
       "post": {
         "tags": [
           "Auth"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebSessionResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebSessionResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebSessionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/web/refresh": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebSessionResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebSessionResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebSessionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/web/logout": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/.well-known/jwks.json": {
+      "get": {
+        "tags": [
+          "Discovery"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/invitations/accept": {
+      "post": {
+        "tags": [
+          "InvitationAcceptance"
         ],
         "requestBody": {
           "content": {
@@ -331,80 +342,6 @@
                 }
               }
             }
-          }
-        }
-      }
-    },
-    "/api/v1/auth/password/forgot": {
-      "post": {
-        "tags": [
-          "Auth"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ForgotPasswordRequest"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ForgotPasswordRequest"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/ForgotPasswordRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/auth/password/reset": {
-      "post": {
-        "tags": [
-          "Auth"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ResetPasswordRequest"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ResetPasswordRequest"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/ResetPasswordRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/.well-known/jwks.json": {
-      "get": {
-        "tags": [
-          "Discovery"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
           }
         }
       }
@@ -961,7 +898,6 @@
           {
             "name": "organizationId",
             "in": "query",
-            "description": "Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization.",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -1001,7 +937,6 @@
           {
             "name": "organizationId",
             "in": "query",
-            "description": "Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization.",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -1058,7 +993,6 @@
           {
             "name": "organizationId",
             "in": "query",
-            "description": "Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization.",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -1116,7 +1050,6 @@
           {
             "name": "organizationId",
             "in": "query",
-            "description": "Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization.",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -1148,7 +1081,6 @@
           {
             "name": "organizationId",
             "in": "query",
-            "description": "Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization.",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -1180,7 +1112,6 @@
           {
             "name": "organizationId",
             "in": "query",
-            "description": "Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization.",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -1226,6 +1157,68 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/password/forgot": {
+      "post": {
+        "tags": [
+          "PasswordRecovery"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/password/reset": {
+      "post": {
+        "tags": [
+          "PasswordRecovery"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
           }
         }
       }
@@ -1354,6 +1347,307 @@
         }
       }
     },
+    "/api/v1/organization/time-control/analyses": {
+      "get": {
+        "tags": [
+          "TimeAnalyses"
+        ],
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "workforcePersonId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "period",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/AnalysisPeriod"
+            }
+          },
+          {
+            "name": "day",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "issue",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 30
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeReportResponsePagedResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeReportResponsePagedResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeReportResponsePagedResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/organization/time-control/teams/{teamId}/assignments": {
+      "get": {
+        "tags": [
+          "TimeControlTeamAssignments"
+        ],
+        "parameters": [
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "includeHistory",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          {
+            "name": "asOf",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "organizationId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TeamAssignmentResponse"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TeamAssignmentResponse"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TeamAssignmentResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "TimeControlTeamAssignments"
+        ],
+        "parameters": [
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "organizationId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTeamAssignmentRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTeamAssignmentRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTeamAssignmentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamAssignmentResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamAssignmentResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamAssignmentResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/organization/time-control/teams/{teamId}/assignments/{assignmentId}/end": {
+      "patch": {
+        "tags": [
+          "TimeControlTeamAssignments"
+        ],
+        "parameters": [
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "assignmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "organizationId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EndTeamAssignmentRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EndTeamAssignmentRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/EndTeamAssignmentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamAssignmentResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamAssignmentResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamAssignmentResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/organization/time-control/teams": {
       "get": {
         "tags": [
@@ -1379,7 +1673,6 @@
           {
             "name": "organizationId",
             "in": "query",
-            "description": "Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization.",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -1426,7 +1719,6 @@
           {
             "name": "organizationId",
             "in": "query",
-            "description": "Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization.",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -1502,7 +1794,6 @@
           {
             "name": "organizationId",
             "in": "query",
-            "description": "Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization.",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -1549,7 +1840,6 @@
           {
             "name": "organizationId",
             "in": "query",
-            "description": "Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization.",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -1599,41 +1889,30 @@
         }
       }
     },
-    "/api/v1/organization/time-control/teams/{teamId}/assignments": {
+    "/api/v1/organization/time-control/notification-dispatches/preview": {
       "get": {
         "tags": [
-          "TimeControlTeams"
+          "TimeNotificationDispatches"
         ],
         "parameters": [
           {
-            "name": "teamId",
-            "in": "path",
-            "required": true,
+            "name": "period",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/AnalysisPeriod"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "query",
             "schema": {
               "type": "string",
               "format": "uuid"
             }
           },
           {
-            "name": "includeHistory",
-            "in": "query",
-            "schema": {
-              "type": "boolean",
-              "default": false
-            }
-          },
-          {
-            "name": "asOf",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "date"
-            }
-          },
-          {
             "name": "organizationId",
             "in": "query",
-            "description": "Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization.",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -1646,9 +1925,345 @@
             "content": {
               "text/plain": {
                 "schema": {
+                  "$ref": "#/components/schemas/TimeDispatchPreviewResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeDispatchPreviewResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeDispatchPreviewResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/organization/time-control/notification-dispatches": {
+      "post": {
+        "tags": [
+          "TimeNotificationDispatches"
+        ],
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendTimeNotificationRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendTimeNotificationRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendTimeNotificationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeDispatchResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeDispatchResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeDispatchResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "TimeNotificationDispatches"
+        ],
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 30
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeDispatchResponsePagedResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeDispatchResponsePagedResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeDispatchResponsePagedResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/notifications": {
+      "get": {
+        "tags": [
+          "TimeNotifications"
+        ],
+        "parameters": [
+          {
+            "name": "unreadOnly",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          {
+            "name": "pendingOnly",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeNotificationResponsePagedResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeNotificationResponsePagedResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeNotificationResponsePagedResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/notifications/received": {
+      "post": {
+        "tags": [
+          "TimeNotifications"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReceiveTimeNotificationsRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReceiveTimeNotificationsRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReceiveTimeNotificationsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/me/notifications/{id}/read": {
+      "post": {
+        "tags": [
+          "TimeNotifications"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/time-control/settings": {
+      "get": {
+        "tags": [
+          "TimeSettings"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeSettingsResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeSettingsResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeSettingsResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "TimeSettings"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTimeSettingsRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTimeSettingsRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTimeSettingsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeSettingsResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeSettingsResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeSettingsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/time-control/notification-schedules": {
+      "get": {
+        "tags": [
+          "TimeSettings"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/TeamAssignmentResponse"
+                    "$ref": "#/components/schemas/TimeScheduleResponse"
                   }
                 }
               },
@@ -1656,7 +2271,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/TeamAssignmentResponse"
+                    "$ref": "#/components/schemas/TimeScheduleResponse"
                   }
                 }
               },
@@ -1664,7 +2279,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/TeamAssignmentResponse"
+                    "$ref": "#/components/schemas/TimeScheduleResponse"
                   }
                 }
               }
@@ -1674,43 +2289,23 @@
       },
       "post": {
         "tags": [
-          "TimeControlTeams"
-        ],
-        "parameters": [
-          {
-            "name": "teamId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "organizationId",
-            "in": "query",
-            "description": "Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization.",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
+          "TimeSettings"
         ],
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateTeamAssignmentRequest"
+                "$ref": "#/components/schemas/TimeScheduleRequest"
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateTeamAssignmentRequest"
+                "$ref": "#/components/schemas/TimeScheduleRequest"
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateTeamAssignmentRequest"
+                "$ref": "#/components/schemas/TimeScheduleRequest"
               }
             }
           }
@@ -1721,17 +2316,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/TeamAssignmentResponse"
+                  "$ref": "#/components/schemas/TimeScheduleResponse"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TeamAssignmentResponse"
+                  "$ref": "#/components/schemas/TimeScheduleResponse"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TeamAssignmentResponse"
+                  "$ref": "#/components/schemas/TimeScheduleResponse"
                 }
               }
             }
@@ -1739,34 +2334,16 @@
         }
       }
     },
-    "/api/v1/organization/time-control/teams/{teamId}/assignments/{assignmentId}/end": {
+    "/api/v1/time-control/notification-schedules/{id}": {
       "patch": {
         "tags": [
-          "TimeControlTeams"
+          "TimeSettings"
         ],
         "parameters": [
           {
-            "name": "teamId",
+            "name": "id",
             "in": "path",
             "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "assignmentId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "organizationId",
-            "in": "query",
-            "description": "Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization.",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -1777,17 +2354,17 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/EndTeamAssignmentRequest"
+                "$ref": "#/components/schemas/TimeScheduleRequest"
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/EndTeamAssignmentRequest"
+                "$ref": "#/components/schemas/TimeScheduleRequest"
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/EndTeamAssignmentRequest"
+                "$ref": "#/components/schemas/TimeScheduleRequest"
               }
             }
           }
@@ -1798,20 +2375,49 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/TeamAssignmentResponse"
+                  "$ref": "#/components/schemas/TimeScheduleResponse"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TeamAssignmentResponse"
+                  "$ref": "#/components/schemas/TimeScheduleResponse"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TeamAssignmentResponse"
+                  "$ref": "#/components/schemas/TimeScheduleResponse"
                 }
               }
             }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "TimeSettings"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
           }
         }
       }
@@ -1872,7 +2478,6 @@
           {
             "name": "organizationId",
             "in": "query",
-            "description": "Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization.",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -1920,7 +2525,6 @@
           {
             "name": "organizationId",
             "in": "query",
-            "description": "Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization.",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -1960,7 +2564,6 @@
           {
             "name": "organizationId",
             "in": "query",
-            "description": "Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization.",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -2009,7 +2612,6 @@
           {
             "name": "organizationId",
             "in": "query",
-            "description": "Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization.",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -2087,7 +2689,6 @@
           {
             "name": "organizationId",
             "in": "query",
-            "description": "Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization.",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -2152,7 +2753,6 @@
           {
             "name": "organizationId",
             "in": "query",
-            "description": "Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization.",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -2192,7 +2792,6 @@
           {
             "name": "organizationId",
             "in": "query",
-            "description": "Required for SystemAdmin: organization to administer. Other roles remain restricted to their own organization.",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -2269,6 +2868,15 @@
           }
         },
         "additionalProperties": false
+      },
+      "AnalysisPeriod": {
+        "enum": [
+          "daily",
+          "weekly",
+          "sprint",
+          "previousDay"
+        ],
+        "type": "string"
       },
       "AuditEventResponse": {
         "type": "object",
@@ -2634,6 +3242,22 @@
         },
         "additionalProperties": false
       },
+      "NotificationDispatchStatus": {
+        "enum": [
+          "pending",
+          "completed",
+          "failed"
+        ],
+        "type": "string"
+      },
+      "NotificationScheduleKind": {
+        "enum": [
+          "previousDay",
+          "lunch",
+          "endOfDay"
+        ],
+        "type": "string"
+      },
       "OrganizationResponse": {
         "type": "object",
         "properties": {
@@ -2713,6 +3337,20 @@
         ],
         "type": "string"
       },
+      "ReceiveTimeNotificationsRequest": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "RefreshRequest": {
         "type": "object",
         "properties": {
@@ -2737,6 +3375,28 @@
           "newPassword": {
             "type": "string",
             "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "SendTimeNotificationRequest": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          },
+          "period": {
+            "$ref": "#/components/schemas/AnalysisPeriod"
           }
         },
         "additionalProperties": false
@@ -2829,6 +3489,407 @@
         ],
         "type": "string"
       },
+      "TimeAnalysisDay": {
+        "type": "object",
+        "properties": {
+          "day": {
+            "type": "string",
+            "format": "date"
+          },
+          "vrSeconds": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "mondaySeconds": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "deltaSeconds": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "partial": {
+            "type": "boolean"
+          },
+          "issues": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "TimeAnalysisResponse": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "to": {
+            "type": "string",
+            "format": "date"
+          },
+          "cutoff": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "toleranceMinutes": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimeAnalysisDay"
+            },
+            "nullable": true
+          },
+          "vrSeconds": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "mondaySeconds": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "deltaSeconds": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "absoluteDivergenceSeconds": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "hasIssues": {
+            "type": "boolean"
+          },
+          "settingsVersion": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimeAnalysisSourceResponse"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "TimeAnalysisSourceResponse": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "$ref": "#/components/schemas/ExternalWorkforceSource"
+          },
+          "status": {
+            "type": "string",
+            "nullable": true
+          },
+          "errorCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "observedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "TimeDispatchPreviewResponse": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "to": {
+            "type": "string",
+            "format": "date"
+          },
+          "cutoff": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "recipientCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "TimeDispatchResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/NotificationDispatchStatus"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "recipientCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "errorCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "period": {
+            "$ref": "#/components/schemas/AnalysisPeriod"
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "TimeDispatchResponsePagedResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimeDispatchResponse"
+            },
+            "nullable": true
+          },
+          "page": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "additionalProperties": false
+      },
+      "TimeNotificationResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "readAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "deliveredAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "analysis": {
+            "$ref": "#/components/schemas/TimeAnalysisResponse"
+          }
+        },
+        "additionalProperties": false
+      },
+      "TimeNotificationResponsePagedResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimeNotificationResponse"
+            },
+            "nullable": true
+          },
+          "page": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "additionalProperties": false
+      },
+      "TimeReportResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "workforcePersonId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "analysis": {
+            "$ref": "#/components/schemas/TimeAnalysisResponse"
+          }
+        },
+        "additionalProperties": false
+      },
+      "TimeReportResponsePagedResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimeReportResponse"
+            },
+            "nullable": true
+          },
+          "page": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "additionalProperties": false
+      },
+      "TimeScheduleRequest": {
+        "type": "object",
+        "properties": {
+          "localTime": {
+            "type": "string",
+            "format": "time"
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          },
+          "kind": {
+            "$ref": "#/components/schemas/NotificationScheduleKind"
+          },
+          "isEnabled": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "TimeScheduleResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "localTime": {
+            "type": "string",
+            "format": "time"
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          },
+          "kind": {
+            "$ref": "#/components/schemas/NotificationScheduleKind"
+          },
+          "isEnabled": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false
+      },
+      "TimeSettingsResponse": {
+        "type": "object",
+        "properties": {
+          "toleranceMinutes": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "timeZoneId": {
+            "type": "string",
+            "nullable": true
+          },
+          "automaticEnabled": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedByUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "TokenResponse": {
         "type": "object",
         "properties": {
@@ -2860,6 +3921,23 @@
           "displayName": {
             "type": "string",
             "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UpdateTimeSettingsRequest": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "toleranceMinutes": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "automaticEnabled": {
+            "type": "boolean"
           }
         },
         "additionalProperties": false
@@ -3351,6 +4429,9 @@
       "name": "Discovery"
     },
     {
+      "name": "InvitationAcceptance"
+    },
+    {
       "name": "Me"
     },
     {
@@ -3360,13 +4441,31 @@
       "name": "OrganizationUsers"
     },
     {
+      "name": "PasswordRecovery"
+    },
+    {
       "name": "PluginGrants"
     },
     {
       "name": "SystemAudit"
     },
     {
+      "name": "TimeAnalyses"
+    },
+    {
+      "name": "TimeControlTeamAssignments"
+    },
+    {
       "name": "TimeControlTeams"
+    },
+    {
+      "name": "TimeNotificationDispatches"
+    },
+    {
+      "name": "TimeNotifications"
+    },
+    {
+      "name": "TimeSettings"
     },
     {
       "name": "WorkforceDirectory"

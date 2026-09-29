@@ -57,6 +57,15 @@ export function App({ client }: { client: AuthClient }) {
     document.title = session ? 'CEP Horas' : 'Entrar · CEP Horas'
   }, [session, client])
 
+  useEffect(() => {
+    if (!window.__CEP_DESKTOP__ || session || restoring) return
+    let active = true
+    const resume = () => { void client.restore().then((value) => { if (active && value) { setSession(value); setNotice(undefined) } }).catch(() => { /* The login form remains available after an uncertain refresh. */ }) }
+    window.addEventListener('online', resume)
+    const timer = setInterval(resume, 60_000)
+    return () => { active = false; clearInterval(timer); window.removeEventListener('online', resume) }
+  }, [client, session, restoring])
+
   async function logout() {
     if (pending) return
     setPending(true)

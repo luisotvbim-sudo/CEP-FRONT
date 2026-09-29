@@ -97,7 +97,7 @@ export class DesktopAuthClient implements AuthClient {
     })
   }
   restore() {
-    return (this.restoring ??= this.call<AuthSession | null>('restore', {}, 45_000))
+    return (this.restoring ??= this.call<AuthSession | null>('restore', {}, 45_000).finally(() => { this.restoring = null }))
   }
   onExpired(listener: (error?: AuthError) => void) {
     this.listeners.add(listener)
@@ -105,7 +105,7 @@ export class DesktopAuthClient implements AuthClient {
       this.listeners.delete(listener)
     }
   }
-  request<T>(method: 'GET' | 'POST' | 'PATCH', path: string, body?: object) {
+  request<T>(method: 'GET' | 'POST' | 'PATCH' | 'DELETE', path: string, body?: object) {
     return this.call<T>(
       'api',
       { method, path, body },

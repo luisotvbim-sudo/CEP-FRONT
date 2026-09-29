@@ -1,0 +1,91 @@
+.notification-form {
+  display: grid;
+  gap: 1rem;
+}
+.notification-form > label {
+  display: grid;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+.notification-form input:not([type='checkbox']),
+.notification-form select,
+.notification-form textarea {
+  width: 100%;
+  max-width: 42rem;
+  border: 1px solid #d7d7d0;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  background: white;
+  color: #292d2d;
+  font: inherit;
+}
+.notification-form textarea {
+  min-height: 6rem;
+  resize: vertical;
+}
+.notification-form .primary-button {
+  width: fit-content;
+}
+.notification-check {
+  display: flex !important;
+  align-items: center;
+  gap: 0.6rem;
+}
+.notification-check input {
+  accent-color: #c7500d;
+}
+.notification-list article {
+  padding: 1.2rem 0;
+  border-bottom: 1px solid #e5e5df;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.notification-list article > div:first-child {
+  min-width: 0;
+  flex: 1;
+}
+.notification-list p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.notification-list summary {
+  cursor: pointer;
+  padding: 0.75rem 0;
+  color: #a13b08;
+}
+.analysis-totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+}
+.analysis-totals dt {
+  font-size: 0.8rem;
+  color: #666;
+}
+.analysis-totals dd {
+  margin: 0.5rem 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+.analysis-details {
+  padding: 1rem 0;
+}
+.analysis-details table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.analysis-details th,
+.analysis-details td {
+  padding: 0.7rem;
+  text-align: left;
+  border-bottom: 1px solid #e5e5df;
+}
+.analysis-details .table-scroll {
+  overflow-x: auto;
+}
+@media (max-width: 650px) {
+  .notification-list article {
+    flex-direction: column;
+  }
+}

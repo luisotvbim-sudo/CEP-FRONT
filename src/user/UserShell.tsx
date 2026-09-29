@@ -9,8 +9,9 @@ import { SyncPage } from '../admin/SyncPage'
 import { date, duration, sourceLabel, syncLabels, timestamp, today, validatePeriod } from '../admin/format'
 import { Badge, Empty, Loading, PageHeading, QueryError, useAction, useQuery } from '../admin/ui'
 import '../admin/admin.css'
+import { Analyses, Inbox, useNotificationApi, useOpenInbox } from '../notifications/Pages'
 
-type Page = 'mine' | 'teams' | 'sync'
+type Page = 'mine' | 'teams' | 'sync' | 'notifications' | 'analyses' | 'teamAnalyses'
 
 function LatestSources({ api }: { api: AdminApi }) {
   const latest = useQuery(async () => {
@@ -144,6 +145,8 @@ export function UserShell({ client, session, onLogout }: { client: AuthClient; s
   const people = useQuery(() => api.visiblePeople(), [api])
   const teams = useQuery(() => api.teams(false, today()), [api])
   const [page, setPage] = useState<Page>('mine')
+  const notifications = useNotificationApi(client)
+  useOpenInbox(() => setPage('notifications'))
   const [teamId, setTeamId] = useState<string | null>(null)
   const logout = useAction()
   const self = people.data?.find((person) => person.userId === session.user.id)
@@ -153,6 +156,9 @@ export function UserShell({ client, session, onLogout }: { client: AuthClient; s
     { id: 'mine' as const, label: 'Minha jornada', icon: History },
     ...(managed.length ? [{ id: 'teams' as const, label: 'Meus times', icon: UsersRound }] : []),
     { id: 'sync' as const, label: 'Atualização', icon: RefreshCw },
+    { id: 'notifications' as const, label: 'Minhas notificações', icon: History },
+    { id: 'analyses' as const, label: 'Minha análise', icon: History },
+    ...(managed.length ? [{ id: 'teamAnalyses' as const, label: 'Análises dos times', icon: UsersRound }] : []),
   ]
   const activePage = page === 'teams' && !managed.length ? 'mine' : page
 
@@ -191,6 +197,9 @@ export function UserShell({ client, session, onLogout }: { client: AuthClient; s
           </>}
         </>}
         {activePage === 'sync' && <SyncPage api={api} allowFull={false} />}
+        {activePage === 'notifications' && <Inbox api={notifications} />}
+        {activePage === 'analyses' && <Analyses api={notifications} peopleApi={api} ownUserId={session.user.id} />}
+        {activePage === 'teamAnalyses' && <Analyses api={notifications} peopleApi={api} />}
       </main>
       <footer className="admin-footer"><span>CEP Horas · Conceito Engenharia</span><span>Fuso de apresentação: America/Sao_Paulo</span></footer>
     </div>

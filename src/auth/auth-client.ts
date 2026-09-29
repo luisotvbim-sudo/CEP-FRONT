@@ -14,7 +14,7 @@ export interface AuthClient {
   requestPasswordReset(email: string): Promise<void>
   resetPassword(input: ResetPassword): Promise<void>
   restore(): Promise<AuthSession | null>
-  request<T>(method: 'GET' | 'POST' | 'PATCH', path: string, body?: object): Promise<T>
+  request<T>(method: 'GET' | 'POST' | 'PATCH' | 'DELETE', path: string, body?: object): Promise<T>
   onExpired(listener: (error?: AuthError) => void): () => void
 }
 
@@ -40,6 +40,17 @@ export function errorMessage(error: unknown): AuthError {
 
 export function describeError(status: number, problem: ApiProblem): string {
   const messages: Record<string, string> = {
+    configuration_conflict: 'Outro administrador alterou esta configuração. Recarregue a versão atual antes de salvar novamente.',
+    schedule_time_conflict: 'Já existe um agendamento nesse horário. Edite o agendamento existente ou escolha outro horário.',
+    schedule_not_found: 'Este agendamento foi excluído. Atualize a lista.',
+    invalid_schedule: 'Informe um horário com precisão de minutos e uma mensagem válida.',
+    notification_scope_empty: 'Não há contas ativas associadas às fontes nesse escopo. Confira as pessoas e os vínculos.',
+    notification_cooldown: 'Aguarde um minuto antes de solicitar outro envio. O envio anterior continua no histórico.',
+    notification_request_conflict: 'Este identificador de envio já foi usado para outro conteúdo. Confira o histórico e prepare uma nova mensagem.',
+    notification_not_found: 'A notificação não está disponível para sua conta. Atualize a central.',
+    invalid_analysis_period: 'Selecione um período de análise disponível.',
+    invalid_analysis_issue: 'Selecione um tipo de ocorrência disponível.',
+    invalid_notification_request: 'Confira destinatário, período e mensagem antes de enviar.',
     external_identity_already_mapped:
       'Um dos perfis já está associado. Atualize a lista e confira a pessoa antes de tentar novamente.',
     external_identity_inactive:
@@ -285,9 +296,11 @@ export class HttpAuthClient implements AuthClient {
     return this.refreshFlight
   }
 
-  async request<T>(method: 'GET' | 'POST' | 'PATCH', path: string, body?: object): Promise<T> {
+  async request<T>(method: 'GET' | 'POST' | 'PATCH' | 'DELETE', path: string, body?: object): Promise<T> {
     if (
       !path.startsWith('/organization/') &&
+      !/^\/time-control\/(settings|notification-schedules(?:\/[0-9a-f-]{36})?)(\?|$)/i.test(path) &&
+      !/^\/me\/notifications(?:\/received|\/[0-9a-f-]{36}\/read)?(\?|$)/i.test(path) &&
       path.split('?')[0] !== '/admin/organizations' &&
       path !== '/me'
     )
