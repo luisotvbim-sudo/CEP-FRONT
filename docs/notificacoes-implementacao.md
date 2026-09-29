@@ -12,7 +12,7 @@ Entrega de 29/09/2026, integrada ao contrato real da CEP API desta mesma entrega
 
 ## Windows
 
-- WPF permanece na bandeja ao fechar a janela. O menu oferece abrir, abrir a central e sair do aplicativo. Release registra inicialização por usuário no `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`; Debug não altera a inicialização. A distribuição precisa conservar o caminho do executável. O instalador/MSIX e a assinatura permanecem uma entrega separada.
+- WPF permanece na bandeja ao fechar a janela. O menu oferece abrir, abrir a central, testar um popup local e sair do aplicativo. A instalação por usuário registra início em segundo plano em `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`; builds portáteis e Debug não alteram a inicialização. MSIX usa a tarefa do manifesto. Veja [aplicativo Windows](aplicativo-windows.md); assinatura e instalação MSIX ainda precisam de homologação.
 - O host nativo consulta pendentes após login/retomada e a cada minuto. Coleta todas as páginas antes de confirmar recebimento para não deslocar resultados da paginação.
 - Identificadores recebidos são persistidos com DPAPI, separados pela origem da API e pela conta. Nenhum token ou corpo de mensagem entra no React ou nesse arquivo de recibos. O arquivo não contém uma cópia offline das análises; detalhes continuam na central autenticada.
 - Um popup resume o lote de pendentes. Novas chegadas próximas são agrupadas, com intervalo mínimo de cinco minutos entre popups. A central conserva cada mensagem com sua data original. Recebimento não equivale a leitura.

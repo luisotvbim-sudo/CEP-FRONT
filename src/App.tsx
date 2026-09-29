@@ -170,7 +170,7 @@ export function App({ client }: { client: AuthClient }) {
       </main>
       <footer className="page-footer">
         <span>© {new Date().getFullYear()} Conceito Engenharia</span>
-        <span>Feito para conectar pessoas, projetos e tempo.</span>
+        {!window.__CEP_DESKTOP__ ? <a className="login-download-link" href="/download">Baixar aplicativo para Windows</a> : <span>Feito para conectar pessoas, projetos e tempo.</span>}
       </footer>
     </div>
   )

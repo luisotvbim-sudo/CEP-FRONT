@@ -5,11 +5,14 @@ import './styles.css'
 import { App } from './App'
 import { HttpAuthClient } from './auth/auth-client'
 import { DesktopAuthClient } from './auth/desktop-auth-client'
+import { DownloadPage } from './download/DownloadPage'
 
 const root = createRoot(document.getElementById('root')!)
 
 // This preview is excluded by Vite from production, including its fixtures.
-if (import.meta.env.DEV && new URLSearchParams(location.search).get('preview') === 'analysis') {
+if (location.pathname.replace(/\/$/, '') === '/download') {
+  root.render(<StrictMode><DownloadPage /></StrictMode>)
+} else if (import.meta.env.DEV && new URLSearchParams(location.search).get('preview') === 'analysis') {
   void import('./preview/AnalysisPreview').then(({ AnalysisPreview }) => {
     root.render(
       <StrictMode>
