@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useModal } from './useModal'
+import { useAction } from '../hooks/async'
+import { useEffect, useState, type FormEvent } from 'react'
 import { ArrowRight, Check, LoaderCircle, Mail, X } from 'lucide-react'
-import { AuthError, errorMessage, type AuthClient } from '../auth/auth-client'
+import { AuthError, type AuthClient } from '../auth/auth-client'
 import { FormNotice } from './FormNotice'
 
 export function RecoveryDialog({
@@ -12,36 +14,25 @@ export function RecoveryDialog({
   initialEmail: string
   onClose(): void
 }) {
-  const dialog = useRef<HTMLDialogElement>(null)
-  const inFlight = useRef(false)
+  const dialog = useModal()
+  const { pending, error, setError, run } = useAction()
   const [email, setEmail] = useState(initialEmail)
-  const [pending, setPending] = useState(false)
   const [stage, setStage] = useState<'request' | 'reset' | 'done'>('request')
   const [code, setCode] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmation, setConfirmation] = useState('')
-  const [error, setError] = useState<AuthError | null>(null)
 
   useEffect(() => {
-    const element = dialog.current
-    element?.showModal()
-    return () => element?.close()
-  }, [])
-  useEffect(() => {
     if (stage === 'reset') dialog.current?.querySelector<HTMLInputElement>('#reset-code')?.focus()
-  }, [stage])
+  }, [stage, dialog])
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (inFlight.current) return
     if (stage === 'reset' && newPassword !== confirmation) {
       setError(new AuthError('As senhas não coincidem. Confira a confirmação.'))
       return
     }
-    inFlight.current = true
-    setPending(true)
-    setError(null)
-    try {
+    await run(async () => {
       if (stage === 'request') {
         await client.requestPasswordReset(email)
         setStage('reset')
@@ -52,12 +43,7 @@ export function RecoveryDialog({
         setCode('')
         setStage('done')
       }
-    } catch (failure) {
-      setError(errorMessage(failure))
-    } finally {
-      inFlight.current = false
-      setPending(false)
-    }
+    })
   }
 
   return (

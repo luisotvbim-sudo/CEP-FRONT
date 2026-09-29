@@ -1,3 +1,6 @@
+import { collectPages, organizationPath, query } from '../api/query'
+import type { Paged } from '../api/query'
+export type { Paged } from '../api/query'
 import type { components } from '../auth/api-schema'
 import type { AuthClient } from '../auth/auth-client'
 
@@ -12,42 +15,22 @@ export type TimeRecord = Schema['WorkforceTimeRecordResponse']
 export type Invitation = Schema['InvitationResponse']
 export type User = Schema['UserResponse']
 export type AuditEvent = Schema['AuditEventResponse']
-export type Paged<T> = { items?: T[] | null; total?: number; page?: number; pageSize?: number }
 export type History = Schema['WorkforceAdminHistoryResponse']
 
 const root = '/organization/time-control'
-function query(values: Record<string, string | number | boolean | undefined>) {
-  const params = new URLSearchParams()
-  Object.entries(values).forEach(([key, value]) => {
-    if (value !== undefined && value !== '') params.set(key, String(value))
-  })
-  return params.size ? `?${params}` : ''
-}
 export class AdminApi {
   constructor(
     private readonly client: AuthClient,
     private readonly organizationId?: string,
   ) {}
   private request<T>(method: 'GET' | 'POST' | 'PATCH', path: string, body?: object): Promise<T> {
-    const scoped = this.organizationId
-      ? `${path}${path.includes('?') ? '&' : '?'}organizationId=${encodeURIComponent(this.organizationId)}`
-      : path
-    return this.client.request<T>(method, scoped, body)
+    return this.client.request<T>(method, organizationPath(path, this.organizationId), body)
   }
   people(search = '', page = 1, pageSize = 12) {
-    return this.request<Paged<Person>>(
-      'GET',
-      `${root}/people${query({ search, page, pageSize })}`,
-    )
+    return this.request<Paged<Person>>('GET', `${root}/people${query({ search, page, pageSize })}`)
   }
-  async visiblePeople() {
-    const pageSize = 100
-    const first = await this.people('', 1, pageSize)
-    const pages = Math.ceil((first.total ?? first.items?.length ?? 0) / pageSize)
-    const rest = pages > 1
-      ? await Promise.all(Array.from({ length: pages - 1 }, (_, i) => this.people('', i + 2, pageSize)))
-      : []
-    return [first, ...rest].flatMap((result) => result.items ?? [])
+  visiblePeople() {
+    return collectPages((page) => this.people('', page, 100), 100)
   }
   invitations() {
     return this.request<Invitation[]>('GET', '/organization/invitations')
@@ -102,7 +85,10 @@ export class AdminApi {
     )
   }
   organizationUsers(search = '', status?: Schema['UserStatus'], page = 1) {
-    return this.request<Paged<User>>('GET', `/organization/users${query({ search, status, page, pageSize: 20 })}`)
+    return this.request<Paged<User>>(
+      'GET',
+      `/organization/users${query({ search, status, page, pageSize: 20 })}`,
+    )
   }
   updateUser(id: string, body: Schema['UpdateUserRequest']) {
     return this.request<User>('PATCH', `/organization/users/${encodeURIComponent(id)}`, body)
@@ -111,7 +97,10 @@ export class AdminApi {
     return this.request<Invitation>('POST', '/organization/invitations', body)
   }
   audit(before?: string) {
-    return this.request<AuditEvent[]>('GET', `/organization/audit${query({ before, pageSize: 50 })}`)
+    return this.request<AuditEvent[]>(
+      'GET',
+      `/organization/audit${query({ before, pageSize: 50 })}`,
+    )
   }
   assign(teamId: string, body: Schema['CreateTeamAssignmentRequest']) {
     return this.request<Assignment>(

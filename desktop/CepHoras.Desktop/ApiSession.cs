@@ -5,7 +5,6 @@ using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 
 namespace CepHoras.Desktop;
 
@@ -22,7 +21,7 @@ internal sealed class ApiSession : IDisposable
     private readonly HttpClient http;
     private readonly SemaphoreSlim gate = new(1, 1);
     private readonly string sessionFile;
-    private readonly byte[] entropy;
+    private readonly ProtectedJsonFile storedSession;
     private readonly FileStream instanceLock;
     private string? accessToken, refreshToken;
     private DateTimeOffset accessExpiry;
@@ -36,18 +35,28 @@ internal sealed class ApiSession : IDisposable
         return result is JsonElement value ? value : default;
     }
 
-    public ApiSession(Uri api)
+    public ApiSession(Uri api) : this(api, null, SessionDirectory()) { }
+
+    internal ApiSession(Uri api, HttpMessageHandler? handler, string directory)
     {
-        http = new HttpClient { BaseAddress = api, Timeout = Timeout.InfiniteTimeSpan };
-        entropy = SHA256.HashData(Encoding.UTF8.GetBytes(api.GetLeftPart(UriPartial.Authority)));
+        http = handler is null ? new HttpClient() : new HttpClient(handler);
+        http.BaseAddress = api;
+        http.Timeout = Timeout.InfiniteTimeSpan;
+        var entropy = SHA256.HashData(Encoding.UTF8.GetBytes(api.GetLeftPart(UriPartial.Authority)));
+        Directory.CreateDirectory(directory);
+        sessionFile = Path.Combine(directory, Convert.ToHexString(entropy) + ".dat");
+        storedSession = new ProtectedJsonFile(sessionFile, entropy);
+        // Prevent two executable instances from rotating the same stored session.
+        instanceLock = new FileStream(sessionFile + ".lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+    }
+
+    private static string SessionDirectory()
+    {
         var directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Conceito", "CepHoras", "Sessions");
 #if DEBUG
         directory = Environment.GetEnvironmentVariable("CEP_SESSION_DIR") ?? directory;
 #endif
-        Directory.CreateDirectory(directory);
-        sessionFile = Path.Combine(directory, Convert.ToHexString(entropy) + ".dat");
-        // Prevent two executable instances from rotating the same stored session.
-        instanceLock = new FileStream(sessionFile + ".lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+        return directory;
     }
 
     public async Task<object?> Execute(string? operation, JsonElement payload) => operation switch
@@ -67,7 +76,7 @@ internal sealed class ApiSession : IDisposable
         {
             var result = await Send("POST", "/auth/login", new { email = payload.GetProperty("email").GetString()?.Trim(), password = payload.GetProperty("password").GetString(), client = new { type = "cep-horas-desktop", version = "0.2.0" } });
             generation++;
-            Accept(result);
+            await Accept(result);
             user = await Send("GET", "/me", token: accessToken);
             return Metadata();
         }
@@ -81,19 +90,14 @@ internal sealed class ApiSession : IDisposable
         try
         {
             if (accessToken is not null) return Metadata();
-            if (!File.Exists(sessionFile)) return null;
+            if (!storedSession.Exists) return null;
             if (!System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable())
                 throw new ApiFailure(503, "connection_failed");
             try
             {
-                var data = ProtectedData.Unprotect(File.ReadAllBytes(sessionFile), entropy, DataProtectionScope.CurrentUser);
-                try
-                {
-                    using var stored = JsonDocument.Parse(data);
-                    if (stored.RootElement.GetProperty("expiresAt").GetDateTimeOffset() <= DateTimeOffset.UtcNow) { Clear(); return null; }
-                    refreshToken = stored.RootElement.GetProperty("token").GetString();
-                }
-                finally { CryptographicOperations.ZeroMemory(data); }
+                var stored = await storedSession.ReadAsync<JsonElement>();
+                if (stored.GetProperty("expiresAt").GetDateTimeOffset() <= DateTimeOffset.UtcNow) { Clear(); return null; }
+                refreshToken = stored.GetProperty("token").GetString();
             }
             catch (Exception exception) when (exception is CryptographicException or JsonException or InvalidOperationException) { Clear(); return null; }
             await RefreshUnsafe();
@@ -107,7 +111,7 @@ internal sealed class ApiSession : IDisposable
 
     private object Metadata() => new { user, expiresAt = accessExpiry };
 
-    private void Accept(JsonElement result)
+    private async Task Accept(JsonElement result)
     {
         var access = result.GetProperty("accessToken").GetString();
         var refresh = result.GetProperty("refreshToken").GetString();
@@ -115,13 +119,7 @@ internal sealed class ApiSession : IDisposable
         var refreshExpires = result.GetProperty("refreshTokenExpiresAt").GetDateTimeOffset();
         if (string.IsNullOrWhiteSpace(access) || string.IsNullOrWhiteSpace(refresh) || expires <= DateTimeOffset.UtcNow)
             throw new ApiFailure(401, "session_expired");
-        var data = JsonSerializer.SerializeToUtf8Bytes(new { token = refresh, expiresAt = refreshExpires }, Json);
-        try
-        {
-            File.WriteAllBytes(sessionFile + ".tmp", ProtectedData.Protect(data, entropy, DataProtectionScope.CurrentUser));
-            File.Move(sessionFile + ".tmp", sessionFile, true);
-        }
-        finally { CryptographicOperations.ZeroMemory(data); }
+        await storedSession.WriteAsync(new { token = refresh, expiresAt = refreshExpires });
         accessToken = access; refreshToken = refresh; accessExpiry = expires; user = result.GetProperty("user").Clone();
     }
 
@@ -131,11 +129,11 @@ internal sealed class ApiSession : IDisposable
         refreshToken = null;
         // Remove the old persisted token before rotating. After a lost response or
         // process interruption, require login instead of replaying an old token.
-        File.Delete(sessionFile);
+        storedSession.Delete();
         try
         {
             if (token is null) throw new ApiFailure(401, "session_expired");
-            Accept(await Send("POST", "/auth/refresh", new { refreshToken = token }));
+            await Accept(await Send("POST", "/auth/refresh", new { refreshToken = token }));
         }
         catch (Exception exception)
         {
@@ -160,7 +158,7 @@ internal sealed class ApiSession : IDisposable
     {
         var method = payload.GetProperty("method").GetString() ?? "";
         var path = payload.GetProperty("path").GetString() ?? "";
-        if (!Allowed(method, path)) throw new ApiFailure(403, "unsupported_route");
+        if (!ApiRoutePolicy.Allows(method, path)) throw new ApiFailure(403, "unsupported_route");
         object? body = payload.TryGetProperty("body", out var value) && value.ValueKind != JsonValueKind.Null ? value.Clone() : null;
         var token = await Access();
         var currentGeneration = generation;
@@ -181,34 +179,6 @@ internal sealed class ApiSession : IDisposable
         }
         if (currentGeneration != generation) throw new ApiFailure(401, "session_expired");
         return result.ValueKind == JsonValueKind.Undefined ? null : result;
-    }
-
-    private static bool Allowed(string method, string path)
-    {
-        if (path.Contains('\\') || path.Contains('#')) return false;
-        var route = path.Split('?')[0];
-        if (route == "/time-control/settings" && method is "GET" or "PATCH") return true;
-        if (route == "/time-control/notification-schedules" && method is "GET" or "POST") return true;
-        if (Regex.IsMatch(route, "^/time-control/notification-schedules/[0-9a-fA-F-]{36}$") && method is "PATCH" or "DELETE") return true;
-        if (route == "/me/notifications" && method == "GET") return true;
-        if (method == "POST" && (route == "/me/notifications/received" || Regex.IsMatch(route, "^/me/notifications/[0-9a-fA-F-]{36}/read$"))) return true;
-        if (route == "/admin/organizations" && method is "GET" or "POST") return true;
-        if (method == "GET" && route is "/me" or "/organization/users" or "/organization/invitations" or "/organization/audit") return true;
-        if (method == "POST" && route == "/organization/invitations") return true;
-        if (method == "PATCH" && route.StartsWith("/organization/users/", StringComparison.Ordinal) &&
-            Guid.TryParseExact(route["/organization/users/".Length..], "D", out _)) return true;
-        if (method == "POST" && Regex.IsMatch(route, "^/organization/invitations/[0-9a-fA-F-]{36}/resend$")) return true;
-        const string prefix = "/organization/time-control/";
-        if (!route.StartsWith(prefix, StringComparison.Ordinal)) return false;
-        var relative = route[prefix.Length..];
-        const string id = "[0-9a-fA-F-]{36}";
-        return method switch
-        {
-            "GET" => relative is "people" or "external-identities" or "history" or "teams" or "synchronizations/latest" or "analyses" or "notification-dispatches" or "notification-dispatches/preview" || Regex.IsMatch(relative, $"^(synchronizations/{id}|teams/{id}(/assignments)?)$"),
-            "POST" => relative is "people/invitations" or "synchronizations" or "teams" or "notification-dispatches" || Regex.IsMatch(relative, $"^teams/{id}/assignments$"),
-            "PATCH" => Regex.IsMatch(relative, $"^teams/{id}(/assignments/{id}/end)?$"),
-            _ => false
-        };
     }
 
     private async Task<object?> Logout()
@@ -238,6 +208,6 @@ internal sealed class ApiSession : IDisposable
         return result;
     }
 
-    private void Clear() { generation++; accessToken = null; refreshToken = null; accessExpiry = default; File.Delete(sessionFile); }
+    private void Clear() { generation++; accessToken = null; refreshToken = null; accessExpiry = default; storedSession.Delete(); }
     public void Dispose() { accessToken = null; refreshToken = null; http.Dispose(); instanceLock.Dispose(); }
 }

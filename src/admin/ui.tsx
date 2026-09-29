@@ -1,55 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { ArrowLeft, ArrowRight, Inbox, LoaderCircle, Search } from 'lucide-react'
-import { errorMessage, type AuthError } from '../auth/auth-client'
+import { type AuthError } from '../auth/auth-client'
 import { FormNotice } from '../components/FormNotice'
 
-export function useQuery<T>(load: () => Promise<T>, keys: unknown[]) {
-  const [state, setState] = useState<{ data?: T; pending: boolean; error: AuthError | null }>({
-    pending: true,
-    error: null,
-  })
-  const [version, setVersion] = useState(0)
-  const loader = useRef(load)
-  loader.current = load
-  useEffect(() => {
-    let active = true
-    setState({ pending: true, error: null })
-    loader.current().then(
-      (data) => {
-        if (active) setState({ data, pending: false, error: null })
-      },
-      (failure) => {
-        if (active) setState({ pending: false, error: errorMessage(failure) })
-      },
-    )
-    return () => {
-      active = false
-    }
-    // Consumers supply explicit invalidation keys; the latest loader is read through its ref.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [...keys, version])
-  return { ...state, reload: () => setVersion((v) => v + 1) }
-}
-export function useAction() {
-  const [pending, setPending] = useState(false)
-  const [error, setError] = useState<AuthError | null>(null)
-  const busy = useRef(false)
-  async function run(action: () => Promise<void>) {
-    if (busy.current) return
-    busy.current = true
-    setPending(true)
-    setError(null)
-    try {
-      await action()
-    } catch (e) {
-      setError(errorMessage(e))
-    } finally {
-      busy.current = false
-      setPending(false)
-    }
-  }
-  return { pending, error, run, clear: () => setError(null) }
-}
 export function Loading({ text = 'Carregando dados…' }: { text?: string }) {
   return (
     <div className="admin-loading" role="status">

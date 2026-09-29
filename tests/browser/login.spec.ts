@@ -167,7 +167,7 @@ test('same interface uses native bridge inside WebView2', async ({ page }) => {
       },
     })
   })
-  await page.route('**/api/**', () => {
+  await page.route(/https?:\/\/[^/]+\/api\//, () => {
     throw new Error('Desktop must not call HTTP from React')
   })
   await page.goto('/')

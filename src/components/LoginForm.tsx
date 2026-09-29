@@ -1,11 +1,7 @@
-import { useRef, useState, type FormEvent } from 'react'
+import { useAction } from '../hooks/async'
+import { useState, type FormEvent } from 'react'
 import { ArrowRight, Eye, EyeOff, KeyRound, LoaderCircle, LockKeyhole, Mail } from 'lucide-react'
-import {
-  errorMessage,
-  type AuthClient,
-  type AuthError,
-  type AuthSession,
-} from '../auth/auth-client'
+import { type AuthClient, type AuthSession } from '../auth/auth-client'
 import { FormNotice } from './FormNotice'
 import { RecoveryDialog } from './RecoveryDialog'
 import { InvitationDialog } from './InvitationDialog'
@@ -22,30 +18,19 @@ export function LoginForm({
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [visible, setVisible] = useState(false)
-  const [pending, setPending] = useState(false)
-  const [error, setError] = useState<AuthError | null>(null)
   const [recovering, setRecovering] = useState(false)
   const [activating, setActivating] = useState(
     () => new URLSearchParams(window.location.search).get('convite') === '1',
   )
-  const inFlight = useRef(false)
+  const { pending, error, run } = useAction()
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (inFlight.current) return
-    inFlight.current = true
-    setPending(true)
-    setError(null)
-    try {
+    await run(async () => {
       const session = await client.login({ email, password })
       setPassword('')
       onLogin(session)
-    } catch (failure) {
-      setError(errorMessage(failure))
-    } finally {
-      inFlight.current = false
-      setPending(false)
-    }
+    })
   }
 
   return (

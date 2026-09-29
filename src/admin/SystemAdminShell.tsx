@@ -1,16 +1,12 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useAction, useQuery } from '../hooks/async'
+import { useState, type FormEvent } from 'react'
 import type { components } from '../auth/api-schema'
-import {
-  errorMessage,
-  type AuthClient,
-  type AuthError,
-  type AuthSession,
-} from '../auth/auth-client'
+import type { AuthClient, AuthSession } from '../auth/auth-client'
 import { FormNotice } from '../components/FormNotice'
 import { AdminShell } from './AdminShell'
 import type { Paged } from './api'
 import './admin.css'
-import { Inbox, NotificationSettings, useNotificationApi, useOpenInbox } from '../notifications/Pages'
+import { Inbox, NotificationSettings, useNotificationApi, useOpenInbox } from '../notifications'
 
 type Organization = components['schemas']['OrganizationResponse']
 
@@ -24,56 +20,38 @@ export function SystemAdminShell({
   onLogout(): void
 }) {
   const [selected, setSelected] = useState<{ id: string; name: string } | null>(null)
-  const [organizations, setOrganizations] = useState<Organization[]>([])
   const [page, setPage] = useState(1)
-  const [total, setTotal] = useState(0)
-  const [revision, setRevision] = useState(0)
-  const [loading, setLoading] = useState(true)
-  const [pending, setPending] = useState(false)
-  const [error, setError] = useState<AuthError | null>(null)
   const [notice, setNotice] = useState('')
   const [showCreate, setShowCreate] = useState(false)
   const [globalPage, setGlobalPage] = useState<'settings' | 'inbox' | null>(null)
   const notifications = useNotificationApi(client)
-  useOpenInbox(() => { if (!selected) setGlobalPage('inbox') })
+  useOpenInbox(() => {
+    if (!selected) setGlobalPage('inbox')
+  })
 
-  useEffect(() => {
-    let active = true
-    client
-      .request<Paged<Organization>>('GET', `/admin/organizations?page=${page}&pageSize=20`)
-      .then((result) => {
-        if (active) {
-          setOrganizations(result.items ?? [])
-          setTotal(result.total ?? 0)
-        }
-      })
-      .catch((failure) => {
-        if (active) setError(errorMessage(failure))
-      })
-      .finally(() => {
-        if (active) setLoading(false)
-      })
-    return () => {
-      active = false
-    }
-  }, [client, page, revision])
-
+  const list = useQuery(
+    () =>
+      client.request<Paged<Organization>>('GET', `/admin/organizations?page=${page}&pageSize=20`),
+    [client, page],
+  )
+  const action = useAction()
+  const organizations = list.data?.items ?? []
+  const total = list.data?.total ?? 0
+  const loading = list.pending
+  const { pending } = action
+  const error = action.error || list.error
   function reload(nextPage = page) {
-    setError(null)
-    setLoading(true)
-    setPage(nextPage)
-    setRevision((value) => value + 1)
+    action.clear()
+    if (nextPage === page) list.reload()
+    else setPage(nextPage)
   }
 
   async function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (pending) return
     const form = event.currentTarget
     const values = new FormData(form)
-    setPending(true)
-    setError(null)
     setNotice('')
-    try {
+    await action.run(async () => {
       await client.request<Organization>('POST', '/admin/organizations', {
         name: String(values.get('name')).trim(),
         slug: String(values.get('slug')).trim(),
@@ -83,18 +61,26 @@ export function SystemAdminShell({
       setShowCreate(false)
       setNotice('Organização criada. O convite do coordenador foi colocado na fila de envio.')
       reload(1)
-    } catch (failure) {
-      setError(errorMessage(failure))
-    } finally {
-      setPending(false)
-    }
+    })
   }
 
   if (globalPage && !selected)
-    return <div className="admin-app system-admin-app"><div className="admin-main"><main className="admin-content">
-      <button className="secondary-button" onClick={() => setGlobalPage(null)}>Voltar às organizações</button>
-      {globalPage === 'settings' ? <NotificationSettings api={notifications} /> : <Inbox api={notifications} />}
-    </main></div></div>
+    return (
+      <div className="admin-app system-admin-app">
+        <div className="admin-main">
+          <main className="admin-content">
+            <button className="secondary-button" onClick={() => setGlobalPage(null)}>
+              Voltar às organizações
+            </button>
+            {globalPage === 'settings' ? (
+              <NotificationSettings api={notifications} />
+            ) : (
+              <Inbox api={notifications} />
+            )}
+          </main>
+        </div>
+      </div>
+    )
   if (selected)
     return (
       <AdminShell
@@ -118,18 +104,12 @@ export function SystemAdminShell({
           <button
             className="text-button"
             disabled={pending}
-            onClick={async () => {
-              setPending(true)
-              setError(null)
-              try {
+            onClick={() =>
+              void action.run(async () => {
                 await client.logout()
                 onLogout()
-              } catch (failure) {
-                setError(errorMessage(failure))
-              } finally {
-                setPending(false)
-              }
-            }}
+              })
+            }
           >
             Sair da conta
           </button>
@@ -137,7 +117,14 @@ export function SystemAdminShell({
         <main className="admin-content">
           <h1>Organizações</h1>
           <p>Selecione a organização que deseja administrar. Seu acesso global permanece ativo.</p>
-          <div className="button-row"><button className="secondary-button" onClick={() => setGlobalPage('settings')}>Configurações globais</button><button className="secondary-button" onClick={() => setGlobalPage('inbox')}>Minhas notificações</button></div>
+          <div className="button-row">
+            <button className="secondary-button" onClick={() => setGlobalPage('settings')}>
+              Configurações globais
+            </button>
+            <button className="secondary-button" onClick={() => setGlobalPage('inbox')}>
+              Minhas notificações
+            </button>
+          </div>
           <FormNotice error={error} />
           {notice && <p role="status">{notice}</p>}
           <button className="text-button" onClick={() => reload()} disabled={loading}>

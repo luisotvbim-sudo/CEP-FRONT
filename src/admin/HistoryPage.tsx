@@ -1,21 +1,12 @@
+import { useQuery } from '../hooks/async'
 import { useState } from 'react'
 import { Search } from 'lucide-react'
 import { DailyHistory } from './DailyHistory'
-import { AuthError } from '../auth/auth-client'
+import { useHistory } from './useHistory'
 import { FormNotice } from '../components/FormNotice'
-import type { AdminApi, History, Person, Source } from './api'
-import { date, timestamp, today, validatePeriod } from './format'
-import {
-  Badge,
-  Empty,
-  Loading,
-  PageHeading,
-  Pagination,
-  QueryError,
-  SearchBox,
-  useAction,
-  useQuery,
-} from './ui'
+import type { AdminApi, Person, Source } from './api'
+import { date, timestamp } from './format'
+import { Badge, Empty, Loading, PageHeading, Pagination, QueryError, SearchBox } from './ui'
 
 export function HistoryPage({
   api,
@@ -24,23 +15,25 @@ export function HistoryPage({
   api: AdminApi
   initialPerson?: Person | null
 }) {
-  const [from, setFrom] = useState(() => `${today().slice(0, 7)}-01`)
-  const [to, setTo] = useState(today)
-  const [source, setSource] = useState<Source | ''>('')
+  const {
+    from,
+    setFrom,
+    to,
+    setTo,
+    source,
+    setSource,
+    result,
+    validation,
+    action,
+    changed,
+    submit,
+  } = useHistory(api)
   const [person, setPerson] = useState<Person | null>(initialPerson || null)
   const [search, setSearch] = useState('')
   const [historySearch, setHistorySearch] = useState('')
   const [page, setPage] = useState(1)
   const [showPicker, setShowPicker] = useState(false)
-  const [result, setResult] = useState<History | null>(null)
-  const [validation, setValidation] = useState<AuthError | null>(null)
   const people = useQuery(() => api.people(search, page), [api, search, page])
-  const action = useAction()
-  function changed() {
-    setResult(null)
-    setValidation(null)
-    action.clear()
-  }
   return (
     <>
       <PageHeading
@@ -124,21 +117,7 @@ export function HistoryPage({
         <form
           onSubmit={(e) => {
             e.preventDefault()
-            const message = validatePeriod(from, to)
-            setValidation(message ? new AuthError(message) : null)
-            if (message) return
-            setResult(null)
-            void action.run(async () =>
-              setResult(
-                await api.history({
-                  from,
-                  to,
-                  source: source || undefined,
-                  workforcePersonId: person?.id,
-                  search: historySearch.trim() || undefined,
-                }),
-              ),
-            )
+            submit(person?.id, historySearch)
           }}
         >
           <fieldset className="unframed" disabled={action.pending}>
@@ -248,8 +227,8 @@ export function HistoryPage({
               </section>
             ))}
           <p className="page-footnote">
-            Duração indisponível não foi convertida em zero. Os totais refletem os registros importados; não são saldo oficial. Não há
-            justificativas ou aprovação nesta consulta.
+            Duração indisponível não foi convertida em zero. Os totais refletem os registros
+            importados; não são saldo oficial. Não há justificativas ou aprovação nesta consulta.
           </p>
         </>
       )}

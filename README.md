@@ -107,6 +107,8 @@ pnpm test
 pnpm build
 pnpm exec playwright install chromium
 pnpm test:e2e
+dotnet run --project desktop/CepHoras.Desktop.Tests -c Release
+dotnet run --project desktop/CepHoras.Updates.Tests -c Release
 dotnet build desktop/CepHoras.Desktop -c Debug
 node scripts/test-desktop.mjs
 ```
@@ -120,6 +122,8 @@ node scripts/test-desktop.mjs --live
 Esse teste opcional verifica apenas rejeição de uma conta inexistente pela API local através do host real; não utiliza conta real nem envia e-mail. Não equivale à validação autenticada dos fluxos administrativos.
 
 ## Dependências para homologação
+
+O [relatório de refatoração](docs/refatoracao.md) descreve as responsabilidades compartilhadas, os testes adicionais e os limites da validação de 29/09/2026.
 
 1. Login manual no navegador e no executável desktop com uma conta de homologação para validar cookies, retomada, rotação e logout contra o ambiente publicado.
 2. Na preparação inicial, Monday/VR estavam desabilitados no Docker local; confira a configuração atual antes da homologação. Perfis, associação com dados reais e cobertura/histórico importados dependem de configuração segura dessas integrações no servidor. O frontend não habilita fontes nem recebe seus tokens.

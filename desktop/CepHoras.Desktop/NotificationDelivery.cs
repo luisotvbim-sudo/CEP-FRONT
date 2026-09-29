@@ -20,14 +20,8 @@ internal sealed class NotificationDelivery(ApiSession session)
         try
         {
             if (queuedUser != userId) { queuedCount = 0; lastPopup = default; queuedUser = userId; }
-            var path = session.NotificationStorePath(userId);
-            var known = new HashSet<Guid>();
-            if (File.Exists(path))
-            {
-                var bytes = ProtectedData.Unprotect(await File.ReadAllBytesAsync(path), null, DataProtectionScope.CurrentUser);
-                try { known = JsonSerializer.Deserialize<HashSet<Guid>>(bytes) ?? []; }
-                finally { CryptographicOperations.ZeroMemory(bytes); }
-            }
+            var store = new ProtectedJsonFile(session.NotificationStorePath(userId));
+            var known = store.Exists ? await store.ReadAsync<HashSet<Guid>>() ?? [] : [];
             var pending = new HashSet<Guid>();
             for (var page = 1; ; page++)
             {
@@ -42,13 +36,7 @@ internal sealed class NotificationDelivery(ApiSession session)
             known.UnionWith(pending);
             if (pending.Count > 0)
             {
-                var bytes = JsonSerializer.SerializeToUtf8Bytes(known);
-                try
-                {
-                    await File.WriteAllBytesAsync(path + ".tmp", ProtectedData.Protect(bytes, null, DataProtectionScope.CurrentUser));
-                    File.Move(path + ".tmp", path, true);
-                }
-                finally { CryptographicOperations.ZeroMemory(bytes); }
+                await store.WriteAsync(known);
                 queuedCount += fresh;
                 foreach (var ids in pending.Chunk(100))
                 {

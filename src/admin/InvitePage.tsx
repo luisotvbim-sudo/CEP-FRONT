@@ -1,17 +1,9 @@
+import { useAction, useQuery } from '../hooks/async'
 import { useEffect, useRef, useState } from 'react'
 import { ArrowRight, Check, Link2 } from 'lucide-react'
 import type { AdminApi, Identity, Source } from './api'
 import { sourceLabel, timestamp } from './format'
-import {
-  Empty,
-  Loading,
-  PageHeading,
-  Pagination,
-  QueryError,
-  SearchBox,
-  useAction,
-  useQuery,
-} from './ui'
+import { Empty, Loading, PageHeading, Pagination, QueryError, SearchBox } from './ui'
 import { FormNotice } from '../components/FormNotice'
 import { errorMessage, type AuthError } from '../auth/auth-client'
 

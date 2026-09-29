@@ -1,5 +1,16 @@
+import { useAction } from '../hooks/async'
 import { useMemo, useState } from 'react'
-import { ClipboardList, History, Link2, LogOut, RefreshCw, ShieldCheck, UserRoundCog, Users, UsersRound } from 'lucide-react'
+import {
+  ClipboardList,
+  History,
+  Link2,
+  LogOut,
+  RefreshCw,
+  ShieldCheck,
+  UserRoundCog,
+  Users,
+  UsersRound,
+} from 'lucide-react'
 import logo from '../assets/conceito-logo.png'
 import type { AuthClient, AuthSession } from '../auth/auth-client'
 import { FormNotice } from '../components/FormNotice'
@@ -11,11 +22,29 @@ import { TeamsPage } from './TeamsPage'
 import { HistoryPage } from './HistoryPage'
 import { UsersPage } from './UsersPage'
 import { AuditPage } from './AuditPage'
-import { useAction } from './ui'
-import './admin.css'
-import { Analyses, Inbox, NotificationSettings, SendNotification, useNotificationApi, useOpenInbox } from '../notifications/Pages'
 
-type Page = 'people' | 'invite' | 'sync' | 'teams' | 'history' | 'users' | 'audit' | 'notifications' | 'settings' | 'send' | 'analyses'
+import './admin.css'
+import {
+  Analyses,
+  Inbox,
+  NotificationSettings,
+  SendNotification,
+  useNotificationApi,
+  useOpenInbox,
+} from '../notifications'
+
+type Page =
+  | 'people'
+  | 'invite'
+  | 'sync'
+  | 'teams'
+  | 'history'
+  | 'users'
+  | 'audit'
+  | 'notifications'
+  | 'settings'
+  | 'send'
+  | 'analyses'
 const navigation = [
   { id: 'people', label: 'Pessoas', icon: Users },
   { id: 'invite', label: 'Associar e convidar', icon: Link2 },

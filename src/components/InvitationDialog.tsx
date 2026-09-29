@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { AuthError, errorMessage, type AuthClient } from '../auth/auth-client'
+import { useModal } from './useModal'
+import { useAction } from '../hooks/async'
+import { useState, type FormEvent } from 'react'
+import { AuthError, type AuthClient } from '../auth/auth-client'
 import { FormNotice } from './FormNotice'
 
 export function InvitationDialog({
@@ -11,25 +13,17 @@ export function InvitationDialog({
   initialEmail: string
   onClose(): void
 }) {
-  const dialog = useRef<HTMLDialogElement>(null)
-  const inFlight = useRef(false)
+  const dialog = useModal()
+  const { pending, error, setError, run } = useAction()
   const [email, setEmail] = useState(initialEmail)
   const [code, setCode] = useState('')
   const [name, setName] = useState('')
   const [password, setPassword] = useState('')
   const [confirmation, setConfirmation] = useState('')
-  const [pending, setPending] = useState(false)
   const [done, setDone] = useState(false)
-  const [error, setError] = useState<AuthError | null>(null)
-  useEffect(() => {
-    const element = dialog.current
-    element?.showModal()
-    return () => element?.close()
-  }, [])
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (inFlight.current) return
     if (password !== confirmation) {
       setError(new AuthError('As senhas não coincidem.'))
       return
@@ -38,21 +32,13 @@ export function InvitationDialog({
       setError(new AuthError('Informe seu nome e o código do convite.'))
       return
     }
-    inFlight.current = true
-    setPending(true)
-    setError(null)
-    try {
+    await run(async () => {
       await client.activateInvitation({ email, code, displayName: name, password })
       setPassword('')
       setConfirmation('')
       setCode('')
       setDone(true)
-    } catch (failure) {
-      setError(errorMessage(failure))
-    } finally {
-      inFlight.current = false
-      setPending(false)
-    }
+    })
   }
 
   return (

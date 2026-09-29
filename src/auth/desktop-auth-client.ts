@@ -1,12 +1,12 @@
 import {
   AuthError,
-  describeError,
   type AuthClient,
   type AuthSession,
   type Credentials,
   type ResetPassword,
   type ActivateInvitation,
 } from './auth-client'
+import { apiFailure } from './errors'
 
 type BridgeEvent = {
   data: {
@@ -47,12 +47,7 @@ export class DesktopAuthClient implements AuthClient {
         if (event.data.ok) resolve(event.data.result as T)
         else {
           const failure = event.data.error ?? {}
-          const error = new AuthError(
-            describeError(failure.status || 0, failure),
-            failure.correlationId,
-            failure.code,
-            failure.status,
-          )
+          const error = apiFailure(failure.status || 0, failure)
           if (failure.code === 'session_expired')
             this.listeners.forEach((listener) => listener(error))
           reject(error)

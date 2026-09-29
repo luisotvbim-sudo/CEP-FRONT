@@ -1,6 +1,6 @@
 import type { components } from '../auth/api-schema'
 import type { AuthClient } from '../auth/auth-client'
-import type { Paged } from '../admin/api'
+import { organizationPath, query, type Paged } from '../api/query'
 
 type Schema = components['schemas']
 export type Period = Schema['AnalysisPeriod']
@@ -28,9 +28,7 @@ export class NotificationApi {
     private readonly organizationId?: string,
   ) {}
   private scoped(path: string) {
-    return this.organizationId
-      ? `${path}${path.includes('?') ? '&' : '?'}organizationId=${encodeURIComponent(this.organizationId)}`
-      : path
+    return organizationPath(path, this.organizationId)
   }
   settings() {
     return this.client.request<Settings>('GET', '/time-control/settings')
@@ -65,33 +63,33 @@ export class NotificationApi {
     return this.client.request<Required<Schema['TimeDispatchPreviewResponse']>>(
       'GET',
       this.scoped(
-        `/organization/time-control/notification-dispatches/preview?period=${period}${userId ? `&userId=${encodeURIComponent(userId)}` : ''}`,
+        `/organization/time-control/notification-dispatches/preview${query({ period, userId })}`,
       ),
     )
   }
   dispatches(page: number) {
     return this.client.request<Paged<Dispatch>>(
       'GET',
-      this.scoped(`/organization/time-control/notification-dispatches?page=${page}&pageSize=20`),
+      this.scoped(
+        `/organization/time-control/notification-dispatches${query({ page, pageSize: 20 })}`,
+      ),
     )
   }
   inbox(page: number, unreadOnly: boolean) {
     return this.client.request<Paged<Notification>>(
       'GET',
-      `/me/notifications?page=${page}&pageSize=20&unreadOnly=${unreadOnly}`,
+      `/me/notifications${query({ page, pageSize: 20, unreadOnly })}`,
     )
   }
   read(id: string) {
     return this.client.request<void>('POST', `/me/notifications/${encodeURIComponent(id)}/read`, {})
   }
   reports(period: Period, page: number, workforcePersonId?: string, day?: string, issue?: string) {
-    const query = new URLSearchParams({ period, page: String(page), pageSize: '20' })
-    if (workforcePersonId) query.set('workforcePersonId', workforcePersonId)
-    if (day) query.set('day', day)
-    if (issue) query.set('issue', issue)
     return this.client.request<Paged<Report>>(
       'GET',
-      this.scoped(`/organization/time-control/analyses?${query}`),
+      this.scoped(
+        `/organization/time-control/analyses${query({ period, page, pageSize: 20, workforcePersonId, day, issue })}`,
+      ),
     )
   }
 }

@@ -11,7 +11,7 @@ test('preview screens are accessible and do not call any backend or store demo d
 }) => {
   const requests: string[] = []
   page.on('request', (request) => {
-    if (request.url().includes('/api/')) requests.push(request.url())
+    if (new URL(request.url()).pathname.startsWith('/api/')) requests.push(request.url())
   })
   await page.reload()
   for (const title of [
