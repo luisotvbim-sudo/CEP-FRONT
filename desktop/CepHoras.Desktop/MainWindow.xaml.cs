@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Threading;
+using System.Windows.Interop;
 using CepHoras.Updates;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Win32;
@@ -37,6 +38,10 @@ public partial class MainWindow : Window
     private System.Windows.Forms.NotifyIcon? tray;
     private readonly DispatcherTimer notificationTimer = new() { Interval = TimeSpan.FromSeconds(60) };
     private NotificationDelivery? notifications;
+    private ShutdownTestPolicy? shutdownPolicy;
+    private ShutdownTestGuard? shutdownGuard;
+    private bool shutdownPromptOpen;
+    private static bool CorporateMode => File.Exists(Path.Combine(AppContext.BaseDirectory, "corporate-install.marker"));
 
     public MainWindow()
     {
@@ -60,19 +65,77 @@ public partial class MainWindow : Window
             System.Windows.Application.Current.SessionEnding -= OnSessionEnding;
             notificationTimer.Stop();
             updateTimer.Stop();
+            shutdownGuard?.Dispose();
             tray?.Dispose();
             Browser.Dispose();
             session?.Dispose();
         };
     }
 
-    // Closing to tray must never interfere with Windows logoff or shutdown.
-    private void OnSessionEnding(object sender, SessionEndingCancelEventArgs args) => exiting = true;
+    private void OnSessionEnding(object sender, SessionEndingCancelEventArgs args)
+    {
+        // WPF also receives session messages on its internal application window.
+        args.Cancel = args.ReasonSessionEnding == ReasonSessionEnding.Shutdown &&
+            shutdownGuard?.BlockRequest() == true;
+        exiting = !args.Cancel;
+    }
+
+    private void ConfigureShutdownTest()
+    {
+        if (CorporateMode)
+        {
+            ShutdownTestBanner.Visibility = Visibility.Visible;
+            ShutdownTestStatus.Text = "CONTROLE CORPORATIVO · Desligamento pelo serviço local. Piloto com autorização da TI; regra de horas pendente.";
+            ShutdownTestButton.Content = "Solicitar desligamento…";
+            return; // Never load the per-user experimental password/veto in the corporate installation.
+        }
+        try
+        {
+            shutdownPolicy = ShutdownTestPolicy.Load(ShutdownTestPolicy.ConfigurationPath);
+            if (shutdownPolicy is null) return;
+            var source = HwndSource.FromHwnd(new WindowInteropHelper(this).Handle);
+            shutdownGuard = new ShutdownTestGuard(source, shutdownPolicy, ShowShutdownPassword, () => exiting = false,
+                () => { exiting = true; System.Windows.Application.Current.Shutdown(); });
+            ShutdownTestBanner.Visibility = Visibility.Visible;
+            ShutdownTestStatus.Text = "TESTE LOCAL ATIVO · Desligar/reiniciar exige a senha do teste. A liberação dura 60 segundos.";
+        }
+        catch
+        {
+            shutdownPolicy = null;
+            ShutdownTestBanner.Visibility = Visibility.Visible;
+            ShutdownTestStatus.Text = "Teste de desligamento INATIVO: não foi possível carregar a configuração ou registrar o bloqueio no Windows.";
+            ShutdownTestButton.IsEnabled = false;
+        }
+    }
+
+    private void ShowShutdownPassword()
+    {
+        if (closed || shutdownPolicy is null || shutdownPromptOpen) return;
+        shutdownPromptOpen = true;
+        try
+        {
+            OpenWindow(false);
+            var dialog = new ShutdownPasswordWindow(shutdownPolicy) { Owner = this };
+            if (dialog.ShowDialog() == true)
+            {
+                shutdownGuard?.UpdateReason();
+                ShutdownTestStatus.Text = $"TESTE · Autorizado até {DateTime.Now.AddSeconds(60):HH:mm:ss}. Solicite Desligar novamente no Windows. Após esse horário, a senha será exigida novamente.";
+            }
+        }
+        finally { shutdownPromptOpen = false; }
+    }
+
+    private void ShutdownTest_Click(object sender, RoutedEventArgs e)
+    {
+        if (CorporateMode) new CorporateShutdownWindow { Owner = this }.ShowDialog();
+        else ShowShutdownPassword();
+    }
 
     private async void Initialize(object sender, RoutedEventArgs e)
     {
         if (initialized) return;
         initialized = true;
+        if (CorporateMode) ConfigureShutdownTest();
         try
         {
 #if DEBUG
@@ -85,6 +148,7 @@ public partial class MainWindow : Window
                 throw new InvalidOperationException("HTTPS is required outside loopback.");
             session = new ApiSession(api);
             notifications = new NotificationDelivery(session);
+            if (!CorporateMode) ConfigureShutdownTest();
             ConfigureTray();
             notificationTimer.Tick += async (_, _) => await notifications.Poll(ShowNotificationSummary);
             notificationTimer.Start();
@@ -135,6 +199,12 @@ public partial class MainWindow : Window
             }
 #endif
         }
+        catch (SessionAlreadyInUseException)
+        {
+            StartupStatus.Text = "O CEP Horas já está aberto em outra janela ou versão. Perto do relógio do Windows, clique com o botão direito no ícone do CEP Horas e escolha Sair do aplicativo. Depois, tente novamente aqui.";
+            RetryStartupButton.Visibility = Visibility.Visible;
+            RecordNativeEvent("startup-session-in-use");
+        }
         catch (WebView2RuntimeNotFoundException)
         {
             StartupStatus.Text = "Instale o Microsoft Edge WebView2 Runtime e abra o CEP Horas novamente.";
@@ -143,6 +213,15 @@ public partial class MainWindow : Window
         {
             StartupStatus.Text = "Não foi possível iniciar o CEP Horas. Confira a instalação e a configuração da API.";
         }
+    }
+
+    private void RetryStartup_Click(object sender, RoutedEventArgs e)
+    {
+        if (closed || RetryStartupButton.Visibility != Visibility.Visible) return;
+        RetryStartupButton.Visibility = Visibility.Collapsed;
+        StartupStatus.Text = "Preparando seu espaço…";
+        initialized = false;
+        Initialize(sender, e);
     }
 
     private static bool IsAppOrigin(string uri) => Uri.TryCreate(uri, UriKind.Absolute, out var value) && value.GetLeftPart(UriPartial.Authority) == AppOrigin;

@@ -2,6 +2,7 @@
   <Grid>
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
       <RowDefinition Height="*" />
     </Grid.RowDefinitions>
     <Border x:Name="UpdateBanner" Grid.Row="0" Visibility="Collapsed" Background="#FFF0E6" BorderBrush="#DA5D1E" BorderThickness="0,0,0,1" Padding="12">
@@ -13,7 +14,17 @@
         <TextBlock x:Name="UpdateMessage" Text="Nova versão disponível." VerticalAlignment="Center" TextWrapping="Wrap" />
       </DockPanel>
     </Border>
-    <TextBlock x:Name="StartupStatus" Grid.Row="1" Text="Preparando seu espaço…" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" Foreground="#555750" TextWrapping="Wrap" Margin="40" />
-    <wv:WebView2 x:Name="Browser" Grid.Row="1" Visibility="Hidden" />
+    <Border x:Name="ShutdownTestBanner" Grid.Row="1" Visibility="Collapsed" Background="#FFF0E6" BorderBrush="#DA5D1E" BorderThickness="0,0,0,1" Padding="12">
+      <DockPanel>
+        <Button x:Name="ShutdownTestButton" DockPanel.Dock="Right" Content="Autorizar desligamento…" Click="ShutdownTest_Click" Padding="12,6" Margin="12,0,0,0" />
+        <TextBlock x:Name="ShutdownTestStatus" VerticalAlignment="Center" TextWrapping="Wrap" Foreground="#555750" />
+      </DockPanel>
+    </Border>
+    <StackPanel Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="680" Margin="32">
+      <TextBlock x:Name="StartupStatus" Text="Preparando seu espaço…" FontSize="16" Foreground="#555750" TextWrapping="Wrap" TextAlignment="Center" />
+      <Button x:Name="RetryStartupButton" Content="Já encerrei a outra versão — tentar novamente" Click="RetryStartup_Click"
+              Visibility="Collapsed" HorizontalAlignment="Center" Padding="16,10" Margin="0,20,0,0" />
+    </StackPanel>
+    <wv:WebView2 x:Name="Browser" Grid.Row="2" Visibility="Hidden" />
   </Grid>
 </Window>

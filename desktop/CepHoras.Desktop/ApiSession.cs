@@ -16,6 +16,9 @@ internal sealed class ApiFailure(int status, string? code, string? correlationId
     public string? CorrelationId { get; } = correlationId;
 }
 
+internal sealed class SessionAlreadyInUseException(IOException inner)
+    : IOException("Outra instância do CEP Horas está usando esta sessão.", inner);
+
 internal sealed class ApiSession : IDisposable
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
@@ -47,7 +50,16 @@ internal sealed class ApiSession : IDisposable
         Directory.CreateDirectory(directory);
         sessionFile = Path.Combine(directory, Convert.ToHexString(entropy) + ".dat");
         // Prevent two executable instances from rotating the same stored session.
-        instanceLock = new FileStream(sessionFile + ".lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+        try
+        {
+            instanceLock = new FileStream(sessionFile + ".lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+        }
+        catch (IOException exception) when ((exception.HResult & 0xffff) is 32 or 33)
+        {
+            http.Dispose();
+            gate.Dispose();
+            throw new SessionAlreadyInUseException(exception);
+        }
     }
 
     public async Task<object?> Execute(string? operation, JsonElement payload) => operation switch

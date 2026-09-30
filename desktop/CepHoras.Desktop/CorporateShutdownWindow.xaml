@@ -1,0 +1,14 @@
+<Window x:Class="CepHoras.Desktop.CorporateShutdownWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="CEP Horas — solicitar desligamento" Width="510" SizeToContent="Height" ResizeMode="NoResize" WindowStartupLocation="CenterOwner" Background="#F5F5F3">
+  <StackPanel Margin="28">
+    <TextBlock Text="Solicitar desligamento" FontSize="24" FontWeight="SemiBold" />
+    <TextBlock Text="PILOTO · A autorização usa a senha definida pela TI. A regra de horas ainda não está integrada." TextWrapping="Wrap" Margin="0,16,0,16" />
+    <Label Content="Senha de autorização" Target="{Binding ElementName=Password}" Padding="0,0,0,6" />
+    <PasswordBox x:Name="Password" Padding="10" MaxLength="128" />
+    <CheckBox x:Name="Confirmed" Margin="0,16,0,16" Content="Salvei meu trabalho e quero desligar este computador." />
+    <TextBlock x:Name="Status" Text="Consultando o serviço local…" TextWrapping="Wrap" AutomationProperties.LiveSetting="Assertive" />
+    <Button x:Name="Submit" Content="Autorizar e desligar em 30 segundos" IsEnabled="False" Click="Submit_Click" Padding="12,9" Margin="0,18,0,8" Background="#D96527" Foreground="White" />
+    <Button x:Name="CancelShutdown" Content="Cancelar meu desligamento agendado" Click="Cancel_Click" Padding="12,9" />
+    <Button Content="Voltar" IsCancel="True" Padding="12,9" Margin="0,8,0,0" />
+  </StackPanel>
+</Window>

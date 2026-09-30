@@ -1,0 +1,102 @@
+CEP HORAS CORPORATIVO - PILOTO 0.3.0 - INSTALACAO PELA TI
+
+OBJETIVO
+Retirar do usuario comum a permissao de desligar/reiniciar pelo Windows e
+oferecer Solicitar desligamento dentro do CEP Horas. Um servico Windows
+valida a autorizacao e solicita o desligamento local.
+
+REGRA DESTE PILOTO
+A TI define uma senha temporaria (minimo 8 caracteres) na configuracao.
+Nenhuma senha e distribuida no pacote. A regra de divergencia/tolerancia
+de horas ainda NAO esta integrada; este instalador nao a simula.
+Senha correta + confirmacao solicita desligamento real em 30 segundos.
+Ha cancelamento pelo mesmo usuario durante esses 30 segundos.
+
+ANTES DE INSTALAR
+1. Usar primeiro uma VM ou um unico computador de teste, com trabalho salvo.
+2. Windows 11 x64 Pro/Enterprise/Education, 24H2 com KB5062660 ou superior.
+   A maquina de desenvolvimento usa 25H2; validar a versao usada pela TI.
+3. Microsoft Edge WebView2 Runtime deve estar instalado. .NET esta incluido.
+4. Fechar CEP Horas pela bandeja. Remover o MSI/ZIP de teste anterior e seus
+   atalhos/inicio automatico: esta linha corporativa e um produto separado.
+   O configurador recusa ativar enquanto houver CepHoras.exe aberto.
+5. Ter uma conta administrativa funcional para recuperacao. Registrar se
+   existe GPO de dominio gerenciando direitos de desligamento ou energia.
+
+INSTALAR E ATIVAR
+1. Abrir CEP-Horas-Corporativo-Piloto-win-x64.msi e autorizar como administrador.
+2. Concluir com Abrir configuracao administrativa (TI) marcado. A ferramenta
+   pode solicitar uma segunda elevacao. Alternativa: menu Iniciar >
+   CEP Horas - Configuracao TI.
+3. Revisar o escopo, definir/confirmar a senha de teste e Ativar restricao local.
+   INSTALAR SOMENTE O MSI NAO ATIVA A RESTRICAO; e necessario concluir esta etapa.
+4. Sair da sessao do Windows e entrar novamente em TODAS as contas ja conectadas.
+   Tokens de sessoes anteriores ainda podem ter a permissao de desligamento.
+5. Abrir CEP Horas (Corporativo). Ele tambem inicia em segundo plano a cada logon.
+6. Testar com usuario comum; administradores continuam sendo uma excecao.
+
+ALTERACOES LOCAIS
+- Binarios: C:\Program Files\Conceito CEP Horas Corporativo (usuarios: leitura/execucao).
+- Servico CepHorasControl: LocalSystem, inicio automatico, recuperacao apos falha.
+  Usuario comum nao recebe permissao de parar/reconfigurar o servico.
+- HKLM Run: CepHorasCorporativo, para abrir a interface nos logons.
+- SeShutdownPrivilege e SeRemoteShutdownPrivilege: somente SYSTEM e Administradores.
+- HidePowerOptions=1 em HKLM\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer.
+  A politica oculta Desligar/Reiniciar/Suspender/Hibernar, inclusive para a TI;
+  a TI conserva os direitos e pode usar a ferramenta administrativa/comandos elevados.
+- ShutdownWithoutLogon=0 em HKLM\Software\Microsoft\Windows\CurrentVersion\Policies\System.
+- Politica AC/DC do botao fisico de energia: Nao fazer nada (toque curto).
+  Caminho: HKLM\Software\Policies\Microsoft\Power\PowerSettings\
+  7648efa3-dd9c-4e3e-b566-50f929386280, ACSettingIndex/DCSettingIndex=0.
+  Homologar a aplicacao dessa politica em cada modelo/plano de energia.
+- Estado original, configuracao e auditoria:
+  C:\ProgramData\Conceito.CepHoras.Control (somente SYSTEM/Administradores).
+
+RECUPERACAO / DESINSTALACAO
+1. Preferencial: Configuracao TI > Restaurar configuracoes anteriores.
+2. Se a interface normal nao abrir, a configuracao TI e independente do WebView/API.
+3. Se os arquivos instalados estiverem ausentes, extraia TODO o ZIP recebido e
+   abra RecuperacaoTI\CepHoras.Control.exe. Autorize a elevacao e use Restaurar.
+   Essa copia nao instala/ativa o servico. Nao apague ProgramData antes de recuperar.
+4. Alternativa em terminal elevado (sem prompt interativo):
+   "C:\Program Files\Conceito CEP Horas Corporativo\control\CepHoras.Control.exe" --restore-policy
+   Verifique o codigo de saida (0=sucesso) e audit.jsonl. Refaca logon para renovar direitos.
+5. Desinstale CEP Horas (Corporativo - Piloto) em Aplicativos instalados.
+   O MSI restaura a politica antes de parar/remover o servico. Se houver alteracao
+   externa/GPO ou falha de restauracao, ele deve falhar, preservando a instalacao;
+   revise e restaure manualmente com a TI. Rollback do MSI restaura o estado previo
+   a tentativa de remocao. Upgrade corporativo preserva configuracao e backup.
+6. O backup/auditoria em ProgramData e preservado para recuperacao; nao contem senha
+   em texto claro. Depois de validar a restauracao, a TI pode arquivar/remover esses dados.
+
+HOMOLOGACAO OBRIGATORIA DA TI
+- Confirmar servico ativo e binarios/configuracao sem gravacao pelo usuario comum.
+- Usuario comum: sc stop CepHorasControl deve dar acesso negado; nao executar
+  comandos reais de desligamento fora da janela de teste com trabalho salvo.
+- Apos novo logon, whoami /priv nao deve listar SeShutdownPrivilege para usuario comum.
+- Confirmar ausencia de desligamento no Iniciar, Ctrl+Alt+Del e tela sem login.
+- Confirmar que shutdown.exe nao permite contornar a restricao como usuario comum.
+- Testar senha incorreta, senha correta, cancelar nos 30 segundos e desligamento real.
+- Testar com CEP Horas fechado: a permissao nativa nao deve retornar.
+- Testar toque curto do botao fisico e planos de energia AC/DC no equipamento.
+- Testar restauracao, desinstalacao e falha/rollback primeiro em VM com snapshot.
+- Se houver dominio, aplicar gpupdate e novo logon, e verificar novamente. Uma GPO
+  pode sobrescrever a politica local; o servico informa divergencia, nao disputa a GPO.
+
+LIMITES
+Este pacote foi compilado e validado estruturalmente, com testes isolados de
+autorizacao, IPC e rollback. NAO foi instalado com elevacao nem aplicado a politica
+real na maquina de desenvolvimento. O desligamento real e a remocao elevada precisam
+da homologacao acima. O aplicativo existente de teste foi preservado.
+
+Nao e bloqueio absoluto: nao impede corte de energia, botao fisico forcado, acoes
+de administrador/SYSTEM, reinicios obrigatorios do sistema ou alteracoes do dominio.
+Fechar/finalizar a interface continua possivel; isso nao remove a politica local.
+O inicio por logon pode ser desativado pelo usuario; o servico e a restricao permanecem.
+Se o servico ficar indisponivel, pedidos pelo aplicativo falham e a TI deve recuperar.
+Nao substituir a manutencao do Windows nem usar a senha de teste como politica definitiva.
+
+Pacote SEM ASSINATURA DIGITAL. Politicas da empresa podem impedir a instalacao.
+Nao instala certificados, nao desativa UAC/antivirus e nao modifica o dominio.
+API padrao do aplicativo: https://api.cep.lat (producao); o controle piloto e local.
+Nenhum endpoint novo de backend e utilizado para decidir desligamento.

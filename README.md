@@ -41,6 +41,10 @@ Use uma conta existente no navegador ou no executável desktop. Não há credenc
 
 ## Executável Windows
 
+**Piloto corporativo administrativo:** `./scripts/build-corporate-msi.ps1` gera um MSI separado, exclusivamente por máquina, com serviço local e configuração da TI para restringir desligamento. A ativação é explícita, preserva backup para restauração e exige novo logon. A regra piloto usa senha definida pela TI; a regra de horas ainda não está integrada. O ZIP inclui recuperação independente. Veja [instalação, limites e homologação](docs/instalador-corporativo.md). Não foi aplicada política real nesta máquina de desenvolvimento.
+
+**MSI básico para testes (30/09/2026):** `./scripts/build-desktop-msi.ps1` gera um instalador x64 com escolha entre **Somente para mim** (padrão, sem elevação) e **Todos os usuários** (administrador), .NET incluído, atalho no menu Iniciar e remoção pelo Windows. Requer WebView2 Runtime. Sem assinatura, serviço supervisor ou início automático. Desde 0.2.7, oferece um [teste local opcional de senha no desligamento](docs/teste-bloqueio-desligamento.md), desativado por padrão e sem garantia contra encerramento forçado. Veja [escopo e homologação](docs/aplicativo-windows.md#msi-básico-de-teste--30092026).
+
 A página pública `/download` apresenta o pacote Windows de teste, requisitos, instruções e links da release. Ela não inicia uma sessão nem consulta a API. O download usa uma tag fixa do GitHub para não confundir versões de teste com o MSIX assinado.
 
 A integração do instalador com bandeja, WebView2 e teste de popup nativo está descrita em [Aplicativo Windows](docs/aplicativo-windows.md). A distribuição assinada e a atualização real entre versões continuam pendentes.

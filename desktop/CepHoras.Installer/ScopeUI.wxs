@@ -1,0 +1,60 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Fragment>
+    <UI Id="CepScopeUI">
+      <TextStyle Id="WixUI_Font_Normal" FaceName="Tahoma" Size="8" />
+      <TextStyle Id="WixUI_Font_Bigger" FaceName="Tahoma" Size="12" />
+      <TextStyle Id="WixUI_Font_Title" FaceName="Tahoma" Size="9" Bold="yes" />
+      <Property Id="DefaultUIFont" Value="WixUI_Font_Normal" />
+      <Property Id="ARPNOMODIFY" Value="1" />
+      <DialogRef Id="ErrorDlg" />
+      <DialogRef Id="FatalError" />
+      <DialogRef Id="FilesInUse" />
+      <DialogRef Id="MsiRMFilesInUse" />
+      <DialogRef Id="PrepareDlg" />
+      <DialogRef Id="ProgressDlg" />
+      <DialogRef Id="ResumeDlg" />
+      <DialogRef Id="UserExit" />
+      <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchCepHoras" Order="1"
+               Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX=1 AND NOT Installed AND NOT REMOVE~=&quot;ALL&quot;" />
+      <Publish Dialog="ExitDialog" Control="Finish" Event="EndDialog" Value="Return" Order="999" />
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="CepScopeDlg" Condition="NOT Installed" />
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg" Condition="Installed AND PATCH" />
+      <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="CepScopeDlg" Order="1" Condition="NOT Installed" />
+      <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="MaintenanceTypeDlg" Order="2" Condition="Installed AND NOT PATCH" />
+      <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Order="3" Condition="Installed AND PATCH" />
+      <Publish Dialog="MaintenanceWelcomeDlg" Control="Next" Event="NewDialog" Value="MaintenanceTypeDlg" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton" Event="NewDialog" Value="VerifyReadyDlg" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="RemoveButton" Event="NewDialog" Value="VerifyReadyDlg" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="Back" Event="NewDialog" Value="MaintenanceWelcomeDlg" />
+      <Dialog Id="CepScopeDlg" Width="370" Height="270" Title="Instalar CEP Horas">
+        <Control Id="Title" Type="Text" X="20" Y="15" Width="330" Height="22" Transparent="yes" NoPrefix="yes" Text="{\WixUI_Font_Title}Quem poderá usar este aplicativo?" />
+        <Control Id="Scope" Type="RadioButtonGroup" X="20" Y="50" Width="330" Height="65" Property="CEPINSTALLSCOPE">
+          <RadioButtonGroup Property="CEPINSTALLSCOPE">
+            <RadioButton Value="user" X="0" Y="0" Width="320" Height="18" Text="Somente para mim (sem administrador)" />
+            <RadioButton Value="machine" X="0" Y="35" Width="320" Height="18" Text="Todos os usuários (exige administrador)" />
+          </RadioButtonGroup>
+        </Control>
+        <Control Id="UserHint" Type="Text" X="35" Y="70" Width="310" Height="14" Text="Instala na pasta pessoal da conta atual do Windows." />
+        <Control Id="MachineHint" Type="Text" X="35" Y="105" Width="310" Height="22" Text="Instala em Arquivos de Programas para este computador." />
+        <Control Id="Notice" Type="Text" X="20" Y="145" Width="330" Height="70" Text="Versão de teste sem assinatura. Requer WebView2 Runtime. Conecta à API de produção. Sem serviço supervisor ou restrição para sair. Teste opcional de senha no desligamento, configurado à parte." />
+        <Control Id="Line" Type="Line" X="0" Y="234" Width="370" Height="0" />
+        <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="Voltar"><Publish Event="NewDialog" Value="WelcomeDlg" /></Control>
+        <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="Avançar">
+          <Publish Property="ALLUSERS" Value="{}" Order="1" Condition="CEPINSTALLSCOPE=&quot;user&quot;" />
+          <Publish Property="MSIINSTALLPERUSER" Value="1" Order="2" Condition="CEPINSTALLSCOPE=&quot;user&quot;" />
+          <Publish Property="INSTALLFOLDER" Value="[LocalAppDataFolder]Programs\Conceito\CEP Horas Teste MSI" Order="3" Condition="CEPINSTALLSCOPE=&quot;user&quot;" />
+          <Publish Property="ALLUSERS" Value="1" Order="4" Condition="CEPINSTALLSCOPE=&quot;machine&quot;" />
+          <Publish Property="MSIINSTALLPERUSER" Value="{}" Order="5" Condition="CEPINSTALLSCOPE=&quot;machine&quot;" />
+          <Publish Property="INSTALLFOLDER" Value="[MACHINEPROGRAMFILES]\Conceito\CEP Horas Teste MSI" Order="6" Condition="CEPINSTALLSCOPE=&quot;machine&quot;" />
+          <Publish Property="ProgramMenuFolder" Value="[USERPROGRAMS]" Order="7" Condition="CEPINSTALLSCOPE=&quot;user&quot;" />
+          <Publish Property="ProgramMenuFolder" Value="[MACHINEPROGRAMS]" Order="8" Condition="CEPINSTALLSCOPE=&quot;machine&quot;" />
+          <Publish Event="SetTargetPath" Value="INSTALLFOLDER" Order="9" />
+          <Publish Event="SetTargetPath" Value="ProgramMenuFolder" Order="10" />
+          <Publish Event="NewDialog" Value="VerifyReadyDlg" Order="11" />
+        </Control>
+        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="Cancelar"><Publish Event="SpawnDialog" Value="CancelDlg" /></Control>
+      </Dialog>
+    </UI>
+    <UIRef Id="WixUI_Common" />
+  </Fragment>
+</Wix>

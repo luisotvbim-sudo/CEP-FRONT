@@ -1,0 +1,44 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="CEP Horas (Teste MSI)" Manufacturer="Conceito"
+           Version="$(var.InstallerVersion)" Language="1046" Codepage="1252"
+           UpgradeCode="89DBF50D-C346-42A7-9075-924BFC088DA5" Scope="perUserOrMachine">
+    <SummaryInformation Description="Instalador de teste do CEP Horas para Windows x64" />
+    <MajorUpgrade Schedule="afterInstallInitialize" DowngradeErrorMessage="Uma versão mais recente deste MSI de teste já está instalada." />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="medium" />
+    <Launch Condition="Installed OR VersionNT64" Message="Este pacote exige Windows de 64 bits." />
+    <Property Id="ARPHELPLINK" Value="https://cep.lat" />
+    <Property Id="ARPCOMMENTS" Value="Teste sem assinatura; sem serviço supervisor e teste de senha no desligamento opcional. WebView2 Runtime necessário." />
+    <Property Id="CEPINSTALLSCOPE" Value="user" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Abrir CEP Horas" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
+    <Property Id="WixUnelevatedShellExecTarget" Value="[#AppExe]" />
+    <!-- Launch from the successful interactive exit dialog, in the desktop user's context. -->
+    <CustomAction Id="LaunchCepHoras" BinaryRef="Wix4UtilCA_X64" DllEntry="WixUnelevatedShellExec"
+                  Execute="immediate" Impersonate="yes" Return="ignore" />
+    <Property Id="MACHINEPROGRAMFILES" Secure="yes">
+      <RegistrySearch Id="MachineProgramFiles" Root="HKLM" Key="SOFTWARE\Microsoft\Windows\CurrentVersion" Name="ProgramFilesDir" Type="raw" Bitness="always64" />
+    </Property>
+    <Property Id="MACHINEPROGRAMS" Secure="yes">
+      <RegistrySearch Id="MachinePrograms" Root="HKLM" Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" Name="Common Programs" Type="raw" Bitness="always64" />
+    </Property>
+    <Property Id="USERPROGRAMS">
+      <RegistrySearch Id="UserPrograms" Root="HKCU" Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" Name="Programs" Type="raw" />
+    </Property>
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="ConceitoFolder" Name="Conceito">
+        <Directory Id="INSTALLFOLDER" Name="CEP Horas Teste MSI" />
+      </Directory>
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder" />
+    <SetProperty Id="INSTALLFOLDER" Action="SetUserInstallFolder" Value="[LocalAppDataFolder]Programs\Conceito\CEP Horas Teste MSI"
+                 Before="CostFinalize" Sequence="both" Condition="NOT ALLUSERS OR (ALLUSERS=2 AND MSIINSTALLPERUSER=1)" />
+    <SetProperty Id="INSTALLFOLDER" Action="SetMachineInstallFolder" Value="[MACHINEPROGRAMFILES]\Conceito\CEP Horas Teste MSI"
+                 Before="CostFinalize" Sequence="both" Condition="ALLUSERS=1 OR (ALLUSERS=2 AND NOT MSIINSTALLPERUSER)" />
+    <SetProperty Id="ProgramMenuFolder" Action="SetUserPrograms" Value="[USERPROGRAMS]"
+                 Before="CostFinalize" Sequence="both" Condition="NOT ALLUSERS OR (ALLUSERS=2 AND MSIINSTALLPERUSER=1)" />
+    <SetProperty Id="ProgramMenuFolder" Action="SetMachinePrograms" Value="[MACHINEPROGRAMS]"
+                 Before="CostFinalize" Sequence="both" Condition="ALLUSERS=1 OR (ALLUSERS=2 AND NOT MSIINSTALLPERUSER)" />
+    <Feature Id="MainFeature" Title="CEP Horas" Level="1"><ComponentGroupRef Id="AppFiles" /></Feature>
+    <UIRef Id="CepScopeUI" />
+  </Package>
+</Wix>

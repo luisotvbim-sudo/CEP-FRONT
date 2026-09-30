@@ -215,6 +215,28 @@ try {
     const encrypted = await readFile(path.join(sessionDirectory, files[0]))
     assert.ok(encrypted.length > 0)
     assert.equal(encrypted.includes(Buffer.from('fixture-refresh')), false)
+    const duplicate = spawn(
+      path.resolve('desktop/CepHoras.Desktop/bin/Debug/net10.0-windows/CepHoras.exe'), [],
+      { windowsHide: true, stdio: 'ignore', env: {
+        ...process.env, CEP_API_URL: `http://127.0.0.1:${port}`,
+        CEP_SESSION_DIR: sessionDirectory, CEP_DESKTOP_TESTING: '1',
+        WEBVIEW2_USER_DATA_FOLDER: path.join(working, 'duplicate-profile'),
+      } },
+    )
+    try {
+      await waitNativeEvent('startup-session-in-use')
+      assert.equal(child.exitCode, null, 'the existing app must keep running')
+      assert.deepEqual(await readFile(path.join(sessionDirectory, files[0])), encrypted,
+        'a duplicate launch must not delete or modify the stored session')
+      assert.equal(refreshes, 1, 'a duplicate launch must not rotate the session')
+      console.log('PASS: duplicate startup shows the session-in-use state and preserves the existing session.')
+    } finally {
+      if (duplicate.exitCode === null) {
+        const exited = new Promise((resolve) => duplicate.once('exit', resolve))
+        duplicate.kill()
+        await exited
+      }
+    }
     for (let attempt = 0; attempt < 100 && deliveredNotifications.size < 101; attempt++)
       await new Promise((resolve) => setTimeout(resolve, 100))
     assert.equal(deliveredNotifications.size, 101, 'the native host recovers every pending page')

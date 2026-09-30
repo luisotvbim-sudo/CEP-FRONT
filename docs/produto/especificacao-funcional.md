@@ -1,5 +1,7 @@
 # Conciliação de horas — especificação funcional do produto
 
+> Piloto nativo de 30/09/2026: [controle local de desligamento](../instalador-corporativo.md), capacidade **parcial**. Foi preparado instalador administrativo com serviço e autorização por senha local definida pela TI. Aplicação efetiva das políticas, remoção elevada e desligamento real dependem de homologação pela TI. A decisão baseada nas divergências/tolerância de horas continua **planejada**; este piloto não implementa essa regra.
+
 > Atualização de 29/09/2026: [contrato aprovado](../contrato-analises-notificacoes.md) e [implementação de análises/notificações](../notificacoes-implementacao.md). Configurações globais, tolerância diária inicial de 30 minutos nos dois sentidos, agendas, envio manual, central e resultados do motor único estão integrados nesta entrega. A matriz de 23/09 abaixo é histórica para essas capacidades. Justificativas, decisões e exportações continuam planejadas.
 
 Versão 1.1 · 23/09/2026 · Fonte de verdade funcional para produto e engenharia

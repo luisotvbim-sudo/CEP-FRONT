@@ -1,0 +1,59 @@
+CEP HORAS - MSI BÁSICO DE TESTE (WINDOWS X64)
+
+1. Feche outras versões do CEP Horas pela opção Sair do aplicativo na bandeja.
+2. Instale o Microsoft Edge WebView2 Runtime, se ainda não estiver disponível:
+   https://developer.microsoft.com/microsoft-edge/webview2/#download-section
+3. Abra CEP-Horas-Teste-win-x64.msi e escolha o escopo na segunda tela:
+   - Somente para mim: instala no perfil atual, sem solicitar administrador.
+   - Todos os usuários: instala no computador, com autorização administrativa da TI.
+   Para instalar somente para você, abra normalmente com sua própria conta.
+4. Ao terminar, mantenha Abrir CEP Horas marcado e clique em Concluir.
+   O aplicativo abre na sessão do usuário, sem elevação administrativa.
+   Se preferir, desmarque e abra CEP Horas (Teste MSI) depois pelo menu Iniciar.
+   Execute o aplicativo como usuário comum, não como administrador.
+5. Faça login na conta autorizada. A API padrão é https://api.cep.lat (PRODUÇÃO).
+   Ações autenticadas afetam dados reais. O pacote não contém conta nem senha.
+6. Na bandeja, use Testar notificação para conferir o popup local, sem enviar mensagens.
+
+INSTALAÇÃO
+- Todos os usuários: C:\Program Files\Conceito\CEP Horas Teste MSI
+- Somente para mim: %LOCALAPPDATA%\Programs\Conceito\CEP Horas Teste MSI
+- .NET incluído no pacote. A opção padrão é Somente para mim.
+- O usuário pode desinstalar sua própria instalação. Esta opção não garante
+  as restrições administrativas discutidas para a futura versão com serviço.
+- O WebView2 Runtime é um pré-requisito separado.
+- Não substitui nem remove a instalação ZIP/MSIX anterior.
+- Não abra duas versões ao mesmo tempo: elas compartilham a sessão protegida do usuário.
+- Se outra versão estiver aberta, o aplicativo explica o conflito. Encerre a anterior
+  pela opção Sair do aplicativo na bandeja e clique em tentar novamente na nova janela.
+- Este MSI não foi assinado. Políticas da empresa podem exigir liberação pela TI.
+  Não desative as proteções do Windows para instalar.
+
+LIMITES DESTA ETAPA
+- Sem serviço supervisor ou senha administrativa para sair. Bloqueio de desligamento somente como teste local opcional; veja abaixo.
+- Sem início com o Windows e sem atualização automática.
+- Abrir após instalar é uma opção da tela final. Instalação silenciosa,
+  reparo e remoção não abrem o aplicativo.
+- X minimiza para a bandeja; Sair do aplicativo encerra normalmente.
+- Instalar o MSI não garante entrega de notificações; login, conexão e permissões
+  de notificação do Windows continuam necessários.
+
+ATUALIZAR / REMOVER
+- Encerre pela bandeja antes de atualizar ou remover.
+- Uma versão MSI maior substitui a versão de teste anterior; downgrade é bloqueado.
+- Mantenha o mesmo escopo ao atualizar. Para trocar entre usuário e computador,
+  remova primeiro a instalação anterior; não há migração automática entre escopos.
+- Configurações > Aplicativos > Aplicativos instalados > CEP Horas (Teste MSI).
+- A remoção preserva o perfil WebView2 e a sessão DPAPI no perfil do usuário.
+  Para revogar a sessão, use Sair da conta no aplicativo antes de desinstalar.
+
+SUPORTE
+- Instalação com log (no terminal, na pasta deste arquivo):
+  msiexec /i "CEP-Horas-Teste-win-x64.msi" /L*v "%TEMP%\cep-horas-msi.log"
+- SHA256SUMS.txt permite comparar a integridade do MSI; não substitui assinatura.
+
+TESTE OPCIONAL DE DESLIGAMENTO (0.2.7)
+Desativado por padrão. Exige configuração local por usuário, sem senha no pacote.
+Quando ativo, pede senha antes de desligar/reiniciar e libera por 60 segundos.
+O Windows pode oferecer Desligar mesmo assim. Não é uma restrição administrativa.
+Consulte docs/teste-bloqueio-desligamento.md no repositório.

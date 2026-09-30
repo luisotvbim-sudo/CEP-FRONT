@@ -1,0 +1,34 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+  <Package Name="CEP Horas (Corporativo - Piloto)" Manufacturer="Conceito" Version="$(var.InstallerVersion)"
+           Language="1046" Codepage="1252" UpgradeCode="8D0D0DC8-E744-42E7-A57A-20F489145ED8" Scope="perMachine">
+    <SummaryInformation Description="Piloto administrativo do CEP Horas com serviço e configuração local de desligamento" />
+    <MajorUpgrade Schedule="afterInstallInitialize" DowngradeErrorMessage="Já existe uma versão corporativa mais recente." />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="medium" />
+    <Launch Condition="Installed OR VersionNT64" Message="Requer Windows x64." />
+    <Property Id="ARPCOMMENTS" Value="Piloto sem assinatura. Restrição só é ativada na configuração da TI. Regra de horas ainda não integrada." />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Abrir configuração administrativa (TI)" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
+    <Property Id="WixShellExecTarget" Value="[#ControlExe]" />
+    <CustomAction Id="OpenConfiguration" BinaryRef="Wix4UtilCA_X64" DllEntry="WixShellExec" Impersonate="yes" Return="ignore" />
+    <CustomAction Id="RollbackPolicyRestore" FileRef="ControlExe" ExeCommand="--rollback-restore" Execute="rollback" Impersonate="no" Return="check" />
+    <CustomAction Id="RestorePolicy" FileRef="ControlExe" ExeCommand="--uninstall-restore" Execute="deferred" Impersonate="no" Return="check" />
+    <InstallExecuteSequence>
+      <Custom Action="RollbackPolicyRestore" Before="RestorePolicy" Condition="REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE" />
+      <Custom Action="RestorePolicy" Before="StopServices" Condition="REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE" />
+    </InstallExecuteSequence>
+    <StandardDirectory Id="ProgramFiles64Folder"><Directory Id="INSTALLFOLDER" Name="Conceito CEP Horas Corporativo" /></StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder" />
+    <DirectoryRef Id="INSTALLFOLDER">
+      <Component Id="CorporateAutoStart" Guid="76184352-3515-4E5D-AC7D-769A3223C7BB">
+        <CreateFolder><PermissionEx Sddl="D:PAI(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;OICI;0x1200a9;;;BU)" /></CreateFolder>
+        <RegistryValue Root="HKLM" Key="Software\Microsoft\Windows\CurrentVersion\Run" Name="CepHorasCorporativo" Value="&quot;[INSTALLFOLDER]CepHoras.exe&quot; --background" Type="string" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+    <Feature Id="MainFeature" Title="CEP Horas Corporativo" Level="1"><ComponentGroupRef Id="AppFiles" /><ComponentRef Id="CorporateAutoStart" /></Feature>
+    <ui:WixUI Id="WixUI_Minimal" />
+    <WixVariable Id="WixUILicenseRtf" Value="PilotNotice.rtf" />
+    <UI>
+      <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="OpenConfiguration" Order="1" Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX=1 AND NOT Installed AND NOT REMOVE~=&quot;ALL&quot;" />
+    </UI>
+  </Package>
+</Wix>

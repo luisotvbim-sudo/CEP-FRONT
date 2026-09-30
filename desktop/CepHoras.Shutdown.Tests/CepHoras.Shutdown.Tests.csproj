@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../CepHoras.Desktop/ShutdownTestPolicy.cs" Link="ShutdownTestPolicy.cs" />
+    <Compile Include="../CepHoras.Desktop/ShutdownTestGuard.cs" Link="ShutdownTestGuard.cs" />
+    <Compile Include="../CepHoras.Desktop/ShutdownPasswordWindow.xaml.cs" Link="ShutdownPasswordWindow.xaml.cs" />
+    <Page Include="../CepHoras.Desktop/ShutdownPasswordWindow.xaml" Link="ShutdownPasswordWindow.xaml" />
+  </ItemGroup>
+</Project>

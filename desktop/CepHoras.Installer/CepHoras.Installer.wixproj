@@ -1,0 +1,17 @@
+<Project Sdk="WixToolset.Sdk/5.0.2">
+  <PropertyGroup>
+    <OutputName>CEP-Horas-Teste-win-x64</OutputName>
+    <InstallerPlatform>x64</InstallerPlatform>
+    <Cultures>pt-BR</Cultures>
+    <DefineConstants>PublishDir=$(PublishDir);InstallerVersion=$(InstallerVersion)</DefineConstants>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="WixToolset.UI.wixext" Version="5.0.2" />
+    <PackageReference Include="WixToolset.Util.wixext" Version="5.0.2" />
+    <Compile Include="$(PayloadSource)" />
+  </ItemGroup>
+  <Target Name="RequirePublish" BeforeTargets="BeforeBuild">
+    <Error Condition="!Exists('$(PublishDir)/CepHoras.exe')" Text="Execute scripts/build-desktop-msi.ps1 para publicar o aplicativo antes de gerar o MSI." />
+  </Target>
+</Project>

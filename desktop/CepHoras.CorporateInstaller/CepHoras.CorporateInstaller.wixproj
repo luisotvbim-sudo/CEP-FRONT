@@ -1,0 +1,12 @@
+<Project Sdk="WixToolset.Sdk/5.0.2">
+  <PropertyGroup>
+    <OutputName>CEP-Horas-Corporativo-Piloto-win-x64</OutputName><InstallerPlatform>x64</InstallerPlatform>
+    <Cultures>pt-BR</Cultures><TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <DefineConstants>InstallerVersion=$(InstallerVersion)</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="WixToolset.UI.wixext" Version="5.0.2" />
+    <PackageReference Include="WixToolset.Util.wixext" Version="5.0.2" />
+    <Compile Include="$(PayloadSource)" />
+  </ItemGroup>
+</Project>
