@@ -8,6 +8,7 @@ import { FormNotice } from './components/FormNotice'
 import { AdminShell } from './admin/AdminShell'
 import { SystemAdminShell } from './admin/SystemAdminShell'
 import { UserShell } from './user/UserShell'
+import { AuthenticatedLayout } from './power/PowerMenu'
 
 export function App({ client }: { client: AuthClient }) {
   const [session, setSession] = useState<AuthSession | null>(null)
@@ -60,10 +61,26 @@ export function App({ client }: { client: AuthClient }) {
   useEffect(() => {
     if (!window.__CEP_DESKTOP__ || session || restoring) return
     let active = true
-    const resume = () => { void client.restore().then((value) => { if (active && value) { setSession(value); setNotice(undefined) } }).catch(() => { /* The login form remains available after an uncertain refresh. */ }) }
+    const resume = () => {
+      void client
+        .restore()
+        .then((value) => {
+          if (active && value) {
+            setSession(value)
+            setNotice(undefined)
+          }
+        })
+        .catch(() => {
+          /* The login form remains available after an uncertain refresh. */
+        })
+    }
     window.addEventListener('online', resume)
     const timer = setInterval(resume, 60_000)
-    return () => { active = false; clearInterval(timer); window.removeEventListener('online', resume) }
+    return () => {
+      active = false
+      clearInterval(timer)
+      window.removeEventListener('online', resume)
+    }
   }, [client, session, restoring])
 
   async function logout() {
@@ -88,28 +105,36 @@ export function App({ client }: { client: AuthClient }) {
       </div>
     )
   if (session?.user.role === 'systemAdmin')
-    return <SystemAdminShell client={client} session={session} onLogout={() => setSession(null)} />
+    return (
+      <AuthenticatedLayout client={client}>
+        <SystemAdminShell client={client} session={session} onLogout={() => setSession(null)} />
+      </AuthenticatedLayout>
+    )
   if (session?.user.role === 'organizationAdmin' && session.user.organizationId)
     return (
-      <AdminShell
-        client={client}
-        session={session}
-        onLogout={() => {
-          setSession(null)
-          setNotice('Você saiu da sua conta com segurança.')
-        }}
-      />
+      <AuthenticatedLayout client={client}>
+        <AdminShell
+          client={client}
+          session={session}
+          onLogout={() => {
+            setSession(null)
+            setNotice('Você saiu da sua conta com segurança.')
+          }}
+        />
+      </AuthenticatedLayout>
     )
   if (session?.user.role === 'user' && session.user.organizationId)
     return (
-      <UserShell
-        client={client}
-        session={session}
-        onLogout={() => {
-          setSession(null)
-          setNotice('Você saiu da sua conta com segurança.')
-        }}
-      />
+      <AuthenticatedLayout client={client}>
+        <UserShell
+          client={client}
+          session={session}
+          onLogout={() => {
+            setSession(null)
+            setNotice('Você saiu da sua conta com segurança.')
+          }}
+        />
+      </AuthenticatedLayout>
     )
   return (
     <div className="app-shell">
@@ -170,7 +195,13 @@ export function App({ client }: { client: AuthClient }) {
       </main>
       <footer className="page-footer">
         <span>© {new Date().getFullYear()} Conceito Engenharia</span>
-        {!window.__CEP_DESKTOP__ ? <a className="login-download-link" href="/download">Baixar aplicativo para Windows</a> : <span>Feito para conectar pessoas, projetos e tempo.</span>}
+        {!window.__CEP_DESKTOP__ ? (
+          <a className="login-download-link" href="/download">
+            Baixar aplicativo para Windows
+          </a>
+        ) : (
+          <span>Feito para conectar pessoas, projetos e tempo.</span>
+        )}
       </footer>
     </div>
   )

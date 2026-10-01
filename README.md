@@ -11,6 +11,8 @@ Interface React + TypeScript compartilhada entre navegador e um executável Wind
 
 ## Funcionalidades implementadas
 
+- **Menu de energia:** rodapé recolhível nas áreas autenticadas com verificação pessoal pela API. Agendamento de dez segundos e cancelamento usam um [contrato nativo isolado](docs/menu-energia.md), ainda dependente do bridge do instalador. No navegador, não executa ações do sistema.
+
 - **Login:** desktop e navegador usam autenticação, `/me`, refresh rotativo, logout, recuperação e redefinição de senha disponíveis na API atual. No navegador, o refresh fica em cookie protegido e não é exposto ao React.
 - **Pessoas:** pesquisa e paginação das associações Monday/VR, detalhes da pessoa, estado do convite, reenvio de convites pendentes (válidos ou expirados) com confirmação e atalho para histórico. Convites pendentes não comprovam entrega de e-mail. O estado complementar de revogação vem de `/organization/invitations`; quando não disponível, a tela não afirma que o convite continua válido.
 - **Associar e convidar:** busca de perfis ativos e ainda não associados, atualização de nome/e-mail ao trocar a seleção, sugestão entre Monday e VR nos dois sentidos por e-mail exato e único, seleção pelos IDs internos e confirmação humana da correspondência, nome/e-mail e convite com papel `User`, válido por 48 horas. A confirmação informa enfileiramento, não entrega.

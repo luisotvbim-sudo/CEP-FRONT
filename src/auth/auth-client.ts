@@ -228,6 +228,8 @@ export class HttpAuthClient implements AuthClient {
       !path.startsWith('/organization/') &&
       !/^\/time-control\/(settings|notification-schedules(?:\/[0-9a-f-]{36})?)(\?|$)/i.test(path) &&
       !/^\/me\/notifications(?:\/received|\/[0-9a-f-]{36}\/read)?(\?|$)/i.test(path) &&
+      !(method === 'POST' && path === '/me/time-control/power-action-check') &&
+      !(method === 'GET' && /^\/me\/time-control\/power-action-status(\?|$)/.test(path)) &&
       path.split('?')[0] !== '/admin/organizations' &&
       path !== '/me'
     )

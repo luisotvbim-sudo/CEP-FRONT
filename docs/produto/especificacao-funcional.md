@@ -1,5 +1,7 @@
 # Conciliação de horas — especificação funcional do produto
 
+> Aditivo do menu de energia: [comportamento e dependências](../menu-energia.md). Menu discreto nas áreas autenticadas para Desligar, Reiniciar, Hibernar e Verificar status. A CEP API decide liberação/inconclusivo/bloqueio; somente liberação agenda dez segundos no host com cancelamento. Contingência quando a API realmente não responde exige verificação nativa. Interface integrada; execução Windows depende do instalador/bridge.
+
 > Atualização de 29/09/2026: [contrato aprovado](../contrato-analises-notificacoes.md) e [implementação de análises/notificações](../notificacoes-implementacao.md). Configurações globais, tolerância diária inicial de 30 minutos nos dois sentidos, agendas, envio manual, central e resultados do motor único estão integrados nesta entrega. A matriz de 23/09 abaixo é histórica para essas capacidades. Justificativas, decisões e exportações continuam planejadas.
 
 Versão 1.1 · 23/09/2026 · Fonte de verdade funcional para produto e engenharia

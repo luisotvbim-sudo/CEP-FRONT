@@ -12,6 +12,7 @@ void Check(bool condition, string reason)
 const string id = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
 var allowed = new (string Method, string Path)[]
 {
+    ("POST", "/me/time-control/power-action-check"), ("GET", "/me/time-control/power-action-status"),
     ("GET", "/me"), ("GET", "/admin/organizations"), ("POST", "/admin/organizations"),
     ("GET", "/organization/users"), ("PATCH", $"/organization/users/{id}"),
     ("GET", "/organization/invitations"), ("POST", "/organization/invitations"),
@@ -44,6 +45,8 @@ foreach (var path in new[] { "/auth/login", "/auth/refresh", "/auth/logout", "ht
 Check(!ApiRoutePolicy.Allows("DELETE", "/organization/users"), "Must not allow destructive unsupported operation");
 Check(!ApiRoutePolicy.Allows("GET", $"/me/notifications/{id}/read"), "Read acknowledgement requires POST");
 Check(!ApiRoutePolicy.Allows("POST", "/time-control/settings"), "Settings requires PATCH");
+Check(!ApiRoutePolicy.Allows("GET", "/me/time-control/power-action-check"), "Power check requires POST");
+Check(!ApiRoutePolicy.Allows("POST", "/me/time-control/power-action-status"), "Power status requires GET");
 
 var directory = Path.Combine(Path.GetTempPath(), "cep-storage-tests-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(directory);

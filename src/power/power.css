@@ -1,0 +1,80 @@
+.authenticated-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100svh;
+  background: #f4f4f4;
+}
+.authenticated-layout > .admin-app {
+  min-height: 0;
+  flex: 1;
+}
+.power-menu {
+  margin-top: auto;
+  padding: 10px 24px;
+  border-top: 1px solid #dfdfdf;
+  background: #f4f4f4;
+  color: #555;
+  font-size: 12px;
+}
+.authenticated-layout:has(.admin-sidebar) > .power-menu {
+  margin-left: 236px;
+}
+.power-menu summary {
+  cursor: pointer;
+  width: fit-content;
+  padding: 4px 0;
+}
+.power-menu summary svg {
+  vertical-align: middle;
+  margin-right: 4px;
+}
+.power-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  padding-top: 8px;
+}
+.power-menu button {
+  background: transparent;
+  color: #555;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font: inherit;
+}
+.power-menu button:hover {
+  border-color: #c24e12;
+  color: #a4400d;
+}
+.power-menu button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.power-menu :is(button, summary):focus-visible {
+  outline: 2px solid #c24e12;
+  outline-offset: 3px;
+}
+.power-menu p {
+  margin: 8px 0 0;
+  overflow-wrap: anywhere;
+}
+.power-menu .power-cancel {
+  margin-top: 8px;
+  color: #a4400d;
+}
+@media (max-width: 600px) {
+  .power-menu {
+    padding: 10px 17px;
+  }
+}
+@media (max-width: 1150px) {
+  .authenticated-layout:has(.admin-sidebar) > .power-menu {
+    margin-left: 207px;
+  }
+}
+@media (max-width: 850px) {
+  .authenticated-layout:has(.admin-sidebar) > .power-menu {
+    margin-left: 0;
+  }
+}
