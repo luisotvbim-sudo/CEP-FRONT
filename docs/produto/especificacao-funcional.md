@@ -1,6 +1,6 @@
 # Conciliação de horas — especificação funcional do produto
 
-> Aditivo do menu de energia: [comportamento e dependências](../menu-energia.md). Menu discreto nas áreas autenticadas para Desligar, Reiniciar, Hibernar e Verificar status. A CEP API decide liberação/inconclusivo/bloqueio; somente liberação agenda dez segundos no host com cancelamento. Contingência quando a API realmente não responde exige verificação nativa. Interface integrada; execução Windows depende do instalador/bridge.
+> Aditivo do menu de energia de 30/09/2026: [comportamento e dependências](../menu-energia.md). Menu discreto nas áreas autenticadas para Desligar, Reiniciar, Hibernar e Verificar status. A CEP API decide liberação/inconclusivo/bloqueio; somente liberação agenda dez segundos no host com cancelamento. Contingência quando a API realmente não responde exige verificação nativa. Interface, bridge, serviço e MSI corporativo estão integrados; aplicação efetiva das políticas e ações reais depende de homologação elevada em máquina piloto.
 
 > Atualização de 29/09/2026: [contrato aprovado](../contrato-analises-notificacoes.md) e [implementação de análises/notificações](../notificacoes-implementacao.md). Configurações globais, tolerância diária inicial de 30 minutos nos dois sentidos, agendas, envio manual, central e resultados do motor único estão integrados nesta entrega. A matriz de 23/09 abaixo é histórica para essas capacidades. Justificativas, decisões e exportações continuam planejadas.
 
@@ -62,6 +62,7 @@ O backend atual já entrega a fundação administrativa e de integração do CEP
 | Coordenador com acesso total ao CEP Horas | **Entregue** por `OrganizationAdmin` nas capacidades existentes |
 | Líder restrito aos próprios times | **Entregue** nas consultas atuais de times, pessoas e histórico |
 | Membro com acesso aos próprios registros | **Entregue** nas consultas atuais de pessoa e histórico |
+| Decisão pessoal e menu de energia no desktop | **Entregue** no contrato da API, interface, bridge, serviço e MSI; **homologação operacional pendente** |
 | Conciliação diária, tolerâncias, calendário e divergências | **Planejado** |
 | Justificativas, decisões, alertas e notificações internas | **Planejado** |
 | Painéis, relatórios e exportações | **Planejado** |

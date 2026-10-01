@@ -1,6 +1,7 @@
 using System.IO;
 using System.Diagnostics;
 using System.Text.Json;
+using System.Security.Principal;
 using System.Windows;
 using System.Windows.Threading;
 using CepHoras.Updates;
@@ -37,6 +38,10 @@ public partial class MainWindow : Window
     private System.Windows.Forms.NotifyIcon? tray;
     private readonly DispatcherTimer notificationTimer = new() { Interval = TimeSpan.FromSeconds(60) };
     private NotificationDelivery? notifications;
+    private PowerBridgeHandler? power;
+    private readonly bool managedInstallation = File.Exists(Path.Combine(AppContext.BaseDirectory, "managed-install.marker"));
+    private readonly bool windowsAdministrator = new WindowsPrincipal(WindowsIdentity.GetCurrent())
+        .IsInRole(WindowsBuiltInRole.Administrator);
 
     public MainWindow()
     {
@@ -66,8 +71,16 @@ public partial class MainWindow : Window
         };
     }
 
-    // Closing to tray must never interfere with Windows logoff or shutdown.
-    private void OnSessionEnding(object sender, SessionEndingCancelEventArgs args) => exiting = true;
+    private void OnSessionEnding(object sender, SessionEndingCancelEventArgs args)
+    {
+        if (managedInstallation && !windowsAdministrator && power?.SessionEndingAllowed != true)
+        {
+            args.Cancel = true;
+            OpenWindow(false);
+            return;
+        }
+        exiting = true;
+    }
 
     private async void Initialize(object sender, RoutedEventArgs e)
     {
@@ -84,6 +97,7 @@ public partial class MainWindow : Window
             if (api.Scheme != "https" && !(api.Scheme == "http" && api.IsLoopback))
                 throw new InvalidOperationException("HTTPS is required outside loopback.");
             session = new ApiSession(api);
+            power = new PowerBridgeHandler(session);
             notifications = new NotificationDelivery(session);
             ConfigureTray();
             notificationTimer.Tick += async (_, _) => await notifications.Poll(ShowNotificationSummary);
@@ -105,7 +119,9 @@ public partial class MainWindow : Window
             core.Settings.AreBrowserAcceleratorKeysEnabled = false;
 #endif
             core.SetVirtualHostNameToFolderMapping("app.cephoras.local", Path.Combine(AppContext.BaseDirectory, "wwwroot"), CoreWebView2HostResourceAccessKind.DenyCors);
-            await core.AddScriptToExecuteOnDocumentCreatedAsync("window.__CEP_DESKTOP__ = true;");
+            await core.AddScriptToExecuteOnDocumentCreatedAsync(managedInstallation
+                ? "window.__CEP_DESKTOP__ = true; window.__CEP_POWER_VERSION__ = 1;"
+                : "window.__CEP_DESKTOP__ = true;");
             core.NavigationStarting += (_, args) => { if (!IsAppOrigin(args.Uri)) args.Cancel = true; };
             core.NewWindowRequested += (_, args) =>
             {
@@ -170,16 +186,26 @@ public partial class MainWindow : Window
                 return;
             }
 #endif
-            if (root.GetProperty("type").GetString() != "cep-auth") return;
+            var type = root.GetProperty("type").GetString();
             id = root.GetProperty("id").GetString();
             if (!Guid.TryParse(id, out _)) return;
             var operation = root.GetProperty("operation").GetString();
             var payload = root.GetProperty("payload");
+            if (type == "cep-power")
+            {
+                if (!managedInstallation || power is null) throw new PowerBridgeFailure("native_power_unavailable");
+                var powerResult = await power.Execute(operation, payload);
+                Reply(new { id, ok = true, result = powerResult });
+                return;
+            }
+            if (type != "cep-auth") return;
+            if (operation == "logout" && power is not null) await power.CancelCurrent();
             var result = await session!.Execute(operation, payload);
             Reply(new { id, ok = true, result });
             if (operation is "login" or "restore" && notifications is not null)
                 await notifications.Poll(ShowNotificationSummary);
         }
+        catch (PowerBridgeFailure failure) { Reply(new { id, ok = false, error = new { code = failure.Code, correlationId = failure.CorrelationId } }); }
         catch (ApiFailure failure) { Reply(new { id, ok = false, error = new { status = failure.Status, code = failure.Code, correlationId = failure.CorrelationId } }); }
         catch { if (id is not null) Reply(new { id, ok = false, error = new { code = "desktop_request_failed" } }); }
     }
@@ -196,7 +222,13 @@ public partial class MainWindow : Window
         tray.ContextMenuStrip.Items.Add("Abrir CEP Horas", null, (_, _) => OpenWindow(false));
         tray.ContextMenuStrip.Items.Add("Minhas notificações", null, (_, _) => OpenWindow(true));
         tray.ContextMenuStrip.Items.Add("Testar notificação", null, (_, _) => ShowTestNotification());
-        tray.ContextMenuStrip.Items.Add("Sair do aplicativo", null, (_, _) => { exiting = true; Close(); });
+        if (!managedInstallation || windowsAdministrator)
+            tray.ContextMenuStrip.Items.Add("Sair do aplicativo", null, async (_, _) =>
+            {
+                if (power is not null) await power.CancelCurrent();
+                exiting = true;
+                Close();
+            });
         tray.DoubleClick += (_, _) => OpenWindow(false);
         tray.BalloonTipClicked += (_, _) => OpenWindow(!testPopup);
         tray.BalloonTipShown += (_, _) => RecordNativeEvent("popup-shown-by-windows");

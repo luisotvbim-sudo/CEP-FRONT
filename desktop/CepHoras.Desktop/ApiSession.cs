@@ -8,11 +8,12 @@ using System.Text.Json;
 
 namespace CepHoras.Desktop;
 
-internal sealed class ApiFailure(int status, string? code, string? correlationId = null) : Exception
+internal sealed class ApiFailure(int status, string? code, string? correlationId = null, bool transportFailure = false) : Exception
 {
     public int Status { get; } = status;
     public string? Code { get; } = code;
     public string? CorrelationId { get; } = correlationId;
+    public bool TransportFailure { get; } = transportFailure;
 }
 
 internal sealed class ApiSession : IDisposable
@@ -33,6 +34,35 @@ internal sealed class ApiSession : IDisposable
     {
         var result = await Request(JsonSerializer.SerializeToElement(new { method, path, body }, Json));
         return result is JsonElement value ? value : default;
+    }
+
+    internal async Task<JsonElement> PowerActionCheck(string action)
+    {
+        var payload = JsonSerializer.SerializeToElement(new
+        {
+            method = "POST",
+            path = "/me/time-control/power-action-check",
+            body = new { action }
+        }, Json);
+        var result = await Request(payload);
+        return result is JsonElement value && value.ValueKind == JsonValueKind.Object
+            ? value
+            : throw new ApiFailure(502, "invalid_power_response");
+    }
+
+    internal async Task<bool> IsApiUnreachable()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/health/ready");
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        try
+        {
+            using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
+            return false; // Any HTTP response means the API transport is reachable.
+        }
+        catch (Exception error) when (error is HttpRequestException or TaskCanceledException)
+        {
+            return true;
+        }
     }
 
     public ApiSession(Uri api) : this(api, null, SessionDirectory()) { }
@@ -196,16 +226,25 @@ internal sealed class ApiSession : IDisposable
         if (body is not null) request.Content = JsonContent.Create(body, options: Json);
         if (token is not null) request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(method == "POST" && path.StartsWith("/organization/time-control/synchronizations", StringComparison.Ordinal) ? 180 : 20));
-        using var response = await http.SendAsync(request, timeout.Token);
+        HttpResponseMessage response;
+        try { response = await http.SendAsync(request, timeout.Token); }
+        catch (Exception error) when (error is HttpRequestException or TaskCanceledException)
+        {
+            throw new ApiFailure(503, "connection_failed", transportFailure: true);
+        }
+        using (response)
+        {
         JsonElement result = default;
         try { using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(timeout.Token)); result = document.RootElement.Clone(); }
         catch (JsonException) { }
+        catch (TaskCanceledException) { throw new ApiFailure(503, "connection_failed", transportFailure: true); }
         if (!response.IsSuccessStatusCode)
         {
             string? Read(string name) => result.ValueKind == JsonValueKind.Object && result.TryGetProperty(name, out var property) && property.ValueKind == JsonValueKind.String ? property.GetString() : null;
             throw new ApiFailure((int)response.StatusCode, Read("code"), Read("correlationId"));
         }
         return result;
+        }
     }
 
     private void Clear() { generation++; accessToken = null; refreshToken = null; accessExpiry = default; storedSession.Delete(); }

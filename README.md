@@ -11,7 +11,7 @@ Interface React + TypeScript compartilhada entre navegador e um executável Wind
 
 ## Funcionalidades implementadas
 
-- **Menu de energia:** rodapé recolhível nas áreas autenticadas com verificação pessoal pela API. Agendamento de dez segundos e cancelamento usam um [contrato nativo isolado](docs/menu-energia.md), ainda dependente do bridge do instalador. No navegador, não executa ações do sistema.
+- **Menu de energia:** rodapé recolhível nas áreas autenticadas com verificação pessoal pela API. No instalador corporativo, o bridge nativo revalida a decisão no host e agenda no serviço local com dez segundos para cancelamento. No navegador, não executa ações do sistema.
 
 - **Login:** desktop e navegador usam autenticação, `/me`, refresh rotativo, logout, recuperação e redefinição de senha disponíveis na API atual. No navegador, o refresh fica em cookie protegido e não é exposto ao React.
 - **Pessoas:** pesquisa e paginação das associações Monday/VR, detalhes da pessoa, estado do convite, reenvio de convites pendentes (válidos ou expirados) com confirmação e atalho para histórico. Convites pendentes não comprovam entrega de e-mail. O estado complementar de revogação vem de `/organization/invitations`; quando não disponível, a tela não afirma que o convite continua válido.
@@ -42,6 +42,14 @@ Abra `http://127.0.0.1:5173`. O proxy Vite encaminha `/api` para `http://127.0.0
 Use uma conta existente no navegador ou no executável desktop. Não há credenciais fixas ou cadastro público. Solicite a senha ao responsável e insira-a na interface; não a grave em scripts, código, capturas ou Git. Confira `/health/ready`: Swagger acessível sozinho não comprova conexão com o banco.
 
 ## Executável Windows
+
+O instalador corporativo unificado inclui o aplicativo, inicialização automática, serviço `CepHorasControl` e políticas locais de energia. Nas áreas autenticadas, o menu discreto oferece Desligar, Reiniciar, Hibernar e Verificar status. A API decide conforme a análise/tolerância do usuário; uma ação liberada aguarda dez segundos e pode ser cancelada. Quando a API realmente não responde no transporte, o host permite a contingência local. Veja [menu de energia](docs/menu-energia.md) e [instalador corporativo](docs/instalador-corporativo.md).
+
+```powershell
+./scripts/build-corporate-msi.ps1 -Version 0.4.0
+```
+
+O MSI é por máquina e exige autorização administrativa. Ele altera direitos e políticas do Windows; instalação, ações reais e restauração devem ser homologadas primeiro numa VM ou máquina piloto. Builds portáteis e o navegador não executam ações de energia.
 
 A página pública `/download` apresenta o pacote Windows de teste, requisitos, instruções e links da release. Ela não inicia uma sessão nem consulta a API. O download usa uma tag fixa do GitHub para não confundir versões de teste com o MSIX assinado.
 
@@ -78,7 +86,7 @@ O caminho de atualização do desktop é um pacote MSIX assinado, distribuído c
 ./scripts/build-desktop-msix.ps1 -Publisher 'CN=Conceito Engenharia' -UnsignedForTest
 ```
 
-Para distribuir, é necessário obter assinatura confiável, gerar o MSIX assinado com `-CertificateThumbprint`, validar a instalação/atualização em outro PC e publicar o asset em uma release estável com tag e versão correspondentes. Ainda não há certificado nem release desktop; portanto a atualização real **não está ativada**. O pacote atual é framework-dependent e exige .NET Desktop Runtime 10 e Microsoft Edge WebView2 Runtime. Inicialização com o Windows, execução em bandeja e notificações de negócio continuam pendentes; avisos de atualização são um mecanismo separado.
+Para distribuir, é necessário obter assinatura confiável, gerar o MSIX assinado com `-CertificateThumbprint`, validar a instalação/atualização em outro PC e publicar o asset em uma release estável com tag e versão correspondentes. Ainda não há certificado nem release desktop; portanto a atualização real **não está ativada**. O pacote MSIX histórico é framework-dependent. O novo MSI corporativo é self-contained, inicia o aplicativo em cada logon, mantém a execução em bandeja e instala o serviço de controle; assinatura e homologação elevada em máquina piloto ainda são pendências.
 
 O [handoff do aplicativo Windows](docs/desktop-handoff.md) registra o estado testado, dependências de notificações, estratégia de atualização ainda pendente e os passos para continuar em outro computador.
 

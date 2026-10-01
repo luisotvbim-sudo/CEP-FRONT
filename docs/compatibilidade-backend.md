@@ -1,6 +1,6 @@
 # Compatibilidade entre CEP-FRONT e CEP-API
 
-> Menu de energia: [interface, contrato e dependência WPF](menu-energia.md). Snapshots importados do OpenAPI produzido pela CEP-API em `cf15a5c`; POST de verificação e GET de status integrados. Execução/cancelamento e contingência dependem do bridge do instalador; não estão ativos no host atual.
+> Menu de energia: [interface, contrato e integração WPF](menu-energia.md). Snapshots importados do OpenAPI produzido pela CEP-API em `cf15a5c`; POST de verificação e GET de status integrados. Execução, cancelamento e contingência estão implementados no bridge e no serviço do MSI corporativo; navegador, Debug e builds portáteis continuam sem ações locais.
 
 > Histórico diário de 29/09/2026: [contrato, telas e limites](historico-diario.md). O backend adiciona `days` por pessoa; os snapshots e tipos estão alinhados. Implantar o backend correspondente antes do frontend.
 

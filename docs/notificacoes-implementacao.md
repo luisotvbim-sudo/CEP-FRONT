@@ -17,7 +17,7 @@ Entrega de 29/09/2026, integrada ao contrato real da CEP API desta mesma entrega
 - Identificadores recebidos são persistidos com DPAPI, separados pela origem da API e pela conta. Nenhum token ou corpo de mensagem entra no React ou nesse arquivo de recibos. O arquivo não contém uma cópia offline das análises; detalhes continuam na central autenticada.
 - Um popup resume o lote de pendentes. Novas chegadas próximas são agrupadas, com intervalo mínimo de cinco minutos entre popups. A central conserva cada mensagem com sua data original. Recebimento não equivale a leitura.
 - Falha na consulta ou confirmação é retomada no próximo ciclo. Sem conectividade de rede ao iniciar, o arquivo de sessão é preservado e a retomada é tentada novamente. Uma resposta incerta durante rotação de refresh exige login, preservando a proteção contra replay já existente.
-- A configuração de notificações do Windows/Não perturbe pode suprimir um popup; a central permanece a referência de mensagens. Não há bloqueio de desligamento nem cálculo de horas no Windows.
+- A configuração de notificações do Windows/Não perturbe pode suprimir um popup; a central permanece a referência de mensagens. O Windows não calcula horas. O instalador corporativo aplica o controle local de energia, mas a decisão online vem do endpoint autenticado da CEP API; somente a indisponibilidade real do transporte ativa a contingência local.
 
 ## Validação
 

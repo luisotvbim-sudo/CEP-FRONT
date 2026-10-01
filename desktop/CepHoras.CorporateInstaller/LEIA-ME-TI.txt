@@ -1,0 +1,48 @@
+CEP HORAS 0.4 - INSTALACAO CORPORATIVA PELA TI
+
+Este e um unico instalador: aplicativo CEP Horas, inicio automatico e servico
+Windows CepHorasControl. O usuario comum usa o menu discreto no rodape do app
+para Desligar, Reiniciar ou Hibernar.
+
+REGRA
+- A CEP API verifica o usuario autenticado, a analise do dia e a tolerancia global.
+- allowed: o host confirma com a API e agenda a acao em 10 segundos.
+- blocked/indeterminate/resposta HTTP: nao executa.
+- API realmente inacessivel no transporte: o host confirma novamente e permite
+  a contingencia local.
+- Cancelar aborta o agendamento no servico antes do fim da contagem.
+
+CONTROLE LOCAL
+- Servico automatico LocalSystem, protegido pelas permissoes normais do SCM.
+- SeShutdownPrivilege e SeRemoteShutdownPrivilege ficam apenas com SYSTEM e
+  Administradores; o menu de energia e ocultado e a tela sem login nao desliga.
+- Toque curto nos botoes fisicos de energia/sono e fechamento da tampa recebem
+  a politica Nao fazer nada. Pressao fisica prolongada e corte de energia nao
+  podem ser bloqueados.
+- O CEP Horas inicia em cada logon. Fechar a janela minimiza para a bandeja;
+  usuario comum nao recebe Sair. O servico relanca o aplicativo se ele for
+  finalizado na sessao local ativa.
+- Administradores e SYSTEM permanecem como caminho de recuperacao.
+
+HOMOLOGACAO
+1. Instale primeiro em VM ou computador piloto com trabalho salvo.
+2. Requer Windows 11 x64 Pro/Enterprise/Education 24H2 ou superior e WebView2.
+3. Saia e entre novamente em todas as contas apos instalar/restaurar.
+4. Valide API local/publicada, allowed, blocked, indeterminate e contingencia.
+5. Valide as tres acoes, contagem de 10 segundos e cancelamento.
+6. Valide Start, Ctrl+Alt+Del, Alt+F4 na area de trabalho, shutdown.exe,
+   botoes fisicos, tampa, encerramento do app e relancamento pelo servico.
+7. Se houver dominio, execute gpupdate e confira se a GPO nao sobrescreveu
+   as politicas locais.
+
+RECUPERACAO
+- Menu Iniciar > CEP Horas - Recuperacao TI.
+- Terminal elevado:
+  "C:\Program Files\Conceito CEP Horas\control\CepHoras.Control.exe" --restore-policy
+- A desinstalacao restaura a configuracao original antes de remover o servico.
+- Preserve C:\ProgramData\Conceito.CepHoras.Control ate validar a restauracao.
+
+LIMITES
+Nao impede administrador/SYSTEM, corte de energia, pressao prolongada do botao,
+firmware, reinicio critico do Windows ou GPO de dominio. A instalacao, aplicacao
+real de politica, acoes reais e desinstalacao precisam de homologacao da TI.

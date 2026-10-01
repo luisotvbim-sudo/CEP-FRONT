@@ -38,7 +38,7 @@ dotnet publish desktop/CepHoras.Desktop -c Release -r win-x64 --self-contained f
 - O backend deve determinar quem recebe avisos por diferença entre Monday e VR Mais acima da tolerância aprovada. O programa de um usuário não deve calcular destinatários nem distribuir mensagens para os demais.
 - O Coordenador deverá poder enviar avisos gerais ou direcionados; Membro e Líder devem receber somente o que lhes é autorizado. A central web e o aplicativo Windows devem refletir os mesmos dados e permissões do backend.
 - Horários automáticos devem ser configuráveis e persistidos por organização. O exemplo inicial é 11:50 em `America/Sao_Paulo`, mas a definição de período, tolerância, conteúdo e destinatários precisa ser fechada antes de ativar envios.
-- A ideia de consultar horas ao desligar o computador foi descartada. Não implementar bloqueio de desligamento.
+- Decisão substituída em 30/09/2026: o aplicativo corporativo deve ser o caminho normal do usuário comum para desligar, reiniciar ou hibernar. A CEP API decide pela análise/tolerância do usuário autenticado; o serviço Windows executa a ação autorizada. O modo contingência libera somente quando o host confirma que a API não respondeu no transporte.
 
 Esses requisitos complementam a [especificação funcional](produto/especificacao-funcional.md), que ainda classifica notificações como planejadas. Não apresentar alertas automáticos como já entregues.
 
