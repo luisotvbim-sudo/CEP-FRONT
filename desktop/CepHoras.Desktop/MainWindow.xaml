@@ -13,7 +13,10 @@
         <TextBlock x:Name="UpdateMessage" Text="Nova versão disponível." VerticalAlignment="Center" TextWrapping="Wrap" />
       </DockPanel>
     </Border>
-    <TextBlock x:Name="StartupStatus" Grid.Row="1" Text="Preparando seu espaço…" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" Foreground="#555750" TextWrapping="Wrap" Margin="40" />
+    <StackPanel x:Name="StartupPanel" Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="40" MaxWidth="620">
+      <TextBlock x:Name="StartupStatus" Text="Preparando seu espaço…" HorizontalAlignment="Center" TextAlignment="Center" FontSize="16" Foreground="#555750" TextWrapping="Wrap" />
+      <Button x:Name="ForceRestartButton" Content="Reiniciar CEP Horas" Click="ForceRestart_Click" Visibility="Collapsed" HorizontalAlignment="Center" Padding="18,9" Margin="0,18,0,0" Background="#DA5D1E" Foreground="White" BorderThickness="0" />
+    </StackPanel>
     <wv:WebView2 x:Name="Browser" Grid.Row="1" Visibility="Hidden" />
   </Grid>
 </Window>

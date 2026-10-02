@@ -47,10 +47,12 @@ Use uma conta existente no navegador ou no executável desktop. Não há credenc
 O instalador corporativo unificado inclui o aplicativo, inicialização automática, serviço `CepHorasControl` e políticas locais de energia. Nas áreas autenticadas, o menu discreto oferece Desligar, Reiniciar, Hibernar e Verificar status. A API decide conforme a análise/tolerância do usuário; uma ação liberada aguarda dez segundos e pode ser cancelada. Quando a API realmente não responde no transporte, o host permite a contingência local. Veja [menu de energia](docs/menu-energia.md) e [instalador corporativo](docs/instalador-corporativo.md).
 
 ```powershell
-./scripts/build-corporate-msi.ps1 -Version 0.4.1
+./scripts/build-corporate-msi.ps1 -Version 0.4.2
 ```
 
 O MSI é por máquina e exige autorização administrativa. Ele altera direitos e políticas do Windows; instalação, ações reais e restauração devem ser homologadas primeiro numa VM ou máquina piloto. Builds portáteis e o navegador não executam ações de energia.
+
+Desde o MSI 0.4.2, o aplicativo mantém uma única instância por sessão: abrir o atalho traz a instância iniciada pelo serviço para a frente, sem disputar o perfil WebView2. Se a interface nativa não carregar, **Reiniciar CEP Horas** encerra somente processos do CEP Horas e do WebView2 pertencentes àquela instância, preserva o perfil anterior como backup, recria o navegador local e abre o aplicativo novamente. O serviço `CepHorasControl` continua ativo para manter as políticas e relançar o host; o botão não encerra serviços do Windows nem executa ação de energia.
 
 A página pública `/download` apresenta o pacote Windows de teste, requisitos, instruções e links da release. Ela não inicia uma sessão nem consulta a API. O download usa uma tag fixa do GitHub para não confundir versões de teste com o MSIX assinado.
 

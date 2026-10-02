@@ -1,6 +1,6 @@
 # Compatibilidade entre CEP-FRONT e CEP-API
 
-> Menu de energia: [interface, contrato e integração WPF](menu-energia.md). Em 01/10/2026, snapshots e tipos alinhados à API local na `main` `b36c6e1`, com POST de liberação por PIN, POST de verificação e GET de status. O PIN libera apenas a conta autenticada por cinco minutos de servidor, sem dispensar a revalidação nativa. Produção depende da migração e do provisionamento seguro no backend, sem deploy de backend nesta entrega. Execução, cancelamento e contingência estão implementados no bridge e no serviço do MSI corporativo; navegador, Debug e builds portáteis continuam sem ações locais.
+> Menu de energia: [interface, contrato e integração WPF](menu-energia.md). Em 01/10/2026, snapshots e tipos foram alinhados à API `main` `b36c6e1`, com POST de liberação por PIN, POST de verificação e GET de status. Backend, migração e PIN dedicado foram implantados em produção; o valor não pertence ao repositório. O CEP-FRONT `a4a0a4d` também foi publicado. O PIN libera apenas a conta autenticada por cinco minutos de servidor, sem dispensar a revalidação nativa. Execução, cancelamento e contingência estão implementados no bridge e no serviço do MSI corporativo; navegador, Debug e builds portáteis continuam sem ações locais.
 
 > Histórico diário de 29/09/2026: [contrato, telas e limites](historico-diario.md). O backend adiciona `days` por pessoa; os snapshots e tipos estão alinhados. Implantar o backend correspondente antes do frontend.
 

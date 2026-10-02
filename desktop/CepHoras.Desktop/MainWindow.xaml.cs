@@ -42,9 +42,11 @@ public partial class MainWindow : Window
     private readonly bool managedInstallation = File.Exists(Path.Combine(AppContext.BaseDirectory, "managed-install.marker"));
     private readonly bool windowsAdministrator = new WindowsPrincipal(WindowsIdentity.GetCurrent())
         .IsInRole(WindowsBuiltInRole.Administrator);
+    private readonly bool forceVisibleAfterRecovery;
 
-    public MainWindow()
+    public MainWindow(bool forceVisibleAfterRecovery = false)
     {
+        this.forceVisibleAfterRecovery = forceVisibleAfterRecovery;
         InitializeComponent();
         Loaded += Initialize;
         System.Windows.Application.Current.SessionEnding += OnSessionEnding;
@@ -138,9 +140,10 @@ public partial class MainWindow : Window
             {
                 Browser.Visibility = args.IsSuccess ? Visibility.Visible : Visibility.Hidden;
                 StartupStatus.Text = args.IsSuccess ? "" : "Não foi possível carregar a interface. Reabra o CEP Horas.";
+                ForceRestartButton.Visibility = args.IsSuccess ? Visibility.Collapsed : Visibility.Visible;
             };
             core.Navigate($"{AppOrigin}/index.html");
-            if (Environment.GetCommandLineArgs().Contains("--background")) Hide();
+            if (Environment.GetCommandLineArgs().Contains("--background") && !forceVisibleAfterRecovery) Hide();
             if (Environment.GetCommandLineArgs().Contains("--test-notification")) ShowTestNotification();
 #if !DEBUG
             if (File.Exists(Path.Combine(AppContext.BaseDirectory, "msix-install.marker")) &&
@@ -154,10 +157,12 @@ public partial class MainWindow : Window
         catch (WebView2RuntimeNotFoundException)
         {
             StartupStatus.Text = "Instale o Microsoft Edge WebView2 Runtime e abra o CEP Horas novamente.";
+            ForceRestartButton.Visibility = Visibility.Visible;
         }
         catch
         {
             StartupStatus.Text = "Não foi possível iniciar o CEP Horas. Confira a instalação e a configuração da API.";
+            ForceRestartButton.Visibility = Visibility.Visible;
         }
     }
 
@@ -267,6 +272,64 @@ public partial class MainWindow : Window
         catch (Exception exception) when (exception is InvalidOperationException or System.Runtime.InteropServices.COMException)
         {
             // Closing or reloading WebView2 while clicking a popup must not crash the host.
+        }
+    }
+
+    internal void OpenFromExternalInstance() => OpenWindow(false);
+
+    private void ForceRestart_Click(object sender, RoutedEventArgs e)
+    {
+        ForceRestartButton.IsEnabled = false;
+        StartupStatus.Text = "Fechando os componentes do CEP Horas e recriando o navegador local…";
+        try
+        {
+            WebViewProfileRecovery.Request();
+            TerminateOwnedWebViewProcesses();
+            TerminatePeerDesktopProcesses();
+            Process.Start(WebViewProfileRecovery.CreateRestartInfo());
+            exiting = true;
+            Close();
+        }
+        catch
+        {
+            StartupStatus.Text = "Não foi possível reiniciar automaticamente. Feche o CEP Horas e abra novamente.";
+            ForceRestartButton.IsEnabled = true;
+        }
+    }
+
+    private void TerminateOwnedWebViewProcesses()
+    {
+        var ids = Browser.CoreWebView2?.Environment.GetProcessInfos().Select(item => item.ProcessId).ToArray() ?? [];
+        foreach (var id in ids)
+        {
+            try
+            {
+                using var process = Process.GetProcessById(id);
+                process.Kill(entireProcessTree: true);
+                process.WaitForExit(2_000);
+            }
+            catch (Exception error) when (error is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception) { }
+        }
+    }
+
+    private static void TerminatePeerDesktopProcesses()
+    {
+        using var current = Process.GetCurrentProcess();
+        var expected = Path.GetFullPath(Environment.ProcessPath ?? "");
+        foreach (var process in Process.GetProcessesByName("CepHoras"))
+        {
+            using (process)
+            {
+                if (process.Id == current.Id || process.SessionId != current.SessionId) continue;
+                try
+                {
+                    var actual = Path.GetFullPath(process.MainModule?.FileName ?? "");
+                    if (!string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase)) continue;
+                    process.Kill(entireProcessTree: true);
+                    process.WaitForExit(2_000);
+                }
+                catch (Exception error) when (error is InvalidOperationException or System.ComponentModel.Win32Exception or IOException) { }
+            }
         }
     }
 

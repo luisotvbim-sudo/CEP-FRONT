@@ -12,6 +12,8 @@
     <Compile Include="../CepHoras.Desktop/ApiRoutePolicy.cs" Link="ApiRoutePolicy.cs" />
     <Compile Include="../CepHoras.Desktop/ProtectedJsonFile.cs" Link="ProtectedJsonFile.cs" />
     <Compile Include="../CepHoras.Desktop/PowerBridgeHandler.cs" Link="PowerBridgeHandler.cs" />
+    <Compile Include="../CepHoras.Desktop/SingleInstanceCoordinator.cs" Link="SingleInstanceCoordinator.cs" />
+    <Compile Include="../CepHoras.Desktop/WebViewProfileRecovery.cs" Link="WebViewProfileRecovery.cs" />
     <ProjectReference Include="../CepHoras.Control.Protocol/CepHoras.Control.Protocol.csproj" />
   </ItemGroup>
 </Project>

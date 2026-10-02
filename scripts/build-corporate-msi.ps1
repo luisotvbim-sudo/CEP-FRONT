@@ -1,4 +1,4 @@
-param([string]$Version = '0.4.1')
+param([string]$Version = '0.4.2')
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))

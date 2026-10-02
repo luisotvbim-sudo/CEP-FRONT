@@ -88,6 +88,8 @@ try
 
     await SessionTests.Run(Check, directory);
     await PowerUnlockTests.Run(Check, directory);
+    SingleInstanceCoordinatorTests.Run(Check);
+    WebViewProfileRecoveryTests.Run(Check, directory);
 }
 finally
 {
