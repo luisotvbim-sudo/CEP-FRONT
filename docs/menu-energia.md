@@ -6,6 +6,8 @@ Implementação iniciada na branch `codex/power-action-menu` e integrada ao MSI 
 
 > Aditivo do MSI 0.4.4: **Fechar CEP Horas**, no menu da bandeja, usa uma senha diária local `ddMMyy#pec`. Esse código offline é independente do PIN administrativo da API: ele somente autoriza encerrar o host na sessão Windows atual e não libera ações de energia.
 
+> Correção do MSI 0.4.5: o fechamento protegido restaura o snapshot original das políticas antes de encerrar o host, liberando os controles nativos; a abertura manual reaplica e verifica o bloqueio. Se a restauração falhar, o aplicativo não fecha.
+
 > Produção em 01/10/2026: CEP API `b36c6e1`, migração `PowerActionOverrides`, PIN dedicado e CEP-FRONT `a4a0a4d` implantados. O segredo foi provisionado interativamente sem eco e não foi incluído em código, documentação ou pacote.
 
 ## Comportamento

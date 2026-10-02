@@ -9,11 +9,9 @@ namespace CepHoras.Control;
 internal sealed class DesktopSupervisor
 {
     private readonly string executable = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "CepHoras.exe"));
-    private readonly DesktopSupervisionState state = new();
+    private readonly DesktopSupervisionState state;
 
-    internal void Suspend(uint sessionId, string sid) => state.Suspend(sessionId, sid);
-
-    internal bool Resume(uint sessionId, string sid) => state.Resume(sessionId, sid);
+    internal DesktopSupervisor(DesktopSupervisionState state) => this.state = state;
 
     internal async Task Run(CancellationToken token)
     {

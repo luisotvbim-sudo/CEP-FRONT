@@ -52,6 +52,44 @@ Assert(supervision.Resume(12, "userA") && supervision.AllowsLaunch(12), "manual 
 supervision.Suspend(12, "userA");
 Assert(supervision.AllowsLaunch(13) && supervision.AllowsLaunch(12), "new Windows session clears suspension");
 
+var lifecycleOrder = new List<string>();
+var lifecycleState = new DesktopSupervisionState();
+var lifecycle = new DesktopLifecycleController(
+    lifecycleState,
+    () => lifecycleOrder.Add("restore"),
+    () => lifecycleOrder.Add("apply"),
+    (code, _) => lifecycleOrder.Add(code));
+Assert(lifecycle.Suspend(21, "userA").Code == "desktop_suspended", "protected close accepted");
+Assert(lifecycleOrder[0] == "restore" && !lifecycleState.AllowsLaunch(21), "policy restored before relaunch suspension");
+Assert(lifecycle.Resume(21, "userA").Code == "desktop_resumed", "manual open accepted");
+Assert(lifecycleOrder.Contains("apply") && lifecycleState.AllowsLaunch(21), "policy applied before supervision resumes");
+lifecycleState.Suspend(21, "userA");
+lifecycle.ProtectAfterSessionEnd(21);
+Assert(lifecycleState.AllowsLaunch(21), "session end reapplies policy and clears session suspension");
+lifecycle.ProtectAtServiceStart();
+Assert(lifecycleOrder.Count(value => value == "apply") == 3, "service start reapplies policy before user launch");
+
+var failedRestoreState = new DesktopSupervisionState();
+var failedRestore = new DesktopLifecycleController(
+    failedRestoreState,
+    () => throw new IOException("fixture"),
+    () => { },
+    (_, _) => { });
+try { failedRestore.Suspend(22, "userA"); throw new Exception("close accepted without policy restore"); }
+catch (IOException) { }
+Assert(failedRestoreState.AllowsLaunch(22), "failed restore must keep supervision active");
+
+var failedApplyState = new DesktopSupervisionState();
+failedApplyState.Suspend(23, "userA");
+var failedApply = new DesktopLifecycleController(
+    failedApplyState,
+    () => { },
+    () => throw new IOException("fixture"),
+    (_, _) => { });
+try { failedApply.Resume(23, "userA"); throw new Exception("supervision resumed without policy apply"); }
+catch (IOException) { }
+Assert(!failedApplyState.AllowsLaunch(23), "failed apply must keep supervision suspended");
+
 foreach (var failure in new[] { "none", "backup", "apply", "verify", "commit", "restore" })
 {
     var state = "original";

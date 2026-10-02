@@ -1,6 +1,7 @@
 using System.IO;
 using System.Security.AccessControl;
 using System.Security.Principal;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using Microsoft.Win32;
 
@@ -158,6 +159,7 @@ internal static class PolicyStore
             () => RestoreSnapshot(config.Original),
             () => Save(config with { Active = true, Phase = "active" }),
             () => Save(config with { Active = false, Phase = "restored" }));
+        NotifyPolicyChanged();
         Audit("policy-enabled", "installer");
     }
 
@@ -226,6 +228,7 @@ internal static class PolicyStore
         }
         RestoreSnapshot(config.Original);
         Save(config with { Active = false, Phase = "restored" });
+        NotifyPolicyChanged();
         Audit("policy-restored", "installer");
     }
 
@@ -261,4 +264,22 @@ internal static class PolicyStore
             File.Move(file, file + ".previous", true);
         File.AppendAllText(file, JsonSerializer.Serialize(new { at = DateTimeOffset.UtcNow, code, sid }) + Environment.NewLine);
     }
+
+    private static void NotifyPolicyChanged()
+    {
+        var hwndBroadcast = new nint(0xffff);
+        const uint wmSettingChange = 0x001a;
+        const uint abortIfHung = 0x0002;
+        _ = SendMessageTimeout(hwndBroadcast, wmSettingChange, 0, "Policy", abortIfHung, 5_000, out _);
+    }
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern nint SendMessageTimeout(
+        nint window,
+        uint message,
+        nint word,
+        string parameter,
+        uint flags,
+        uint timeout,
+        out nint result);
 }

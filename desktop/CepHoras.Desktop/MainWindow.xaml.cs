@@ -277,8 +277,23 @@ public partial class MainWindow : Window
 
     private async Task ResumeDesktopSupervision()
     {
-        try { await ControlClient.Send(new ControlRequest("desktop-resume")); }
-        catch { /* A indisponibilidade do serviço local não deve impedir a abertura manual. */ }
+        try
+        {
+            var response = await ControlClient.Send(new ControlRequest("desktop-resume"));
+            if (response.Code != "desktop_resumed") ShowProtectionWarning();
+            else WindowsPolicyNotification.NotifyShell();
+        }
+        catch { ShowProtectionWarning(); }
+    }
+
+    private void ShowProtectionWarning()
+    {
+        if (closed || tray is null) return;
+        Dispatcher.Invoke(() => tray.ShowBalloonTip(
+            15_000,
+            "CEP Horas — atenção da TI",
+            "A proteção de energia do Windows não pôde ser reativada. Mantenha o CEP Horas aberto e solicite suporte à TI.",
+            System.Windows.Forms.ToolTipIcon.Warning));
     }
 
     private async Task RequestProtectedExit()
@@ -297,6 +312,7 @@ public partial class MainWindow : Window
                 var response = await ControlClient.Send(new ControlRequest("desktop-suspend"));
                 if (response.Code != "desktop_suspended")
                     throw new InvalidOperationException("O serviço não autorizou o fechamento.");
+                WindowsPolicyNotification.NotifyShell();
             }
             exiting = true;
             Close();

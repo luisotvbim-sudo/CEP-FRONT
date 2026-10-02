@@ -13,21 +13,50 @@ internal sealed class ControlService : ServiceBase
 {
     private readonly CancellationTokenSource stop = new();
     private readonly WindowsPower system = new();
-    private readonly DesktopSupervisor desktopSupervisor = new();
+    private readonly DesktopSupervisor desktopSupervisor;
+    private readonly DesktopLifecycleController desktopLifecycle;
     private Task? listener;
     private Task? supervisor;
 
     internal ControlService()
     {
+        var desktopState = new DesktopSupervisionState();
+        desktopSupervisor = new DesktopSupervisor(desktopState);
+        desktopLifecycle = new DesktopLifecycleController(
+            desktopState,
+            () => PolicyStore.Restore(),
+            PolicyStore.Apply,
+            PolicyStore.Audit);
         ServiceName = ControlWire.ServiceName;
         CanStop = true;
+        CanHandleSessionChangeEvent = true;
         AutoLog = true;
     }
 
     protected override void OnStart(string[] args)
     {
+        try { desktopLifecycle.ProtectAtServiceStart(); }
+        catch (Exception error)
+        {
+            PolicyStore.Audit("desktop-policy-service-start-failed:" + error.GetType().Name, "SYSTEM");
+        }
         listener = Task.Run(Listen);
         supervisor = Task.Run(() => desktopSupervisor.Run(stop.Token));
+    }
+
+    protected override void OnSessionChange(SessionChangeDescription changeDescription)
+    {
+        base.OnSessionChange(changeDescription);
+        if (changeDescription.Reason is not (
+                SessionChangeReason.SessionLogoff or
+                SessionChangeReason.SessionLock or
+                SessionChangeReason.ConsoleDisconnect or
+                SessionChangeReason.RemoteDisconnect)) return;
+        try { desktopLifecycle.ProtectAfterSessionEnd(checked((uint)changeDescription.SessionId)); }
+        catch (Exception error)
+        {
+            PolicyStore.Audit("desktop-policy-logoff-failed:" + error.GetType().Name, "session:" + changeDescription.SessionId);
+        }
     }
 
     protected override void OnStop()
@@ -99,8 +128,8 @@ internal sealed class ControlService : ServiceBase
                         {
                             response = request.Operation switch
                             {
-                                "desktop-suspend" => SuspendDesktop(sessionId.Value, sid),
-                                "desktop-resume" => ResumeDesktop(sessionId.Value, sid),
+                                "desktop-suspend" => desktopLifecycle.Suspend(sessionId.Value, sid),
+                                "desktop-resume" => desktopLifecycle.Resume(sessionId.Value, sid),
                                 _ => authority.Handle(request, sid)
                             };
                         }
@@ -122,20 +151,6 @@ internal sealed class ControlService : ServiceBase
             ExitCode = 1;
             Environment.Exit(1);
         }
-    }
-
-    private ControlResponse SuspendDesktop(uint sessionId, string sid)
-    {
-        desktopSupervisor.Suspend(sessionId, sid);
-        PolicyStore.Audit("desktop-supervision-suspended", sid);
-        return new("desktop_suspended", "O CEP Horas pode ser fechado nesta sessão.");
-    }
-
-    private ControlResponse ResumeDesktop(uint sessionId, string sid)
-    {
-        if (desktopSupervisor.Resume(sessionId, sid))
-            PolicyStore.Audit("desktop-supervision-resumed", sid);
-        return new("desktop_resumed", "A supervisão do CEP Horas está ativa.");
     }
 
     private static uint? TrustedClientSession(NamedPipeServerStream pipe)

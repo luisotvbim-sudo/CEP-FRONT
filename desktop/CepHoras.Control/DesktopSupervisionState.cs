@@ -27,6 +27,17 @@ internal sealed class DesktopSupervisionState
         }
     }
 
+    internal bool ResumeSession(uint sessionId)
+    {
+        lock (gate)
+        {
+            if (suspendedSession != sessionId) return false;
+            suspendedSession = null;
+            suspendedSid = null;
+            return true;
+        }
+    }
+
     internal bool AllowsLaunch(uint activeSessionId)
     {
         lock (gate)
