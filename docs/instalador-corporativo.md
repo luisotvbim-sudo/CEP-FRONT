@@ -2,6 +2,8 @@
 
 Implementação de 30/09/2026 na branch `codex/installer-integrado`, construída sobre o menu autenticado e o contrato da CEP API `cf15a5c`.
 
+O atualizador MSI ainda não foi implementado. O estado do atualizador MSIX existente, a versão bootstrap proposta e o handoff completo para continuidade estão em [Contexto do atualizador MSI](contexto-atualizador-msi.md).
+
 ## Componentes
 
 O MSI 0.4.6 inclui a interface de liberação por PIN conforme a CEP API `main` `b36c6e1`, abertura de instância única, recuperação forçada do WebView2 e fechamento local protegido na bandeja com restauração temporária das políticas do Windows. Uma tentativa incorreta de fechamento apenas limpa e refoca o campo, sem mensagem visível. O host permite somente o POST exato de liberação e continua revalidando cada ação no servidor. O PIN da API nunca atravessa o named pipe nem pertence ao serviço ou ao pacote. Detalhes de expiração, rollout e testes em [menu de energia](menu-energia.md).

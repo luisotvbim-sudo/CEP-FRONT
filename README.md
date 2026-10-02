@@ -58,7 +58,7 @@ Desde o MSI 0.4.4, o menu aberto com o botão direito no ícone do CEP Horas per
 
 A página pública `/download` apresenta o pacote Windows de teste, requisitos, instruções e links da release. Ela não inicia uma sessão nem consulta a API. O download usa uma tag fixa do GitHub para não confundir versões de teste com o MSIX assinado.
 
-A integração do instalador com bandeja, WebView2 e teste de popup nativo está descrita em [Aplicativo Windows](docs/aplicativo-windows.md). A distribuição assinada e a atualização real entre versões continuam pendentes.
+A integração do instalador com bandeja, WebView2 e teste de popup nativo está descrita em [Aplicativo Windows](docs/aplicativo-windows.md). A distribuição assinada e a atualização real entre versões continuam pendentes. O handoff específico para adaptar o atualizador histórico de MSIX ao MSI corporativo está em [Contexto do atualizador MSI](docs/contexto-atualizador-msi.md).
 
 Pré-requisitos adicionais: .NET SDK 10 e Microsoft Edge WebView2 Runtime.
 
@@ -91,7 +91,7 @@ O caminho de atualização do desktop é um pacote MSIX assinado, distribuído c
 ./scripts/build-desktop-msix.ps1 -Publisher 'CN=Conceito Engenharia' -UnsignedForTest
 ```
 
-Para distribuir, é necessário obter assinatura confiável, gerar o MSIX assinado com `-CertificateThumbprint`, validar a instalação/atualização em outro PC e publicar o asset em uma release estável com tag e versão correspondentes. Ainda não há certificado nem release desktop; portanto a atualização real **não está ativada**. O pacote MSIX histórico é framework-dependent. O novo MSI corporativo é self-contained, inicia o aplicativo em cada logon, mantém a execução em bandeja e instala o serviço de controle; assinatura e homologação elevada em máquina piloto ainda são pendências.
+Para distribuir, é necessário obter assinatura confiável, gerar o MSIX assinado com `-CertificateThumbprint`, validar a instalação/atualização em outro PC e publicar o asset em uma release estável com tag e versão correspondentes. Ainda não há certificado nem release desktop; portanto a atualização real **não está ativada**. O pacote MSIX é histórico. O MSI corporativo atual é self-contained, inicia o aplicativo em cada logon, mantém a execução em bandeja e instala o serviço de controle. A migração planejada usa uma versão MSI bootstrap instalada manualmente e atualizações seguintes validadas/executadas pelo serviço; o desenho e os critérios de segurança estão no [contexto do atualizador MSI](docs/contexto-atualizador-msi.md).
 
 O [handoff do aplicativo Windows](docs/desktop-handoff.md) registra o estado testado, dependências de notificações, estratégia de atualização ainda pendente e os passos para continuar em outro computador.
 

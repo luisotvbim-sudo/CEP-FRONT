@@ -38,6 +38,8 @@ O host mantém uma única instância por sessão. Quando o serviço já iniciou 
 - A tentativa de gerar MSIX neste PC parou porque o Windows SDK/MakeAppx não está instalado. Foi gerado o pacote ZIP executável; o manifesto de início automático ainda precisa ser validado pelo MakeAppx em um ambiente com SDK.
 - A preparação do atualizador foi preservada. Não foi criada uma release pública nem escolhida uma nova política de assinatura.
 
+O código preservado atende somente ao MSIX histórico e não atualiza o MSI corporativo 0.4.6. A arquitetura proposta para atualização elevada por meio do serviço, incluindo bootstrap, assinatura, manutenção e testes, está em [Contexto do atualizador MSI](contexto-atualizador-msi.md).
+
 Referências: [popup da bandeja](https://learn.microsoft.com/en-us/dotnet/api/system.windows.forms.notifyicon.showballoontip?view=windowsdesktop-10.0), [tarefa de início MSIX](https://learn.microsoft.com/en-us/uwp/schemas/appxpackage/uapmanifestschema/element-desktop-startuptask).
 
 ## Download público — versão de teste
