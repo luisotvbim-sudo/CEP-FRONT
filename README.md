@@ -7,6 +7,7 @@ Interface React + TypeScript compartilhada entre navegador e um executável Wind
 - A [especificação funcional](docs/produto/especificacao-funcional.md) define a visão do produto, os perfis Coordenador, Líder e Membro e distingue o que está entregue, parcial e planejado.
 - O [snapshot OpenAPI do backend atual](docs/openapi-backend-current.json) registra o contrato exposto pela CEP API local na `main` `b36c6e1`, sincronizado em 01/10/2026.
 - O [relatório de compatibilidade](docs/compatibilidade-backend.md) registra o alinhamento atual e separa o que já existe no backend das telas ainda pendentes no front.
+- O [contexto consolidado do controle de energia](docs/contexto-controle-energia-instalador.md) reúne produto, API, WPF, serviço, instalador, segurança, testes e rollout do PIN administrativo.
 - `docs/openapi.json` originou o cliente atual e está alinhado em rotas e schemas com o snapshot real.
 
 ## Funcionalidades implementadas
