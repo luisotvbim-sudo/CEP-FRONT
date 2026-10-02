@@ -9,8 +9,9 @@ internal sealed class PowerBridgeFailure(string code, string? correlationId = nu
     internal string? CorrelationId { get; } = correlationId;
 }
 
-internal sealed class PowerBridgeHandler(ApiSession session)
+internal sealed class PowerBridgeHandler(ApiSession session, Func<ControlRequest, Task<ControlResponse>>? sender = null)
 {
+    private readonly Func<ControlRequest, Task<ControlResponse>> send = sender ?? (request => ControlClient.Send(request));
     private static readonly HashSet<string> Actions = new(StringComparer.Ordinal)
     {
         "shutdown", "restart", "hibernate"
@@ -46,7 +47,15 @@ internal sealed class PowerBridgeHandler(ApiSession session)
             {
                 var check = await session.PowerActionCheck(action);
                 allowed = check.TryGetProperty("action", out var checkedAction) && checkedAction.GetString() == action &&
-                          check.TryGetProperty("decision", out var decision) && decision.GetString() == "allowed";
+                          check.TryGetProperty("decision", out var decision) && decision.GetString() == "allowed" &&
+                          check.TryGetProperty("code", out var code) &&
+                          check.TryGetProperty("override", out var overridden) &&
+                          check.TryGetProperty("unlockedUntil", out var until) &&
+                          check.TryGetProperty("analysis", out var analysis) &&
+                          ((code.GetString() == "administrative_override" && overridden.ValueKind == JsonValueKind.True &&
+                            until.ValueKind == JsonValueKind.String && until.TryGetDateTimeOffset(out _) && analysis.ValueKind == JsonValueKind.Null) ||
+                           (code.GetString() == "within_tolerance" && overridden.ValueKind == JsonValueKind.False &&
+                            until.ValueKind == JsonValueKind.Null && analysis.ValueKind == JsonValueKind.Object));
             }
             catch (ApiFailure failure) when (failure.TransportFailure)
             {
@@ -59,7 +68,7 @@ internal sealed class PowerBridgeHandler(ApiSession session)
         }
         if (!allowed) throw new PowerBridgeFailure("power_not_authorized");
 
-        var response = await ControlClient.Send(new ControlRequest("schedule", requestId, action, delay));
+        var response = await send(new ControlRequest("schedule", requestId, action, delay));
         if (response.Code != "scheduled" || response.RequestId != requestId || response.Action != action || response.ExecuteAt is null)
             throw new PowerBridgeFailure(response.Code);
         activeRequestId = requestId;
@@ -71,7 +80,7 @@ internal sealed class PowerBridgeHandler(ApiSession session)
     {
         var requestId = payload.GetProperty("requestId").GetString();
         if (!Guid.TryParse(requestId, out _)) throw new PowerBridgeFailure("invalid_power_request");
-        var response = await ControlClient.Send(new ControlRequest("cancel", requestId));
+        var response = await send(new ControlRequest("cancel", requestId));
         if (response.Code != "cancelled" || !response.Cancelled)
             throw new PowerBridgeFailure(response.Code);
         if (activeRequestId == requestId)
@@ -86,7 +95,7 @@ internal sealed class PowerBridgeHandler(ApiSession session)
     {
         var requestId = activeRequestId;
         if (requestId is null) return;
-        try { await ControlClient.Send(new ControlRequest("cancel", requestId)); }
+        try { await send(new ControlRequest("cancel", requestId)); }
         catch { }
         activeRequestId = null;
         SessionEndingAllowed = false;

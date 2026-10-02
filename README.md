@@ -5,13 +5,13 @@ Interface React + TypeScript compartilhada entre navegador e um executável Wind
 ## Fonte de verdade e compatibilidade
 
 - A [especificação funcional](docs/produto/especificacao-funcional.md) define a visão do produto, os perfis Coordenador, Líder e Membro e distingue o que está entregue, parcial e planejado.
-- O [snapshot OpenAPI do backend atual](docs/openapi-backend-current.json) registra o contrato realmente exposto pela branch `codex/integracao-monday-vrmais` da CEP API.
+- O [snapshot OpenAPI do backend atual](docs/openapi-backend-current.json) registra o contrato exposto pela CEP API local na `main` `b36c6e1`, sincronizado em 01/10/2026.
 - O [relatório de compatibilidade](docs/compatibilidade-backend.md) registra o alinhamento atual e separa o que já existe no backend das telas ainda pendentes no front.
 - `docs/openapi.json` originou o cliente atual e está alinhado em rotas e schemas com o snapshot real.
 
 ## Funcionalidades implementadas
 
-- **Menu de energia:** rodapé recolhível nas áreas autenticadas com verificação pessoal pela API. No instalador corporativo, o bridge nativo revalida a decisão no host e agenda no serviço local com dez segundos para cancelamento. No navegador, não executa ações do sistema.
+- **Menu de energia:** rodapé recolhível nas áreas autenticadas com verificação pessoal pela API e PIN administrativo para liberação pessoal de cinco minutos. Cada ação continua sendo verificada. No instalador corporativo, o bridge nativo revalida a decisão no host e agenda no serviço local com dez segundos para cancelamento. No navegador, não executa ações do sistema. A liberação depende da migração e do provisionamento seguro do PIN no backend; veja [contrato e validação](docs/menu-energia.md).
 
 - **Login:** desktop e navegador usam autenticação, `/me`, refresh rotativo, logout, recuperação e redefinição de senha disponíveis na API atual. No navegador, o refresh fica em cookie protegido e não é exposto ao React.
 - **Pessoas:** pesquisa e paginação das associações Monday/VR, detalhes da pessoa, estado do convite, reenvio de convites pendentes (válidos ou expirados) com confirmação e atalho para histórico. Convites pendentes não comprovam entrega de e-mail. O estado complementar de revogação vem de `/organization/invitations`; quando não disponível, a tela não afirma que o convite continua válido.
@@ -46,7 +46,7 @@ Use uma conta existente no navegador ou no executável desktop. Não há credenc
 O instalador corporativo unificado inclui o aplicativo, inicialização automática, serviço `CepHorasControl` e políticas locais de energia. Nas áreas autenticadas, o menu discreto oferece Desligar, Reiniciar, Hibernar e Verificar status. A API decide conforme a análise/tolerância do usuário; uma ação liberada aguarda dez segundos e pode ser cancelada. Quando a API realmente não responde no transporte, o host permite a contingência local. Veja [menu de energia](docs/menu-energia.md) e [instalador corporativo](docs/instalador-corporativo.md).
 
 ```powershell
-./scripts/build-corporate-msi.ps1 -Version 0.4.0
+./scripts/build-corporate-msi.ps1 -Version 0.4.1
 ```
 
 O MSI é por máquina e exige autorização administrativa. Ele altera direitos e políticas do Windows; instalação, ações reais e restauração devem ser homologadas primeiro numa VM ou máquina piloto. Builds portáteis e o navegador não executam ações de energia.

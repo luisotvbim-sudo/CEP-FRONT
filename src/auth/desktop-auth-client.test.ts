@@ -29,6 +29,21 @@ function bridgeFixture() {
 afterEach(() => vi.useRealTimers())
 
 describe('desktop bridge lifecycle', () => {
+  it('distinguishes native transport failure from an HTTP 503 response', async () => {
+    for (const transportFailure of [false, true]) {
+      const f = bridgeFixture()
+      const pending = f.client.request('POST', '/me/time-control/power-action-unlock', {
+        pin: '012345',
+      })
+      const assertion = expect(pending).rejects.toMatchObject({ status: 503, transportFailure })
+      f.reply({
+        id: f.sent[0].id,
+        ok: false,
+        error: { status: 503, code: 'connection_failed', transportFailure },
+      })
+      await assertion
+    }
+  })
   it('correlates concurrent replies, ignores other messages, and removes listeners', async () => {
     const f = bridgeFixture()
     const first = f.client.request('GET', '/organization/users')

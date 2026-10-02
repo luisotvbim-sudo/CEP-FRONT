@@ -12,6 +12,7 @@ void Check(bool condition, string reason)
 const string id = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
 var allowed = new (string Method, string Path)[]
 {
+    ("POST", "/me/time-control/power-action-unlock"),
     ("POST", "/me/time-control/power-action-check"), ("GET", "/me/time-control/power-action-status"),
     ("GET", "/me"), ("GET", "/admin/organizations"), ("POST", "/admin/organizations"),
     ("GET", "/organization/users"), ("PATCH", $"/organization/users/{id}"),
@@ -35,7 +36,7 @@ var allowed = new (string Method, string Path)[]
 foreach (var (method, path) in allowed)
 {
     Check(ApiRoutePolicy.Allows(method, path), $"Blocked contracted operation: {method} {path}");
-    Check(ApiRoutePolicy.Allows(method, path + "?page=1&organizationId=test"), "Lost query support");
+    if (path != "/me/time-control/power-action-unlock") Check(ApiRoutePolicy.Allows(method, path + "?page=1&organizationId=test"), "Lost query support");
 }
 foreach (var path in new[] { "/auth/login", "/auth/refresh", "/auth/logout", "https://example.invalid/me",
     "//example.invalid/me", "/organization/users/../invitations", "/organization/users/%2e%2e/invitations",
@@ -47,6 +48,9 @@ Check(!ApiRoutePolicy.Allows("GET", $"/me/notifications/{id}/read"), "Read ackno
 Check(!ApiRoutePolicy.Allows("POST", "/time-control/settings"), "Settings requires PATCH");
 Check(!ApiRoutePolicy.Allows("GET", "/me/time-control/power-action-check"), "Power check requires POST");
 Check(!ApiRoutePolicy.Allows("POST", "/me/time-control/power-action-status"), "Power status requires GET");
+foreach (var method in new[] { "GET", "PATCH", "DELETE" })
+    Check(!ApiRoutePolicy.Allows(method, "/me/time-control/power-action-unlock"), "PIN unlock requires exact POST");
+Check(!ApiRoutePolicy.Allows("POST", "/me/time-control/power-action-unlock?pin=123456"), "PIN must never enter query");
 
 var directory = Path.Combine(Path.GetTempPath(), "cep-storage-tests-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(directory);
@@ -83,6 +87,7 @@ try
     catch (CryptographicException) { checks++; }
 
     await SessionTests.Run(Check, directory);
+    await PowerUnlockTests.Run(Check, directory);
 }
 finally
 {

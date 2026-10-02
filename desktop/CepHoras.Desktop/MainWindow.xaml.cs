@@ -206,7 +206,7 @@ public partial class MainWindow : Window
                 await notifications.Poll(ShowNotificationSummary);
         }
         catch (PowerBridgeFailure failure) { Reply(new { id, ok = false, error = new { code = failure.Code, correlationId = failure.CorrelationId } }); }
-        catch (ApiFailure failure) { Reply(new { id, ok = false, error = new { status = failure.Status, code = failure.Code, correlationId = failure.CorrelationId } }); }
+        catch (ApiFailure failure) { Reply(new { id, ok = false, error = new { status = failure.Status, code = failure.Code, correlationId = failure.CorrelationId, transportFailure = failure.TransportFailure } }); }
         catch { if (id is not null) Reply(new { id, ok = false, error = new { code = "desktop_request_failed" } }); }
     }
 

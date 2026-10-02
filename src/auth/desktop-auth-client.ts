@@ -13,7 +13,7 @@ type BridgeEvent = {
     id?: string
     ok?: boolean
     result?: unknown
-    error?: { status?: number; code?: string; correlationId?: string }
+    error?: { status?: number; code?: string; correlationId?: string; transportFailure?: boolean }
   }
 }
 export type WebViewBridge = {
@@ -47,7 +47,14 @@ export class DesktopAuthClient implements AuthClient {
         if (event.data.ok) resolve(event.data.result as T)
         else {
           const failure = event.data.error ?? {}
-          const error = apiFailure(failure.status || 0, failure)
+          const parsed = apiFailure(failure.status || 0, failure)
+          const error = new AuthError(
+            parsed.message,
+            parsed.correlationId,
+            parsed.code,
+            parsed.status,
+            failure.transportFailure === true,
+          )
           if (failure.code === 'session_expired')
             this.listeners.forEach((listener) => listener(error))
           reject(error)

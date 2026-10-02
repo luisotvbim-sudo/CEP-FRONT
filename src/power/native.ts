@@ -30,7 +30,9 @@ export function mayVerifyOffline(error: unknown) {
   return (
     error instanceof AuthError &&
     error.code === 'connection_failed' &&
-    (error.status === undefined || error.status === 0 || error.status === 503)
+    (error.status === undefined ||
+      error.status === 0 ||
+      (error.status === 503 && error.transportFailure))
   )
 }
 

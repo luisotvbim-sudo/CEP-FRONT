@@ -3,6 +3,8 @@ import { AuthError, type AuthClient } from '../auth/auth-client'
 
 export type PowerCheck = components['schemas']['PowerActionCheckResponse']
 export type PowerAction = PowerCheck['action']
+export type PowerUnlock = components['schemas']['PowerActionUnlockResponse']
+export const validPowerPin = (pin: string) => pin.length === 6 && /^[0-9]{6}$/.test(pin)
 export const actionLabels: Record<PowerAction, string> = {
   shutdown: 'Desligar',
   restart: 'Reiniciar',
@@ -34,7 +36,7 @@ export function parsePowerCheck(value: unknown, action: PowerAction): PowerCheck
   )
     return invalid()
   const codes: Record<string, string[]> = {
-    allowed: ['within_tolerance'],
+    allowed: ['within_tolerance', 'administrative_override'],
     blocked: ['above_tolerance'],
     indeterminate: [
       'analysis_incomplete',
@@ -48,6 +50,12 @@ export function parsePowerCheck(value: unknown, action: PowerAction): PowerCheck
     !codes[value.decision]?.includes(value.code)
   )
     return invalid()
+  if (value.code === 'administrative_override') {
+    if (value.override !== true || !date(value.unlockedUntil) || value.analysis !== null)
+      return invalid()
+    return value as PowerCheck
+  }
+  if (value.override !== false || value.unlockedUntil !== null) return invalid()
   const a = value.analysis
   if (a === null && value.decision === 'indeterminate') return value as PowerCheck
   if (
@@ -102,5 +110,27 @@ export class PowerApi {
       await this.client.request('GET', '/me/time-control/power-action-status?action=shutdown'),
       'shutdown',
     )
+  }
+  async unlock(pin: string): Promise<PowerUnlock> {
+    if (!validPowerPin(pin)) throw new AuthError('Informe exatamente 6 dígitos numéricos.')
+    const result = await this.client.request<unknown>(
+      'POST',
+      '/me/time-control/power-action-unlock',
+      { pin },
+    )
+    if (
+      !object(result) ||
+      result.override !== true ||
+      !date(result.serverTime) ||
+      !date(result.unlockedUntil) ||
+      Date.parse(result.unlockedUntil as string) - Date.parse(result.serverTime as string) !==
+        300_000
+    )
+      throw new AuthError(
+        'A API retornou uma liberação inválida. Verifique o status novamente.',
+        undefined,
+        'invalid_power_response',
+      )
+    return result as PowerUnlock
   }
 }

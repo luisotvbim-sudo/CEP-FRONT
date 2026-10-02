@@ -1,5 +1,7 @@
 # Conciliação de horas — especificação funcional do produto
 
+> Aditivo de 01/10/2026: o menu de energia inclui PIN administrativo de seis dígitos para liberação temporária pessoal de cinco minutos, determinada pelo servidor. Cada ação continua consultando a API e sendo revalidada pelo host Windows. O PIN não é persistido e tentativas inválidas não prorrogam a janela existente. Contrato, dependências de ativação no backend e validação em [menu de energia](../menu-energia.md).
+
 > Aditivo do menu de energia de 30/09/2026: [comportamento e dependências](../menu-energia.md). Menu discreto nas áreas autenticadas para Desligar, Reiniciar, Hibernar e Verificar status. A CEP API decide liberação/inconclusivo/bloqueio; somente liberação agenda dez segundos no host com cancelamento. Contingência quando a API realmente não responde exige verificação nativa. Interface, bridge, serviço e MSI corporativo estão integrados; aplicação efetiva das políticas e ações reais depende de homologação elevada em máquina piloto.
 
 > Atualização de 29/09/2026: [contrato aprovado](../contrato-analises-notificacoes.md) e [implementação de análises/notificações](../notificacoes-implementacao.md). Configurações globais, tolerância diária inicial de 30 minutos nos dois sentidos, agendas, envio manual, central e resultados do motor único estão integrados nesta entrega. A matriz de 23/09 abaixo é histórica para essas capacidades. Justificativas, decisões e exportações continuam planejadas.

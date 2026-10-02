@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { AuthError, type AuthClient } from '../auth/auth-client'
-import { parsePowerCheck, PowerApi } from './api'
+import { parsePowerCheck, PowerApi, validPowerPin } from './api'
+import { unlockRemaining, unlockTime, unlockWindow } from './unlock-clock'
 import { mayVerifyOffline, NativePowerBridge, NativePowerUncertain } from './native'
 import type { WebViewBridge } from '../auth/desktop-auth-client'
 
@@ -38,9 +39,92 @@ const allowed = {
   code: 'within_tolerance',
   message: 'Liberado.',
   analysis,
+  override: false,
+  unlockedUntil: null,
 }
 
 describe('power contract', () => {
+  it('accepts only coherent administrative overrides for the selected action', () => {
+    const override = {
+      ...allowed,
+      code: 'administrative_override',
+      override: true,
+      unlockedUntil: '2026-10-01T12:05:00Z',
+      analysis: null,
+    }
+    for (const action of ['shutdown', 'restart', 'hibernate'] as const)
+      expect(parsePowerCheck({ ...override, action }, action).override).toBe(true)
+    for (const value of [
+      { ...override, override: false },
+      { ...override, decision: 'blocked' },
+      { ...override, unlockedUntil: null },
+      { ...allowed, override: true },
+      { ...allowed, unlockedUntil: '2026-10-01T12:05:00Z' },
+    ])
+      expect(() => parsePowerCheck(value, 'shutdown')).toThrow(AuthError)
+  })
+  it.each(['12345', '1234567', '12a456', '１２３４５６', ' 12345', '123456\n', ''])(
+    'refuses invalid PIN format %# without sending',
+    async (pin) => {
+      expect(validPowerPin(pin)).toBe(false)
+      const request = vi.fn()
+      await expect(new PowerApi({ request } as unknown as AuthClient).unlock(pin)).rejects.toThrow(
+        '6 dígitos',
+      )
+      expect(request).not.toHaveBeenCalled()
+    },
+  )
+  it('sends a fixture PIN only in the exact POST body and validates the five-minute server duration', async () => {
+    const result = {
+      override: true,
+      serverTime: '2026-10-01T12:00:00Z',
+      unlockedUntil: '2026-10-01T12:05:00Z',
+    }
+    const request = vi.fn().mockResolvedValue(result)
+    const api = new PowerApi({ request } as unknown as AuthClient)
+    expect(await api.unlock('012345')).toEqual(result)
+    expect(request.mock.calls).toEqual([
+      ['POST', '/me/time-control/power-action-unlock', { pin: '012345' }],
+    ])
+    for (const value of [
+      null,
+      {},
+      { ...result, override: false },
+      { ...result, unlockedUntil: '2026-10-01T12:10:00Z' },
+    ]) {
+      request.mockResolvedValueOnce(value)
+      await expect(api.unlock('012345')).rejects.toThrow('liberação inválida')
+    }
+  })
+  it.each([403, 429, 503])('never turns unlock HTTP %i into offline', async (status) => {
+    const error = new AuthError(
+      'fixture',
+      undefined,
+      status === 503 ? 'power_pin_not_configured' : 'invalid_admin_pin',
+      status,
+    )
+    const api = new PowerApi({ request: vi.fn().mockRejectedValue(error) } as unknown as AuthClient)
+    await expect(api.unlock('012345')).rejects.toBe(error)
+    expect(mayVerifyOffline(error)).toBe(false)
+    expect(mayVerifyOffline(new AuthError('fixture', undefined, 'connection_failed', status))).toBe(
+      false,
+    )
+  })
+  it('uses server timestamps, deducts transport time and expires on monotonic time', () => {
+    const result = {
+      override: true,
+      serverTime: '2026-10-01T12:00:00Z',
+      unlockedUntil: '2026-10-01T12:05:00Z',
+    }
+    const window = unlockWindow(result, 1000, 6000)
+    expect(unlockRemaining(window, 6000)).toBe(295)
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(0)
+    expect(unlockTime(unlockRemaining(window, 300_000))).toBe('0:01')
+    clock.mockReturnValue(9_999_999_999_999)
+    expect(unlockRemaining(window, 301_000)).toBe(0)
+    expect(unlockRemaining(window, 500_000)).toBe(0)
+    clock.mockRestore()
+  })
   it('preserves the server decision at the exact tolerance and partial day', () => {
     expect(parsePowerCheck(allowed, 'shutdown')).toEqual(allowed)
     expect(

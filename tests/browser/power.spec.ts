@@ -60,6 +60,8 @@ async function apiFixture(page: Page, decision = 'allowed', status = 200, invali
                     ? 'Horas dentro da tolerância.'
                     : 'Confira seus registros antes de continuar.',
                 analysis,
+                override: false,
+                unlockedUntil: null,
               },
     })
   })
@@ -126,6 +128,7 @@ for (const profile of [
     await openMenu(page)
     for (const name of ['Desligar', 'Reiniciar', 'Hibernar', 'Verificar status'])
       await expect(menu(page).getByRole('button', { name, exact: true })).toBeVisible()
+    await expect(menu(page).getByLabel('PIN administrativo', { exact: true })).toBeVisible()
     if (profile.role === 'systemAdmin') {
       await page.route('**/api/v1/time-control/settings', (route) =>
         route.fulfill({
@@ -271,4 +274,213 @@ test('failed cancellation keeps retry available', async ({ page }) => {
   await expect(menu(page)).toContainText('cancelamento não foi confirmado')
   await expect(cancel).toBeEnabled()
   await expect(menu(page).getByRole('button', { name: 'Desligar', exact: true })).toBeDisabled()
+})
+
+// Deliberately unrelated to the workstation clock. This is a fixture, not a real PIN.
+const unlockResponse = {
+  override: true,
+  serverTime: '2000-01-01T12:00:00Z',
+  unlockedUntil: '2000-01-01T12:05:00Z',
+}
+async function unlockFixture(page: Page, status = 200) {
+  const requests: { url: string; body: unknown }[] = []
+  await page.route('**/api/v1/me/time-control/power-action-unlock', async (route) => {
+    requests.push({ url: route.request().url(), body: route.request().postDataJSON() })
+    await route.fulfill({
+      status,
+      json:
+        status === 200
+          ? unlockResponse
+          : {
+              code:
+                status === 403
+                  ? 'invalid_admin_pin'
+                  : status === 429
+                    ? 'power_unlock_rate_limited'
+                    : 'power_pin_not_configured',
+              correlationId: 'unlock-fixture',
+            },
+    })
+  })
+  return requests
+}
+async function submitPin(page: Page, pin = '012345') {
+  await menu(page).getByLabel('PIN administrativo', { exact: true }).fill(pin)
+  await menu(page).getByRole('button', { name: 'Liberar por 5 minutos', exact: true }).click()
+  await expect(menu(page).getByLabel('PIN administrativo', { exact: true })).toHaveValue('')
+}
+test('PIN format is exactly six ASCII digits and clears after invalid attempts', async ({
+  page,
+}) => {
+  await fixture(page)
+  const requests = await unlockFixture(page)
+  await openMenu(page)
+  const input = menu(page).getByLabel('PIN administrativo', { exact: true })
+  for (const [name, value] of Object.entries({
+    type: 'password',
+    inputmode: 'numeric',
+    autocomplete: 'off',
+    minlength: '6',
+    maxlength: '6',
+    pattern: '[0-9]{6}',
+  }))
+    await expect(input).toHaveAttribute(name, value)
+  for (const pin of ['12345', '12a456', '１２３４５６']) {
+    await submitPin(page, pin)
+    await expect(menu(page)).toContainText('Informe exatamente 6 dígitos numéricos.')
+  }
+  expect(requests).toHaveLength(0)
+})
+for (const status of [403, 429, 503]) {
+  test(`unlock ${status} clears PIN and never enters contingency`, async ({ page }) => {
+    await fixture(page)
+    await nativeFixture(page)
+    const requests = await unlockFixture(page, status)
+    await openMenu(page)
+    await submitPin(page)
+    await expect(menu(page)).toContainText(
+      status === 403
+        ? 'PIN administrativo inválido'
+        : status === 429
+          ? 'Limite de liberações atingido'
+          : 'PIN administrativo ainda não foi configurado',
+    )
+    await expect(menu(page)).not.toContainText('liberados temporariamente por')
+    expect(await operations(page)).toEqual([])
+    expect(requests).toHaveLength(1)
+  })
+}
+test('correct PIN shows server-based countdown and each of the three actions still checks the API', async ({
+  page,
+}) => {
+  await fixture(page)
+  await nativeFixture(page)
+  await page.clock.install()
+  const requests = await unlockFixture(page)
+  const actions: string[] = []
+  await page.route('**/api/v1/me/time-control/power-action-check', async (route) => {
+    const action = route.request().postDataJSON().action
+    actions.push(action)
+    await route.fulfill({
+      json: {
+        action,
+        decision: 'allowed',
+        code: 'administrative_override',
+        message: 'Liberação temporária.',
+        analysis: null,
+        override: true,
+        unlockedUntil: unlockResponse.unlockedUntil,
+      },
+    })
+  })
+  await openMenu(page)
+  await submitPin(page)
+  await expect(menu(page)).toContainText('liberados temporariamente por 5:00')
+  expect(requests).toEqual([
+    {
+      url: expect.stringContaining('/me/time-control/power-action-unlock'),
+      body: { pin: '012345' },
+    },
+  ])
+  expect(requests[0].url).not.toContain('012345')
+  for (const label of ['Desligar', 'Reiniciar', 'Hibernar']) {
+    await menu(page).getByRole('button', { name: label, exact: true }).click()
+    await expect(menu(page)).toContainText(`${label} em 10 segundos`)
+    await menu(page).getByRole('button', { name: 'Cancelar', exact: true }).click()
+    await expect(menu(page)).toContainText('Ação cancelada')
+  }
+  expect(actions).toEqual(['shutdown', 'restart', 'hibernate'])
+  expect(await page.evaluate(() => JSON.stringify((window as any).powerMessages))).not.toContain(
+    '012345',
+  )
+  await page.clock.runFor(60_000)
+  await expect(menu(page)).toContainText('liberados temporariamente por 4:00')
+})
+test('at five minutes the display expires and the server blocks again', async ({ page }) => {
+  await fixture(page)
+  await nativeFixture(page)
+  await page.clock.install()
+  await unlockFixture(page)
+  await apiFixture(page, 'blocked')
+  // The narrower unlock fixture must take priority over the general check fixture.
+  await unlockFixture(page)
+  await openMenu(page)
+  await submitPin(page)
+  await expect(menu(page)).toContainText('liberados temporariamente por 5:00')
+  await page.clock.runFor(299_000)
+  await expect(menu(page)).toContainText('liberados temporariamente por 0:01')
+  await page.clock.runFor(1000)
+  await expect(menu(page)).toContainText('Liberação temporária encerrada')
+  await expect(menu(page)).not.toContainText('liberados temporariamente por')
+  await menu(page).getByRole('button', { name: 'Desligar', exact: true }).click()
+  await expect(menu(page)).toContainText('Bloqueado.')
+  expect(await operations(page)).toEqual([])
+})
+test('PIN clears on logout, is not persisted, and unlock display does not survive a new login', async ({
+  page,
+}) => {
+  await fixture(page)
+  await unlockFixture(page)
+  await openMenu(page)
+  const consoleMessages: string[] = []
+  page.on('console', (message) => consoleMessages.push(message.text()))
+  await submitPin(page)
+  await expect(menu(page)).toContainText('Liberação administrativa confirmada')
+  expect(
+    await page.evaluate(() =>
+      JSON.stringify({
+        local: { ...localStorage },
+        session: { ...sessionStorage },
+        url: location.href,
+      }),
+    ),
+  ).not.toContain('012345')
+  expect(await page.evaluate(() => indexedDB.databases())).toEqual([])
+  expect(consoleMessages.join(' ')).not.toContain('012345')
+  const input = menu(page).getByLabel('PIN administrativo', { exact: true })
+  await input.fill('654321')
+  const element = await input.elementHandle()
+  await page.getByRole('button', { name: 'Sair da conta', exact: true }).click()
+  await expect(menu(page)).toHaveCount(0)
+  expect(await element!.evaluate((node) => (node as HTMLInputElement).value)).toBe('')
+  await page.getByLabel('E-mail corporativo', { exact: true }).fill('admin@example.invalid')
+  await page.getByLabel('Senha', { exact: true }).fill('Test-only-password')
+  await page.getByRole('button', { name: 'Entrar na minha conta' }).click()
+  await openMenu(page)
+  await expect(menu(page).getByLabel('PIN administrativo', { exact: true })).toHaveValue('')
+  await expect(menu(page)).not.toContainText('liberados temporariamente por')
+})
+test('failed PIN does not extend an existing window; status remains GET only', async ({ page }) => {
+  await fixture(page)
+  await page.clock.install()
+  await unlockFixture(page)
+  await nativeFixture(page)
+  await openMenu(page)
+  await submitPin(page)
+  await expect(menu(page)).toContainText('liberados temporariamente por 5:00')
+  await page.clock.runFor(60_000)
+  await unlockFixture(page, 403)
+  await submitPin(page, '654321')
+  await expect(menu(page)).toContainText('PIN administrativo inválido')
+  await expect(menu(page)).toContainText('liberados temporariamente por 4:00')
+  let requests = 0
+  await page.route('**/api/v1/me/time-control/power-action-status**', (route) => {
+    expect(route.request().method()).toBe('GET')
+    requests++
+    return route.fulfill({
+      json: {
+        action: 'shutdown',
+        decision: 'allowed',
+        code: 'administrative_override',
+        message: 'Liberação temporária.',
+        analysis: null,
+        override: true,
+        unlockedUntil: unlockResponse.unlockedUntil,
+      },
+    })
+  })
+  await menu(page).getByRole('button', { name: 'Verificar status', exact: true }).click()
+  await expect(menu(page)).toContainText('Liberado.')
+  expect(requests).toBe(1)
+  expect(await operations(page)).toEqual([])
 })

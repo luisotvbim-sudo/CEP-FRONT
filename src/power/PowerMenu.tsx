@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode, type FormEvent } from 'react'
 import { Power } from 'lucide-react'
 import { errorMessage, type AuthClient } from '../auth/auth-client'
-import { actionLabels, PowerApi, type PowerAction, type PowerCheck } from './api'
+import { actionLabels, PowerApi, validPowerPin, type PowerAction, type PowerCheck } from './api'
+import { unlockRemaining, unlockTime, unlockWindow, type UnlockWindow } from './unlock-clock'
 import {
   mayVerifyOffline,
   nativePower,
@@ -43,10 +44,16 @@ export function PowerMenu({ client }: { client: AuthClient }) {
   const active = useRef<{ host: NativePower; requestId: string } | null>(null)
   const mounted = useRef(true)
   const cancelButton = useRef<HTMLButtonElement>(null)
+  const pinInput = useRef<HTMLInputElement>(null)
+  const pinHintId = useId()
+  const [unlock, setUnlock] = useState<UnlockWindow | null>(null)
+  const [unlockSeconds, setUnlockSeconds] = useState(0)
   useEffect(() => {
     mounted.current = true
+    const pin = pinInput.current
     return () => {
       mounted.current = false
+      if (pin) pin.value = ''
       const current = active.current
       if (current) void current.host.cancel(current.requestId).catch(() => {})
     }
@@ -60,6 +67,55 @@ export function PowerMenu({ client }: { client: AuthClient }) {
     const timer = setInterval(update, 100)
     return () => clearInterval(timer)
   }, [scheduled])
+  useEffect(() => {
+    if (!unlock) return
+    const update = () => {
+      const seconds = unlockRemaining(unlock, performance.now())
+      setUnlockSeconds(seconds)
+      if (seconds === 0) {
+        setUnlock(null)
+        setCheck((previous) => (previous?.override ? null : previous))
+        setNotice('Liberação temporária encerrada. As ações voltam à verificação normal.')
+      }
+    }
+    update()
+    const timer = setInterval(update, 250)
+    return () => clearInterval(timer)
+  }, [unlock])
+
+  async function release(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const pin = pinInput.current?.value ?? ''
+    if (pinInput.current) pinInput.current.value = ''
+    if (busy.current || active.current) return
+    if (!validPowerPin(pin)) {
+      setNotice('Informe exatamente 6 dígitos numéricos.')
+      return
+    }
+    busy.current = true
+    setPending(true)
+    setNotice('')
+    setCheck(null)
+    const requestedAt = performance.now()
+    try {
+      const result = await api.unlock(pin)
+      if (!mounted.current) return
+      const window = unlockWindow(result, requestedAt, performance.now())
+      setUnlock(window)
+      setUnlockSeconds(unlockRemaining(window, performance.now()))
+      setNotice('Liberação administrativa confirmada por 5 minutos para sua conta.')
+    } catch (error) {
+      const failure = errorMessage(error)
+      if (mounted.current)
+        setNotice(
+          failure.message +
+            (failure.correlationId ? ` Código para suporte: ${failure.correlationId}` : ''),
+        )
+    } finally {
+      busy.current = false
+      if (mounted.current) setPending(false)
+    }
+  }
 
   async function run(action?: PowerAction) {
     if (busy.current || active.current) return
@@ -74,6 +130,10 @@ export function PowerMenu({ client }: { client: AuthClient }) {
         const result = action ? await api.check(action) : await api.status()
         if (!mounted.current) return
         setCheck(result)
+        if (!result.override || result.unlockedUntil !== unlock?.unlockedUntil) {
+          setUnlock(null)
+          setUnlockSeconds(0)
+        }
         if (!action || result.decision !== 'allowed') return
         authorization = { kind: 'api', check: result }
       } catch (error) {
@@ -152,6 +212,34 @@ export function PowerMenu({ client }: { client: AuthClient }) {
             Verificar status
           </button>
         </div>
+        <form
+          className="power-unlock"
+          autoComplete="off"
+          noValidate
+          onSubmit={(event) => void release(event)}
+        >
+          <label>
+            PIN administrativo
+            <input
+              ref={pinInput}
+              type="password"
+              inputMode="numeric"
+              autoComplete="off"
+              required
+              minLength={6}
+              maxLength={6}
+              pattern="[0-9]{6}"
+              aria-describedby={pinHintId}
+              disabled={pending || !!scheduled || uncertain}
+            />
+          </label>
+          <button type="submit" disabled={pending || !!scheduled || uncertain}>
+            Liberar por 5 minutos
+          </button>
+          <small id={pinHintId}>
+            Exatamente 6 dígitos. Liberação temporária apenas para sua conta.
+          </small>
+        </form>
       </details>
       <div aria-live="polite" aria-atomic="true">
         {pending && <p>Consultando…</p>}
@@ -162,6 +250,24 @@ export function PowerMenu({ client }: { client: AuthClient }) {
           </p>
         )}
         {notice && <p>{notice}</p>}
+        {unlock && unlockSeconds > 0 && (
+          <p>
+            Desligar, Reiniciar e Hibernar liberados temporariamente por {unlockTime(unlockSeconds)}
+            . Cada ação será verificada novamente.
+          </p>
+        )}
+        {check?.override && !unlock && (
+          <p>
+            Liberação administrativa confirmada até{' '}
+            {new Intl.DateTimeFormat('pt-BR', {
+              timeZone: 'America/Sao_Paulo',
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+            }).format(new Date(check.unlockedUntil!))}
+            . Cada ação será verificada novamente.
+          </p>
+        )}
         {scheduled && (
           <p>
             {remaining > 0

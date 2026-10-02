@@ -227,7 +227,7 @@ internal sealed class ApiSession : IDisposable
         if (token is not null) request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(method == "POST" && path.StartsWith("/organization/time-control/synchronizations", StringComparison.Ordinal) ? 180 : 20));
         HttpResponseMessage response;
-        try { response = await http.SendAsync(request, timeout.Token); }
+        try { response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token); }
         catch (Exception error) when (error is HttpRequestException or TaskCanceledException)
         {
             throw new ApiFailure(503, "connection_failed", transportFailure: true);
@@ -237,7 +237,7 @@ internal sealed class ApiSession : IDisposable
         JsonElement result = default;
         try { using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(timeout.Token)); result = document.RootElement.Clone(); }
         catch (JsonException) { }
-        catch (TaskCanceledException) { throw new ApiFailure(503, "connection_failed", transportFailure: true); }
+        catch (Exception error) when (error is TaskCanceledException or HttpRequestException) { throw new ApiFailure(502, "invalid_api_response"); }
         if (!response.IsSuccessStatusCode)
         {
             string? Read(string name) => result.ValueKind == JsonValueKind.Object && result.TryGetProperty(name, out var property) && property.ValueKind == JsonValueKind.String ? property.GetString() : null;

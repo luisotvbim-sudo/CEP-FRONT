@@ -9,6 +9,7 @@ internal static class ApiRoutePolicy
     {
         if (path.Contains('\\') || path.Contains('#')) return false;
         var route = path.Split('?')[0];
+        if (path == "/me/time-control/power-action-unlock" && method == "POST") return true;
         if (route == "/me/time-control/power-action-check" && method == "POST") return true;
         if (route == "/me/time-control/power-action-status" && method == "GET") return true;
         if (route == "/time-control/settings" && method is "GET" or "PATCH") return true;

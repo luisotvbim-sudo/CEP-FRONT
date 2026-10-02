@@ -4,6 +4,7 @@ export class AuthError extends Error {
     public readonly correlationId?: string,
     public readonly code?: string,
     public readonly status?: number,
+    public readonly transportFailure = false,
   ) {
     super(message)
     this.name = 'AuthError'
@@ -28,6 +29,10 @@ export function errorMessage(error: unknown): AuthError {
 }
 
 const messages: Record<string, string> = {
+  invalid_admin_pin: 'PIN administrativo inválido. Confira os 6 dígitos e tente novamente.',
+  power_unlock_rate_limited: 'Limite de liberações atingido. Aguarde antes de tentar novamente.',
+  power_pin_not_configured:
+    'O PIN administrativo ainda não foi configurado. Procure o responsável.',
   invalid_invitation:
     'Convite inválido, expirado ou já utilizado. Confira o código mais recente ou solicite um novo ao administrador.',
   invalid_password: 'A senha não atende aos requisitos. Use entre 12 e 200 caracteres.',

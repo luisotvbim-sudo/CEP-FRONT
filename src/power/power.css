@@ -63,6 +63,34 @@
   margin-top: 8px;
   color: #a4400d;
 }
+.power-unlock {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 8px 12px;
+  margin-top: 12px;
+}
+.power-unlock label {
+  display: grid;
+  gap: 4px;
+}
+.power-unlock input {
+  width: 112px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  background: #fff;
+  color: #555;
+  font: inherit;
+  padding: 6px 10px;
+}
+.power-unlock input:focus-visible {
+  outline: 2px solid #c24e12;
+  outline-offset: 3px;
+}
+.power-unlock small {
+  flex-basis: 100%;
+  font-size: 11px;
+}
 @media (max-width: 600px) {
   .power-menu {
     padding: 10px 17px;
