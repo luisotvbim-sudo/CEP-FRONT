@@ -4,7 +4,7 @@ Implementação de 30/09/2026 na branch `codex/installer-integrado`, construída
 
 ## Componentes
 
-O MSI 0.4.5 inclui a interface de liberação por PIN conforme a CEP API `main` `b36c6e1`, abertura de instância única, recuperação forçada do WebView2 e fechamento local protegido na bandeja com restauração temporária das políticas do Windows. O host permite somente o POST exato de liberação e continua revalidando cada ação no servidor. O PIN da API nunca atravessa o named pipe nem pertence ao serviço ou ao pacote. Detalhes de expiração, rollout e testes em [menu de energia](menu-energia.md).
+O MSI 0.4.6 inclui a interface de liberação por PIN conforme a CEP API `main` `b36c6e1`, abertura de instância única, recuperação forçada do WebView2 e fechamento local protegido na bandeja com restauração temporária das políticas do Windows. Uma tentativa incorreta de fechamento apenas limpa e refoca o campo, sem mensagem visível. O host permite somente o POST exato de liberação e continua revalidando cada ação no servidor. O PIN da API nunca atravessa o named pipe nem pertence ao serviço ou ao pacote. Detalhes de expiração, rollout e testes em [menu de energia](menu-energia.md).
 
 - Um único MSI por máquina instala React/WPF, o serviço `CepHorasControl`, inicialização em cada logon e a recuperação da TI.
 - O serviço roda como `LocalSystem`. Usuário comum não recebe permissão para parar ou configurar o serviço.
@@ -30,7 +30,7 @@ O WPF cancela encerramento de sessão não autorizado do usuário comum. Pressã
 
 ```powershell
 dotnet run --project desktop/CepHoras.Control.Tests -c Release
-./scripts/build-corporate-msi.ps1 -Version 0.4.5
+./scripts/build-corporate-msi.ps1 -Version 0.4.6
 ```
 
 Os testes do serviço usam um executor falso e não alteram política nem energia. O teste MSI lê o banco do pacote sem instalar e verifica escopo, serviço, custom actions elevadas, rollback, restauração antes da remoção, ACL e payload.

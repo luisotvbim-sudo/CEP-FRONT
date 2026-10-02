@@ -1,5 +1,7 @@
 # Conciliação de horas — especificação funcional do produto
 
+> Ajuste do MSI 0.4.6 em 02/10/2026: uma senha diária incorreta apenas limpa e mantém o foco no campo; a janela não exibe mensagem de erro nem revela outro detalhe da validação.
+
 > Correção do MSI 0.4.5 em 02/10/2026: fechar o CEP Horas com a senha diária também restaura o estado original das políticas de energia e atualiza o shell do Windows. A abertura manual reaplica as políticas antes de retomar a supervisão. Logoff e reinício do serviço restabelecem a proteção para que a próxima sessão não nasça liberada.
 
 > Aditivo de 02/10/2026: no MSI corporativo, o menu do ícone do CEP Horas na bandeja oferece fechamento protegido por uma senha diária local no formato `ddMMyy#pec`. A validação usa a data do computador, funciona sem internet e não envia nem persiste a senha. Um fechamento autorizado suspende o relançamento somente na sessão Windows atual; a abertura manual ou uma nova sessão reativa a supervisão. A restauração temporária das políticas ao fechar foi incorporada no MSI 0.4.5.

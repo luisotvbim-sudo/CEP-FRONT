@@ -11,11 +11,6 @@ public partial class ClosePasswordDialog : Window
         Closed += (_, _) => PasswordInput.Clear();
     }
 
-    private void PasswordInput_Changed(object sender, RoutedEventArgs e)
-    {
-        ErrorText.Visibility = Visibility.Collapsed;
-    }
-
     private void Confirm_Click(object sender, RoutedEventArgs e)
     {
         if (DailyClosePassword.IsValid(PasswordInput.Password, DateTime.Now))
@@ -26,7 +21,6 @@ public partial class ClosePasswordDialog : Window
         }
 
         PasswordInput.Clear();
-        ErrorText.Visibility = Visibility.Visible;
         PasswordInput.Focus();
     }
 }

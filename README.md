@@ -47,7 +47,7 @@ Use uma conta existente no navegador ou no executável desktop. Não há credenc
 O instalador corporativo unificado inclui o aplicativo, inicialização automática, serviço `CepHorasControl` e políticas locais de energia. Nas áreas autenticadas, o menu discreto oferece Desligar, Reiniciar, Hibernar e Verificar status. A API decide conforme a análise/tolerância do usuário; uma ação liberada aguarda dez segundos e pode ser cancelada. Quando a API realmente não responde no transporte, o host permite a contingência local. Veja [menu de energia](docs/menu-energia.md) e [instalador corporativo](docs/instalador-corporativo.md).
 
 ```powershell
-./scripts/build-corporate-msi.ps1 -Version 0.4.5
+./scripts/build-corporate-msi.ps1 -Version 0.4.6
 ```
 
 O MSI é por máquina e exige autorização administrativa. Ele altera direitos e políticas do Windows; instalação, ações reais e restauração devem ser homologadas primeiro numa VM ou máquina piloto. Builds portáteis e o navegador não executam ações de energia.

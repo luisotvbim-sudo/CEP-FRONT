@@ -157,7 +157,7 @@ sudo docker compose --env-file .env -f compose.production.yaml run --rm --no-dep
 2. Executar as migrações e confirmar `/health/ready`.
 3. Provisionar o PIN de produção de forma interativa, sem registrá-lo em histórico, Git ou logs.
 4. Implantar o `cep-front` atualizado e validar `https://cep.lat/healthz` e o proxy de mesma origem para `/api/`.
-5. Distribuir o MSI 0.4.5 em uma VM ou máquina piloto com autorização administrativa.
+5. Distribuir o MSI 0.4.6 em uma VM ou máquina piloto com autorização administrativa.
 6. Validar login, PIN incorreto, rate limit, PIN correto, expiração em cinco minutos, as três ações, contagem de dez segundos, cancelamento, retorno às regras normais e contingência com indisponibilidade real da API.
 7. Somente depois expandir para as demais máquinas.
 
@@ -210,7 +210,7 @@ dotnet run --project desktop/CepHoras.Desktop.Tests -c Release
 dotnet run --project desktop/CepHoras.Control.Tests -c Release
 dotnet run --project desktop/CepHoras.Updates.Tests -c Release
 node scripts/test-desktop.mjs
-./scripts/build-corporate-msi.ps1 -Version 0.4.5
+./scripts/build-corporate-msi.ps1 -Version 0.4.6
 ```
 
 Na entrega do PIN em 01/10/2026 passaram 83 testes unitários, 174 testes Playwright em desktop/mobile, 189 verificações .NET do desktop, 16 verificações do atualizador, testes do serviço, lint, TypeScript, builds Vite e WPF e a inspeção estrutural do MSI 0.4.1. No aditivo de recuperação, o desktop passou 200 verificações, incluindo instância única, sinalização da janela, preservação do perfil corrompido e consumo idempotente do pedido de recuperação; build Release, serviço, atualizador e inspeção estrutural do MSI 0.4.3 também passaram. Nenhuma ação real de energia foi executada.
