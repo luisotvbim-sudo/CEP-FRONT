@@ -231,7 +231,7 @@ Abra novamente o aplicativo para o WebView2 criar um perfil limpo. Mantenha o di
 |---|---|---|
 | CEP-API — PIN e override | `main` / `c0b398f` | Implementação funcional |
 | CEP-API — precisão PostgreSQL | `main` / `b36c6e1` | Contrato de referência e testes aprovados |
-| CEP-FRONT — instalador integrado | `codex/installer-integrado` / `3798f2a` | Base do MSI e bloqueio nativo |
+| CEP-FRONT — instalador integrado | `codex/installer-integrado`, alinhada à `main`; base histórica `3798f2a` | MSI, bloqueio nativo, liberação administrativa e documentação consolidada |
 | CEP-FRONT — liberação administrativa | `main` / `a22380c` | Front, WPF, contrato, testes e MSI 0.4.1 |
 
 O MSI 0.4.0 instalado anteriormente não possui a interface de PIN. Para usar a liberação de cinco minutos é necessário implantar o backend correspondente, provisionar o PIN e instalar o MSI 0.4.1 ou posterior.
