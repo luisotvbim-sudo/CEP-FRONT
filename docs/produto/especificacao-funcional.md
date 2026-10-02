@@ -1,5 +1,7 @@
 # Conciliação de horas — especificação funcional do produto
 
+> Aditivo de 02/10/2026 — MSI 0.4.9: enquanto a interface WebView2 carrega, o host WPF mostra progresso nativo. A página só aparece após conteúdo renderizado do React. Falha/tela vazia/demora oferece **Recarregar interface** no centro; a ação também fica no rodapé e na bandeja. Eventos técnicos limitados permitem investigar recorrências, sem registrar conta, sessão ou conteúdo. A mudança cobre carregamento e recuperação; a causa inicial do travamento reportado continua sem comprovação. Ver [aplicativo Windows](../aplicativo-windows.md).
+
 > Aditivo de 02/10/2026: o MSI 0.4.7 incorpora atualização pelo serviço Windows a partir de releases estáveis, com manifesto assinado e verificação do pacote. O funcionário escolhe **Atualizar agora** ou **Depois**; as versões seguintes dispensam credenciais administrativas e acesso manual da TI ao computador. A manutenção preserva as políticas de energia. Instalação bootstrap, troca real entre versões e recuperação no Windows ainda dependem de homologação em piloto; ver [atualizador MSI](../atualizador-msi.md).
 
 > Ajuste do MSI 0.4.6 em 02/10/2026: uma senha diária incorreta apenas limpa e mantém o foco no campo; a janela não exibe mensagem de erro nem revela outro detalhe da validação.

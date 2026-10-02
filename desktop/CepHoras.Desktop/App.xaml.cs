@@ -14,7 +14,16 @@ public partial class App : System.Windows.Application
         using (WebViewProfileRecovery.EnterStartupGate(TimeSpan.FromSeconds(20)))
         {
             showAfterRecovery = WebViewProfileRecovery.ResetIfRequested();
-            singleInstance = new SingleInstanceCoordinator("Conceito.CepHoras.Desktop");
+            var instanceName = "Conceito.CepHoras.Desktop";
+#if DEBUG
+            // A disposable UI fixture must never activate the installed Release app.
+            if (Environment.GetEnvironmentVariable("CEP_DESKTOP_TESTING") == "1" &&
+                Environment.GetEnvironmentVariable("CEP_SESSION_DIR") is string fixtureDirectory &&
+                !string.IsNullOrWhiteSpace(fixtureDirectory))
+                instanceName += ".Fixture." + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+                    System.Text.Encoding.UTF8.GetBytes(System.IO.Path.GetFullPath(fixtureDirectory))));
+#endif
+            singleInstance = new SingleInstanceCoordinator(instanceName);
         }
         if (!singleInstance.IsPrimary)
         {

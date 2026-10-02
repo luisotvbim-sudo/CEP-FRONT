@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process'
-import { mkdir, readdir, readFile } from 'node:fs/promises'
+import { mkdir, readdir, readFile, writeFile, unlink } from 'node:fs/promises'
 import path from 'node:path'
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
@@ -10,6 +10,9 @@ const live = process.argv.includes('--live')
 const working = path.resolve('.local/desktop-test', `run-${Date.now()}`)
 const sessionDirectory = path.join(working, 'sessions')
 await mkdir(sessionDirectory, { recursive: true })
+const emptyFixtureName = `native-empty-${Date.now()}.html`
+const emptyFixturePath = path.resolve('desktop/CepHoras.Desktop/bin/Debug/net10.0-windows/wwwroot', emptyFixtureName)
+await writeFile(emptyFixturePath, '<!doctype html><html><body><div id="root"></div></body></html>', { flag: 'wx' })
 const user = {
   id: '20000000-0000-0000-0000-000000000001',
   email: 'fixture@example.invalid',
@@ -166,16 +169,56 @@ async function nativeAction(page, action) {
 async function nativeEvents() {
   return (await readFile(path.join(sessionDirectory, 'native-ui.events'), 'utf8').catch(() => '')).split(/\r?\n/)
 }
-async function waitNativeEvent(value) {
-  for (let attempt = 0; attempt < 50; attempt++) {
+async function waitNativeEvent(value, timeout = 5000) {
+  for (const deadline = Date.now() + timeout; Date.now() < deadline;) {
     if ((await nativeEvents()).includes(value)) return
     await new Promise((resolve) => setTimeout(resolve, 100))
   }
   assert.fail(`Missing native event: ${value}`)
 }
+async function nativeUiState(page) {
+  return page.evaluate(() => new Promise((resolve) => {
+    const id = crypto.randomUUID()
+    const listener = (event) => {
+      if (event.data.id !== id) return
+      window.chrome.webview.removeEventListener('message', listener)
+      resolve(event.data.result)
+    }
+    window.chrome.webview.addEventListener('message', listener)
+    window.chrome.webview.postMessage({ type: 'cep-desktop-test', action: 'ui-state', id })
+  }))
+}
 try {
   let page = await open()
   await page.getByRole('heading', { name: 'Bom ter você aqui.' }).waitFor()
+  await waitNativeEvent('webview-loading')
+  await waitNativeEvent('webview-ready')
+  assert.deepEqual(await nativeUiState(page), { loading: false, recovery: false, browser: true, reloadEnabled: true })
+  // HTML navigation can succeed while React is empty. Verify native recovery
+  // after removing the rendered interface, without touching the installed app.
+  await page.evaluate(() => document.getElementById('root').replaceChildren())
+  await waitNativeEvent('webview-rendered-root-empty')
+  assert.deepEqual(await nativeUiState(page), { loading: false, recovery: true, browser: false, reloadEnabled: true })
+  const recovered = page.waitForEvent('domcontentloaded')
+  await nativeAction(page, 'reload-ui')
+  await recovered
+  await page.getByRole('heading', { name: 'Bom ter você aqui.' }).waitFor()
+  assert.ok((await nativeEvents()).filter((event) => event === 'webview-loading').length >= 2)
+  for (let attempt = 0; attempt < 50 && (await nativeEvents()).filter((event) => event === 'webview-ready').length < 2; attempt++)
+    await new Promise((resolve) => setTimeout(resolve, 100))
+  assert.ok((await nativeEvents()).filter((event) => event === 'webview-ready').length >= 2, 'the native host waits for the restored React interface')
+  // Successful HTML navigation with no React must retain the native loading UI,
+  // then time out to a usable recovery button rather than show a blank browser.
+  const emptyUrl = `https://app.cephoras.local/${emptyFixtureName}`
+  await page.goto(emptyUrl)
+  assert.deepEqual(await nativeUiState(page), { loading: true, recovery: true, browser: false, reloadEnabled: true })
+  await waitNativeEvent('webview-loading-timeout', 35000)
+  assert.deepEqual(await nativeUiState(page), { loading: false, recovery: true, browser: false, reloadEnabled: true })
+  const afterTimeout = page.waitForEvent('domcontentloaded')
+  await nativeAction(page, 'reload-ui')
+  await afterTimeout
+  await page.getByRole('heading', { name: 'Bom ter você aqui.' }).waitFor()
+  console.log('PASS: WPF loading, blank React detection and reload recovery in isolated WebView2.')
   assert.equal(await page.evaluate(() => window.__CEP_DESKTOP__), true)
   await page.screenshot({ path: '.local/login-webview2.png', fullPage: true })
   await page.evaluate(() => {
@@ -309,4 +352,5 @@ try {
 } finally {
   await close()
   server.close()
+  await unlink(emptyFixturePath)
 }

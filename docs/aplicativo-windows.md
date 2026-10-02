@@ -13,6 +13,16 @@ Implementação iniciada em 29/09/2026 e integrada ao instalador corporativo em 
 - A versão instalada pelo script de perfil registra início por usuário com `--background` ao abrir pela primeira vez. O MSI corporativo registra inicialização por máquina em cada logon e o serviço supervisiona a sessão local ativa. O pacote MSIX histórico declara uma tarefa de inicialização do Windows. Builds portáteis e Debug não registram início automático.
 - Nas áreas autenticadas, o menu de energia consulta a CEP API. O host nativo repete a verificação, e o serviço aceita somente Desligar, Reiniciar ou Hibernar com atraso fixo de dez segundos. Falha real de transporte permite contingência; respostas HTTP, inclusive erro, não são tratadas como API offline.
 
+## Carregamento e recuperação da interface — MSI 0.4.9
+
+O WPF mantém o WebView oculto e mostra progresso indeterminado enquanto inicializa o runtime, navega e aguarda conteúdo visível do React em `#root`. `NavigationCompleted.IsSuccess` sozinho indica navegação HTML, não a montagem da interface. Sem conteúdo por 30 segundos, o progresso é substituído por uma mensagem e pelo botão central **Recarregar interface**. Uma interface que fique vazia por três verificações consecutivas também oferece recuperação. Falhas de navegação e eventos `ProcessFailed` de browser/renderizador são tratados; falhas de GPU/utility são registradas e deixam a recuperação automática do runtime atuar.
+
+O botão também está sempre acessível no rodapé nativo e pela bandeja. A recarga normal não limpa o perfil nem a sessão protegida. Se o browser principal já morreu ou o runtime nem inicializou, usa a recuperação existente de reinício/perfil; espera pelos processos fora da thread visual. Durante instalação MSI, a ação não inicia outra recuperação.
+
+Os eventos limitados de carregamento, navegação, root vazio, timeout e falha de processo são registrados em `%LOCALAPPDATA%\Conceito\CepHoras\Diagnostics\webview.jsonl`, com rotação acima de 256 KiB. Apenas código/tipo técnico e horário são registrados; não incluir textos da página, URLs, respostas da API, conta ou credenciais. A fixture Debug isola instância, perfil, sessão, recuperação e logs da instalação real.
+
+Diagnóstico de 02/10/2026: havia evento Windows `AppHangB1` no CEP Horas 0.4.7. Na consulta posterior, serviço e processos WebView2 estavam vivos e os assets principais correspondiam ao pacote gerado. O host não tratava falhas de processo e escondia a recuperação apenas pelo sucesso da navegação. A causa inicial do travamento não está comprovada; essas evidências não demonstram que o serviço tenha encerrado o Chromium. O banner de atualizador indisponível pertence a outro fluxo e também não comprova essa hipótese.
+
 ## Executar e empacotar
 
 ```powershell

@@ -6,10 +6,19 @@ namespace CepHoras.Desktop;
 public static class WebViewProfileRecovery
 {
     private const string RestartArgument = "--recover-after";
-    private static readonly string StateDirectory = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Conceito", "CepHoras");
+    private static readonly string StateDirectory = GetStateDirectory();
     private static readonly string RequestPath = Path.Combine(StateDirectory, "webview-recovery.request");
     private static readonly string ProfilePath = Path.Combine(StateDirectory, "WebView2");
+
+    private static string GetStateDirectory()
+    {
+#if DEBUG
+        if (Environment.GetEnvironmentVariable("CEP_DESKTOP_TESTING") == "1" &&
+            Environment.GetEnvironmentVariable("CEP_SESSION_DIR") is string fixture && !string.IsNullOrWhiteSpace(fixture))
+            return Path.Combine(Path.GetFullPath(fixture), "Recovery");
+#endif
+        return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Conceito", "CepHoras");
+    }
 
     public static void Request()
         => Request(StateDirectory);

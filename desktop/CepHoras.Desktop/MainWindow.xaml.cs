@@ -71,6 +71,7 @@ public partial class MainWindow : Window
             notificationTimer.Stop();
             updateTimer.Stop();
             msiStatusTimer.Stop();
+            webViewHealthTimer.Stop();
             tray?.Dispose();
             Browser.Dispose();
             session?.Dispose();
@@ -92,6 +93,8 @@ public partial class MainWindow : Window
     {
         if (initialized) return;
         initialized = true;
+        webViewHealthTimer.Tick += async (_, _) => await CheckWebViewContent();
+        BeginWebViewLoading();
         try
         {
 #if DEBUG
@@ -130,7 +133,11 @@ public partial class MainWindow : Window
             await core.AddScriptToExecuteOnDocumentCreatedAsync(managedInstallation
                 ? "window.__CEP_DESKTOP__ = true; window.__CEP_POWER_VERSION__ = 1;"
                 : "window.__CEP_DESKTOP__ = true;");
-            core.NavigationStarting += (_, args) => { if (!IsAppOrigin(args.Uri)) args.Cancel = true; };
+            core.NavigationStarting += (_, args) =>
+            {
+                if (!IsAppOrigin(args.Uri)) args.Cancel = true;
+                else BeginWebViewLoading();
+            };
             core.NewWindowRequested += (_, args) =>
             {
                 args.Handled = true;
@@ -142,11 +149,27 @@ public partial class MainWindow : Window
             };
             core.PermissionRequested += (_, args) => args.State = CoreWebView2PermissionState.Deny;
             core.WebMessageReceived += HandleMessage;
-            core.NavigationCompleted += (_, args) =>
+            core.ProcessFailed += (_, args) =>
             {
-                Browser.Visibility = args.IsSuccess ? Visibility.Visible : Visibility.Hidden;
-                StartupStatus.Text = args.IsSuccess ? "" : "Não foi possível carregar a interface. Reabra o CEP Horas.";
-                ForceRestartButton.Visibility = args.IsSuccess ? Visibility.Collapsed : Visibility.Visible;
+                WriteWebViewDiagnostic("process-failed", args.ProcessFailedKind.ToString());
+                if (closed || exiting || installingUpdate) return;
+                if (args.ProcessFailedKind == CoreWebView2ProcessFailedKind.BrowserProcessExited)
+                    browserNeedsRecreation = true;
+                if (args.ProcessFailedKind is CoreWebView2ProcessFailedKind.BrowserProcessExited or
+                    CoreWebView2ProcessFailedKind.RenderProcessExited or CoreWebView2ProcessFailedKind.RenderProcessUnresponsive)
+                    FailWebView("O navegador da interface parou de responder. Clique em Recarregar interface.", "process-failed");
+            };
+            core.NavigationCompleted += async (_, args) =>
+            {
+                if (closed || exiting) return;
+                WriteWebViewDiagnostic("navigation-completed", args.IsSuccess ? "success" : args.WebErrorStatus.ToString());
+                if (!args.IsSuccess)
+                    FailWebView("Não foi possível carregar a página. Clique em Recarregar interface.", "navigation-failed");
+                else
+                {
+                    webViewNavigationCompleted = true;
+                    await CheckWebViewContent();
+                }
             };
             core.Navigate($"{AppOrigin}/index.html");
             if (Environment.GetCommandLineArgs().Contains("--background") && !forceVisibleAfterRecovery) Hide();
@@ -162,13 +185,12 @@ public partial class MainWindow : Window
         }
         catch (WebView2RuntimeNotFoundException)
         {
-            StartupStatus.Text = "Instale o Microsoft Edge WebView2 Runtime e abra o CEP Horas novamente.";
-            ForceRestartButton.Visibility = Visibility.Visible;
+            FailWebView("Instale o Microsoft Edge WebView2 Runtime e abra o CEP Horas novamente.", "runtime-missing");
         }
-        catch
+        catch (Exception error)
         {
-            StartupStatus.Text = "Não foi possível iniciar o CEP Horas. Confira a instalação e a configuração da API.";
-            ForceRestartButton.Visibility = Visibility.Visible;
+            WriteWebViewDiagnostic("initialization-failed", error.GetType().Name);
+            FailWebView("Não foi possível iniciar o CEP Horas. Confira a instalação e a configuração da API.", "initialization-failed");
         }
     }
 
@@ -193,6 +215,15 @@ public partial class MainWindow : Window
                     case "hide": Close(); break;
                     case "open-inbox": OpenWindow(true); break;
                     case "exit": exiting = true; Close(); break;
+                    case "reload-ui": await ReloadWebView(); break;
+                    case "ui-state":
+                        Reply(new { id = root.GetProperty("id").GetString(), ok = true, result = new {
+                            loading = WebViewLoadingIndicator.Visibility == Visibility.Visible,
+                            recovery = StartupPanel.Visibility == Visibility.Visible,
+                            browser = Browser.Visibility == Visibility.Visible,
+                            reloadEnabled = ForceRestartButton.IsEnabled
+                        }});
+                        break;
                 }
                 return;
             }
@@ -231,6 +262,7 @@ public partial class MainWindow : Window
             ContextMenuStrip = new System.Windows.Forms.ContextMenuStrip()
         };
         tray.ContextMenuStrip.Items.Add("Abrir CEP Horas", null, (_, _) => OpenWindow(false));
+        tray.ContextMenuStrip.Items.Add("Recarregar interface", null, async (_, _) => { OpenWindow(false); await ReloadWebView(); });
         tray.ContextMenuStrip.Items.Add("Minhas notificações", null, (_, _) => OpenWindow(true));
         tray.ContextMenuStrip.Items.Add("Testar notificação", null, (_, _) => ShowTestNotification());
         if (managedInstallation)
@@ -338,16 +370,27 @@ public partial class MainWindow : Window
         finally { closingWithPassword = false; }
     }
 
-    private void ForceRestart_Click(object sender, RoutedEventArgs e)
+    private async void ForceRestart_Click(object sender, RoutedEventArgs e)
     {
-        if (installingUpdate) return;
+        if (installingUpdate || restartingInterface || closed || exiting) return;
+        restartingInterface = true;
+        webViewHealthTimer.Stop();
         ForceRestartButton.IsEnabled = false;
+        ReloadInterfaceButton.IsEnabled = false;
+        Browser.Visibility = Visibility.Hidden;
+        StartupPanel.Visibility = Visibility.Visible;
+        WebViewLoadingIndicator.Visibility = Visibility.Visible;
         StartupStatus.Text = "Fechando os componentes do CEP Horas e recriando o navegador local…";
         try
         {
             WebViewProfileRecovery.Request();
-            TerminateOwnedWebViewProcesses();
-            TerminatePeerDesktopProcesses();
+            var webViewIds = GetOwnedWebViewProcessIds();
+            await Task.Run(() =>
+            {
+                KillOwnedWebViewProcesses(webViewIds);
+                TerminatePeerDesktopProcesses();
+            });
+            if (closed) return;
             Process.Start(WebViewProfileRecovery.CreateRestartInfo());
             exiting = true;
             Close();
@@ -355,13 +398,23 @@ public partial class MainWindow : Window
         catch
         {
             StartupStatus.Text = "Não foi possível reiniciar automaticamente. Feche o CEP Horas e abra novamente.";
+            WebViewLoadingIndicator.Visibility = Visibility.Collapsed;
             ForceRestartButton.IsEnabled = true;
+            ReloadInterfaceButton.IsEnabled = true;
+            restartingInterface = false;
         }
     }
 
-    private void TerminateOwnedWebViewProcesses()
+    private int[] GetOwnedWebViewProcessIds()
     {
-        var ids = Browser.CoreWebView2?.Environment.GetProcessInfos().Select(item => item.ProcessId).ToArray() ?? [];
+        try { return Browser.CoreWebView2?.Environment.GetProcessInfos().Select(item => item.ProcessId).ToArray() ?? []; }
+        catch (Exception error) when (error is InvalidOperationException or System.Runtime.InteropServices.COMException) { return []; }
+    }
+
+    private void TerminateOwnedWebViewProcesses() => KillOwnedWebViewProcesses(GetOwnedWebViewProcessIds());
+
+    private static void KillOwnedWebViewProcesses(int[] ids)
+    {
         foreach (var id in ids)
         {
             try
