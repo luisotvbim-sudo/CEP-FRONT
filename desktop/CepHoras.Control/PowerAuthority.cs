@@ -13,8 +13,10 @@ internal sealed class PowerAuthority(
     Func<bool> healthy,
     ISystemPower system,
     Action<string, string> audit,
-    Func<DateTimeOffset>? clock = null)
+    Func<DateTimeOffset>? clock = null,
+    Func<bool>? maintenance = null)
 {
+    private readonly object gate = new();
     private sealed record Pending(string RequestId, string Action, string OwnerSid, DateTimeOffset ExecuteAt);
     private static readonly HashSet<string> Actions = new(StringComparer.Ordinal) { "shutdown", "restart", "hibernate" };
     private readonly Func<DateTimeOffset> now = clock ?? (() => DateTimeOffset.UtcNow);
@@ -22,6 +24,23 @@ internal sealed class PowerAuthority(
     private Pending? pending;
 
     internal ControlResponse Handle(ControlRequest request, string sid)
+    {
+        lock (gate) return HandleLocked(request, sid);
+    }
+
+    internal void CancelForMaintenance()
+    {
+        lock (gate)
+        {
+            if (pending is null) return;
+            system.Cancel(pending.Action);
+            RememberCancelled(pending.RequestId);
+            audit("power-cancelled-for-update:" + pending.Action, pending.OwnerSid);
+            pending = null;
+        }
+    }
+
+    private ControlResponse HandleLocked(ControlRequest request, string sid)
     {
         if (request.Operation == "status")
         {
@@ -34,6 +53,8 @@ internal sealed class PowerAuthority(
         if (request.Operation == "cancel") return Cancel(request, sid);
         if (request.Operation != "schedule")
             return new("invalid_request", "Operação inválida.");
+        if (maintenance?.Invoke() == true)
+            return new("update_maintenance", "O CEP Horas está sendo atualizado. Aguarde para solicitar uma ação de energia.");
         if (configuration()?.Active != true)
             return new("inactive", "Controle ainda não foi ativado pela instalação.");
         if (!healthy())

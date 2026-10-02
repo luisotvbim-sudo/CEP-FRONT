@@ -15,18 +15,24 @@ internal sealed class ControlService : ServiceBase
     private readonly WindowsPower system = new();
     private readonly DesktopSupervisor desktopSupervisor;
     private readonly DesktopLifecycleController desktopLifecycle;
+    private readonly MsiUpdateCoordinator updates;
+    private readonly PowerAuthority authority;
     private Task? listener;
     private Task? supervisor;
 
     internal ControlService()
     {
         var desktopState = new DesktopSupervisionState();
-        desktopSupervisor = new DesktopSupervisor(desktopState);
+        updates = new MsiUpdateCoordinator(stop.Token);
+        authority = new PowerAuthority(PolicyStore.Read, PolicyStore.MatchesExpected, system, PolicyStore.Audit,
+            maintenance: () => updates.InMaintenance);
+        desktopSupervisor = new DesktopSupervisor(desktopState, () => updates.InMaintenance);
         desktopLifecycle = new DesktopLifecycleController(
             desktopState,
             () => PolicyStore.Restore(),
             PolicyStore.Apply,
-            PolicyStore.Audit);
+            PolicyStore.Audit,
+            () => updates.InMaintenance);
         ServiceName = ControlWire.ServiceName;
         CanStop = true;
         CanHandleSessionChangeEvent = true;
@@ -35,6 +41,8 @@ internal sealed class ControlService : ServiceBase
 
     protected override void OnStart(string[] args)
     {
+        try { updates.Initialize(authority.CancelForMaintenance); }
+        catch (Exception error) { PolicyStore.Audit("update-initialization-failed:" + error.GetType().Name, "SYSTEM"); }
         try { desktopLifecycle.ProtectAtServiceStart(); }
         catch (Exception error)
         {
@@ -63,6 +71,7 @@ internal sealed class ControlService : ServiceBase
     {
         stop.Cancel();
         Task.WaitAll([listener ?? Task.CompletedTask, supervisor ?? Task.CompletedTask], TimeSpan.FromSeconds(10));
+        updates.Dispose();
         system.Dispose();
     }
 
@@ -99,7 +108,6 @@ internal sealed class ControlService : ServiceBase
         try
         {
             PolicyStore.SecureDirectory();
-            var authority = new PowerAuthority(PolicyStore.Read, PolicyStore.MatchesExpected, system, PolicyStore.Audit);
             while (!stop.IsCancellationRequested)
             {
                 await using var pipe = NamedPipeServerStreamAcl.Create(
@@ -118,9 +126,9 @@ internal sealed class ControlService : ServiceBase
                     deadline.CancelAfter(TimeSpan.FromSeconds(5));
                     var request = await ControlWire.Read<ControlRequest>(pipe, deadline.Token);
                     var sid = CallerSid(pipe);
-                    var sessionId = TrustedClientSession(pipe);
+                    var client = sid is null ? null : TrustedClient(pipe, sid);
                     ControlResponse response;
-                    if (sid is null || sessionId is null)
+                    if (sid is null || client is null)
                         response = new("access_denied", "Somente o CEP Horas instalado pode solicitar esta operação.");
                     else
                     {
@@ -128,8 +136,9 @@ internal sealed class ControlService : ServiceBase
                         {
                             response = request.Operation switch
                             {
-                                "desktop-suspend" => desktopLifecycle.Suspend(sessionId.Value, sid),
-                                "desktop-resume" => desktopLifecycle.Resume(sessionId.Value, sid),
+                                "desktop-suspend" => desktopLifecycle.Suspend(client.SessionId, sid),
+                                "desktop-resume" => desktopLifecycle.Resume(client.SessionId, sid),
+                                "update-check" or "update-start" or "update-status" or "update-ready" => updates.Handle(request, client),
                                 _ => authority.Handle(request, sid)
                             };
                         }
@@ -153,7 +162,7 @@ internal sealed class ControlService : ServiceBase
         }
     }
 
-    private static uint? TrustedClientSession(NamedPipeServerStream pipe)
+    private static UpdateClient? TrustedClient(NamedPipeServerStream pipe, string sid)
     {
         if (!GetNamedPipeClientProcessId(pipe.SafePipeHandle, out var id) || id == 0) return null;
         try
@@ -164,7 +173,7 @@ internal sealed class ControlService : ServiceBase
             if (!string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase) ||
                 (File.GetAttributes(expected) & FileAttributes.ReparsePoint) != 0)
                 return null;
-            return checked((uint)process.SessionId);
+            return new(sid, checked((uint)process.SessionId), checked((int)id), process.StartTime.ToUniversalTime().Ticks);
         }
         catch (Exception error) when (error is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception or IOException)
         { return null; }

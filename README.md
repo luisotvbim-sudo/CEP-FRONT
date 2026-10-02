@@ -47,18 +47,20 @@ Use uma conta existente no navegador ou no executável desktop. Não há credenc
 O instalador corporativo unificado inclui o aplicativo, inicialização automática, serviço `CepHorasControl` e políticas locais de energia. Nas áreas autenticadas, o menu discreto oferece Desligar, Reiniciar, Hibernar e Verificar status. A API decide conforme a análise/tolerância do usuário; uma ação liberada aguarda dez segundos e pode ser cancelada. Quando a API realmente não responde no transporte, o host permite a contingência local. Veja [menu de energia](docs/menu-energia.md) e [instalador corporativo](docs/instalador-corporativo.md).
 
 ```powershell
-./scripts/build-corporate-msi.ps1 -Version 0.4.6
+./scripts/build-corporate-msi.ps1 -Version 0.4.7 -UpdateSigningKeyPath '<chave local da TI protegida por DPAPI>'
 ```
 
 O MSI é por máquina e exige autorização administrativa. Ele altera direitos e políticas do Windows; instalação, ações reais e restauração devem ser homologadas primeiro numa VM ou máquina piloto. Builds portáteis e o navegador não executam ações de energia.
 
 Desde o MSI 0.4.3, o aplicativo mantém uma única instância por sessão: abrir o atalho traz a instância iniciada pelo serviço para a frente, sem disputar o perfil WebView2. Se a interface nativa não carregar, **Reiniciar CEP Horas** encerra somente processos do CEP Horas e do WebView2 pertencentes àquela instância, preserva o perfil anterior como backup, recria o navegador local e abre o aplicativo novamente. O serviço `CepHorasControl` continua ativo para manter as políticas e relançar o host; o botão não encerra serviços do Windows nem executa ação de energia.
 
+O MSI 0.4.9 acrescenta indicador nativo de carregamento e **Recarregar interface** no centro da tela de recuperação, no rodapé e na bandeja. O WPF espera conteúdo renderizado no `#root`, além do sucesso da navegação HTML. Falha de navegação, root vazio, ausência de conteúdo por 30 segundos e falhas do renderizador oferecem recuperação. Recarregar preserva o perfil e a sessão; quando o processo principal do navegador morreu, a recuperação recria o navegador pelo mecanismo existente. Esperas de encerramento nessa recuperação são executadas fora da thread visual. Eventos técnicos limitados ficam em `%LOCALAPPDATA%\Conceito\CepHoras\Diagnostics\webview.jsonl`, sem conteúdo de página, URLs, credenciais ou dados de conta. O tratamento melhora detecção/recuperação; não comprova a causa do travamento reportado.
+
 Desde o MSI 0.4.4, o menu aberto com o botão direito no ícone do CEP Horas perto do relógio inclui **Fechar CEP Horas**. A confirmação usa somente a data local no formato `ddMMyy` seguida de `#pec`, inclusive zeros à esquerda, e funciona sem internet. A senha não é exibida, persistida ou registrada. No MSI 0.4.5, o fechamento autorizado restaura o estado original das políticas e suspende o relançamento apenas para a sessão Windows atual; abrir o programa manualmente reaplica o bloqueio e reativa a supervisão. Logoff e reinício do serviço também reaplicam a proteção antes da próxima sessão.
 
 A página pública `/download` apresenta o pacote Windows de teste, requisitos, instruções e links da release. Ela não inicia uma sessão nem consulta a API. O download usa uma tag fixa do GitHub para não confundir versões de teste com o MSIX assinado.
 
-A integração do instalador com bandeja, WebView2 e teste de popup nativo está descrita em [Aplicativo Windows](docs/aplicativo-windows.md). A distribuição assinada e a atualização real entre versões continuam pendentes. O handoff específico para adaptar o atualizador histórico de MSIX ao MSI corporativo está em [Contexto do atualizador MSI](docs/contexto-atualizador-msi.md).
+A integração do instalador com bandeja, WebView2 e teste de popup nativo está descrita em [Aplicativo Windows](docs/aplicativo-windows.md). O MSI 0.4.7 inclui o atualizador pelo serviço: busca releases estáveis, apresenta **Atualizar agora/Depois** e aplica pacotes validados sem pedir credenciais administrativas ao usuário. A descoberta ocorre ao abrir, a cada seis horas e por **Verificar atualizações** na bandeja. A instalação inicial requer administrador. [Atualizador MSI](docs/atualizador-msi.md) descreve chave de publicação, manifesto assinado e piloto entre duas versões. Homologação real e distribuição permanecem pendentes até evidência operacional. O [contexto anterior](docs/contexto-atualizador-msi.md) preserva o desenho e o histórico.
 
 Pré-requisitos adicionais: .NET SDK 10 e Microsoft Edge WebView2 Runtime.
 
@@ -85,13 +87,13 @@ dotnet publish desktop/CepHoras.Desktop -c Release -r win-x64 --self-contained f
 
 O script valida o pacote e os arquivos copiados, instala em `%LOCALAPPDATA%/Programs/Conceito/CEP Horas` e cria o atalho `CEP Horas` no menu Iniciar. Ele se recusa a substituir uma instalação ou um atalho existente. Esse instalador local de teste **não recebe atualizações** e não migra automaticamente para MSIX.
 
-O caminho de atualização do desktop é um pacote MSIX assinado, distribuído como release pública no GitHub. O app MSIX consulta releases `desktop-vX.Y.Z.W` ao abrir e a cada 6 horas enquanto estiver aberto. Quando encontrar uma versão maior com o asset `CEP-Horas-win-x64.msix`, mostra “Atualizar” na própria janela; após o clique, verifica SHA-256 e identidade do pacote e abre o Instalador de Aplicativos do Windows. O Windows valida a assinatura antes da instalação. A checagem não roda no instalador local de teste nem no navegador. Para construir um pacote estrutural de teste, **não instalável nem distribuível**:
+O fluxo histórico MSIX consulta releases `desktop-vX.Y.Z.W` ao abrir e a cada seis horas. Com uma versão maior e asset `CEP-Horas-win-x64.msix`, apresenta **Atualizar**, verifica SHA-256 e identidade e abre o Instalador de Aplicativos; o Windows valida a assinatura MSIX. Esse fluxo é separado do MSI corporativo 0.4.7 e não roda no instalador local de teste nem no navegador. Para construir um MSIX estrutural de teste, **não instalável nem distribuível**:
 
 ```powershell
 ./scripts/build-desktop-msix.ps1 -Publisher 'CN=Conceito Engenharia' -UnsignedForTest
 ```
 
-Para distribuir, é necessário obter assinatura confiável, gerar o MSIX assinado com `-CertificateThumbprint`, validar a instalação/atualização em outro PC e publicar o asset em uma release estável com tag e versão correspondentes. Ainda não há certificado nem release desktop; portanto a atualização real **não está ativada**. O pacote MSIX é histórico. O MSI corporativo atual é self-contained, inicia o aplicativo em cada logon, mantém a execução em bandeja e instala o serviço de controle. A migração planejada usa uma versão MSI bootstrap instalada manualmente e atualizações seguintes validadas/executadas pelo serviço; o desenho e os critérios de segurança estão no [contexto do atualizador MSI](docs/contexto-atualizador-msi.md).
+A distribuição MSIX ainda depende de certificado confiável e homologação próprios. O MSI corporativo self-contained inicia em cada logon, mantém o aplicativo em bandeja e instala o serviço de controle. Seu bootstrap 0.4.7 inclui a pública de confiança e o atualizador do serviço; as próximas releases usam manifesto com assinatura destacada RSA-PSS. Essa assinatura autentica o canal de atualização e não equivale a Authenticode do MSI. O procedimento e os limites de homologação estão em [atualizador MSI](docs/atualizador-msi.md).
 
 O [handoff do aplicativo Windows](docs/desktop-handoff.md) registra o estado testado, dependências de notificações, estratégia de atualização ainda pendente e os passos para continuar em outro computador.
 

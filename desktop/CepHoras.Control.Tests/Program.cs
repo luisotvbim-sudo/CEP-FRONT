@@ -3,6 +3,7 @@ using System.Security.AccessControl;
 using System.Security.Principal;
 using CepHoras.Control;
 using CepHoras.Control.Protocol;
+using CepHoras.Updates;
 
 // These checks never install a service, modify Windows policy or invoke a real power action.
 var original = new PolicySnapshot(
@@ -42,6 +43,73 @@ healthy = true;
 configuration = null;
 Assert(authority.Handle(new("schedule", Guid.NewGuid().ToString(), "shutdown", 10), "userA").Code == "inactive", "missing policy denies");
 Assert(audits.All(value => !value.Contains("password", StringComparison.OrdinalIgnoreCase)), "audit has no credential");
+
+configuration = new(2, true, "active", original);
+var inMaintenance = false;
+var updatePower = new FakePower();
+var guardedAuthority = new PowerAuthority(() => configuration, () => true, updatePower, (_, _) => { }, () => now, () => inMaintenance);
+var beforeUpdateId = Guid.NewGuid().ToString();
+Assert(guardedAuthority.Handle(new("schedule", beforeUpdateId, "shutdown", 10), "owner").Code == "scheduled", "power before update accepted");
+inMaintenance = true;
+guardedAuthority.CancelForMaintenance();
+Assert(updatePower.Cancelled.SequenceEqual(["shutdown"]), "update cancels pending power");
+Assert(guardedAuthority.Handle(new("schedule", Guid.NewGuid().ToString(), "restart", 10), "owner").Code == "update_maintenance", "maintenance denies new power");
+inMaintenance = false;
+Assert(guardedAuthority.Handle(new("schedule", beforeUpdateId, "shutdown", 10), "owner").Code == "cancelled", "cancelled power cannot reappear after maintenance");
+var restoreCount = 0;
+var guardedLifecycle = new DesktopLifecycleController(new(), () => restoreCount++, () => { }, (_, _) => { }, () => inMaintenance);
+inMaintenance = true;
+Assert(guardedLifecycle.Suspend(1, "owner").Code == "update_maintenance" && restoreCount == 0, "update never restores power policies through desktop-suspend");
+Assert(guardedLifecycle.Resume(1, "owner").Code == "update_maintenance", "manual resume cannot bypass update maintenance");
+
+var updateOwner = new UpdateClient("owner", 2, 42, 1000);
+var release = new MsiRelease(new Version(0, 4, 8), new Uri("https://github.com/luisotvbim-sudo/CEP-FRONT/releases/download/installer-v0.4.8/CEP-Horas-Windows-win-x64.msi"), 1, new string('A', 64), [], []);
+var ready = new UpdateState(1, Guid.NewGuid(), "0.4.7", "0.4.8", "ready", updateOwner, now.AddMinutes(2), release);
+Assert(UpdateAuthorization.CanAcknowledge(ready, updateOwner, "0.4.8", now, false), "owner can acknowledge exact approved update");
+Assert(!UpdateAuthorization.CanAcknowledge(ready, updateOwner with { Sid = "foreign" }, "0.4.8", now, false), "another SID cannot close owner for update");
+Assert(!UpdateAuthorization.CanAcknowledge(ready, updateOwner with { SessionId = 3 }, "0.4.8", now, false), "another session cannot acknowledge");
+Assert(!UpdateAuthorization.CanAcknowledge(ready, updateOwner with { ProcessStartedUtcTicks = 1001 }, "0.4.8", now, false), "reused PID cannot acknowledge");
+Assert(!UpdateAuthorization.CanAcknowledge(ready, updateOwner, "0.4.9", now, false), "version changed cannot install");
+Assert(!UpdateAuthorization.CanAcknowledge(ready, updateOwner, "0.4.8", ready.Deadline, false), "ready timeout exact boundary denies");
+Assert(!UpdateAuthorization.CanAcknowledge(ready, updateOwner, "0.4.8", now, true), "unfinished preparation cannot start concurrent runner");
+Assert(UpdateRecovery.Reconcile(ready, now.AddMinutes(3), false, false, "0.4.7").Phase == "failed", "expired readiness resumes normal operation");
+var installing = ready with { Phase = "installing", Deadline = now.AddMinutes(40), RunnerPid = 99 };
+Assert(UpdateRecovery.Reconcile(installing, now.AddHours(2), true, false, "0.4.8").InMaintenance, "alive helper prevents premature completion even after deadline");
+Assert(UpdateRecovery.Reconcile(installing, now.AddHours(2), false, true, "0.4.8").InMaintenance, "alive installer keeps maintenance after helper crash");
+Assert(UpdateRecovery.Reconcile(installing, now.AddMinutes(1), false, false, "0.4.8").InMaintenance, "starting installer gap cannot be mistaken for commit");
+Assert(UpdateRecovery.Reconcile(installing, now.AddHours(2), false, false, "0.4.7").Phase == "failed", "abandoned expired update recovers baseline");
+var previousBoot = Guid.NewGuid();
+Assert(UpdateRecovery.Reconcile(installing with { BootId = previousBoot }, now.AddSeconds(1), false, false, "0.4.7", Guid.NewGuid())
+    is { Phase: "failed", InstalledVersion: "0.4.7" }, "reboot immediately recovers interrupted installation without waiting forty minutes");
+Assert(UpdateRecovery.Reconcile(installing with { BootId = previousBoot }, now.AddSeconds(1), false, false, "0.4.8", Guid.NewGuid()).Phase == "failed",
+    "reboot and new file version cannot fabricate an installer commit");
+Assert(UpdateRecovery.Reconcile(installing with { BootId = previousBoot }, now.AddSeconds(1), true, false, "0.4.7", previousBoot).InMaintenance,
+    "same boot service restart preserves live runner maintenance");
+Assert(UpdateRecovery.Completed(installing, 0, "0.4.8").Phase == "success", "MSI commit requires expected installed version");
+Assert(UpdateRecovery.Completed(installing, 1603, "0.4.7").Phase == "failed", "MSI failure exits maintenance after return");
+Assert(UpdateRecovery.Completed(installing, 0, "0.4.7").Phase == "failed", "zero exit alone cannot fabricate installed version");
+Assert(UpdateRecovery.Completed(installing, 3010, "0.4.8") is { Phase: "success", RestartRequired: true }, "3010 retains restart requirement");
+Assert(UpdateRecovery.Completed(installing, 3010, "0.4.7") is { Phase: "failed", RestartRequired: true }, "3010 old payload never claims fully installed");
+Assert(UpdateStatusProjection.Phase("available", "success", true, false) == "available", "new release overrides old successful marker");
+Assert(UpdateStatusProjection.Phase("downloading", "failed", false, true) == "downloading", "new worker overrides previous failure");
+Assert(UpdateStatusProjection.Phase("installing", "success", false, false) == "success", "runner result becomes visible without service restart");
+Assert(!UpdateStore.IsVersion("0.4.8.0") && !UpdateStore.IsVersion("../0.4.8") && UpdateStore.IsVersion("0.4.8"), "approved version is canonical three parts only");
+var exclusiveFixture = Path.Combine(Path.GetTempPath(), "CepHoras.UpdateLock." + Guid.NewGuid().ToString("N"));
+try
+{
+    using (var held = UpdateExclusiveLock.Open(exclusiveFixture))
+    {
+        var deniedLeases = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => Task.Run(() =>
+        {
+            try { using var duplicate = UpdateExclusiveLock.Open(exclusiveFixture); return false; }
+            catch (IOException) { return true; }
+        })));
+        Assert(deniedLeases.All(x => x), "service/helper global file lease rejects every concurrent installer");
+    }
+    using var next = UpdateExclusiveLock.Open(exclusiveFixture);
+    Assert(next.CanWrite, "file lease can transfer to helper after service releases it");
+}
+finally { if (File.Exists(exclusiveFixture)) File.Delete(exclusiveFixture); }
 
 var supervision = new DesktopSupervisionState();
 Assert(supervision.AllowsLaunch(12), "supervision starts active");
@@ -148,6 +216,7 @@ using (var client = new NamedPipeClientStream(".", fixturePipe, PipeDirection.In
 }
 
 Console.WriteLine("PASS: fixed power actions, ten-second scheduling, idempotency, cancellation, policy fail-closed, rollback and bounded IPC. No system action executed.");
+Console.WriteLine("PASS: update owner/version/expiry, recovery, maintenance power cancellation and status projection. Privileged MSI/ACL/StopServices validation remains deferred to a SYSTEM pilot.");
 
 static void Assert(bool value, string message)
 {

@@ -1,5 +1,7 @@
 # Contexto para continuidade — atualizador do MSI corporativo
 
+> Aditivo de implementação em 02/10/2026: o checkout isolado `codex/msi-auto-updater`, baseado em `dc58bde`, implementa o canal MSI e os scripts de publicação. A raiz de confiança escolhida é assinatura destacada RSA-PSS/SHA-256 do manifesto com pública RSA 3072 embutida. Build padrão bootstrap `0.4.7`; primeiro upgrade real de homologação `0.4.8`. O publicador usa privada DPAPI CurrentUser e exportação/importação de backup PKCS#8 com senha; nenhuma credencial pertence aos clientes. Procedimento e limites em [Atualizador MSI](atualizador-msi.md). A instalação piloto, backup externo recuperado e rollout para aproximadamente 40 máquinas permanecem pendentes de evidência operacional. O texto abaixo preserva o estado e desenho anteriores à implementação; seus números de testes e descrição MSIX são históricos.
+
 Registrado em 02/10/2026 na branch `codex/installer-integrado`. Este documento descreve o estado real, o funcionamento pretendido e a sequência segura para outro agente implementar o atualizador do CEP Horas sem reconstruir o contexto da aplicação.
 
 ## Objetivo

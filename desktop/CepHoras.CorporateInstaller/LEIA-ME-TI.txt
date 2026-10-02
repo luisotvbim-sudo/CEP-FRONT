@@ -51,3 +51,15 @@ LIMITES
 Nao impede administrador/SYSTEM, corte de energia, pressao prolongada do botao,
 firmware, reinicio critico do Windows ou GPO de dominio. A instalacao, aplicacao
 real de politica, acoes reais e desinstalacao precisam de homologacao da TI.
+
+ATUALIZACAO MSI
+- A versao 0.4.7 e o bootstrap e exige instalacao manual administrativa uma vez.
+- Versoes seguintes usam manifesto RSA-PSS/SHA256 assinado pela TI, validado
+  novamente pelo servico local com chave publica embutida. Nenhum token do
+  GitHub, chave privada ou senha administrativa e instalado nos clientes.
+- Atualizar agora inicia somente um MSI aprovado do canal fixo; Depois adia.
+  A manutencao do update preserva as politicas e nao usa o fechamento diario.
+- Homologar 0.4.7 para 0.4.8 com conta comum em VM/PC piloto antes da equipe.
+- Build sem manifesto e assinatura validos nao pertence ao canal automatico.
+- Publicacao, backup portatil da chave e recuperacao sao responsabilidades da TI.
+  O procedimento completo fica em docs/atualizador-msi.md do projeto CEP-FRONT.

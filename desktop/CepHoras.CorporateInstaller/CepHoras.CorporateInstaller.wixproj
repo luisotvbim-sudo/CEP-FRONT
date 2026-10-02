@@ -4,6 +4,9 @@
     <InstallerPlatform>x64</InstallerPlatform>
     <Cultures>pt-BR</Cultures>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Release artifacts must not share storage with mutable intermediate output. -->
+    <CreateHardLinksForCopyFilesToOutputDirectoryIfPossible>false</CreateHardLinksForCopyFilesToOutputDirectoryIfPossible>
+    <CreateSymbolicLinksForCopyFilesToOutputDirectoryIfPossible>false</CreateSymbolicLinksForCopyFilesToOutputDirectoryIfPossible>
     <DefineConstants>InstallerVersion=$(InstallerVersion)</DefineConstants>
   </PropertyGroup>
   <ItemGroup>

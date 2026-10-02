@@ -28,7 +28,9 @@ foreach ($expected in @(
 $sequence = Read-Rows 'SELECT `Action`, `Condition`, `Sequence` FROM `InstallExecuteSequence`' 3
 $apply = @($sequence | Where-Object { $_.Values[0] -eq 'ApplyPolicy' })
 $files = @($sequence | Where-Object { $_.Values[0] -eq 'InstallFiles' })
-if ([int]$apply[0].Values[2] -le [int]$files[0].Values[2] -or $apply[0].Values[1] -notmatch 'NOT Installed') { throw 'Política deve ser aplicada somente depois dos arquivos numa instalação nova/upgrade.' }
+if ([int]$apply[0].Values[2] -le [int]$files[0].Values[2] -or $apply[0].Values[1] -cne 'NOT Installed AND NOT WIX_UPGRADE_DETECTED') { throw 'Política inicial deve ser aplicada depois dos arquivos, preservando a política anterior durante upgrades.' }
+$rollbackApply = @($sequence | Where-Object { $_.Values[0] -eq 'RollbackApplyPolicy' })
+if ($rollbackApply.Count -ne 1 -or $rollbackApply[0].Values[1] -cne 'NOT Installed AND NOT WIX_UPGRADE_DETECTED') { throw 'Rollback de upgrade não pode restaurar/liberar a política anterior.' }
 $restore = @($sequence | Where-Object { $_.Values[0] -eq 'RestorePolicy' })
 $stop = @($sequence | Where-Object { $_.Values[0] -eq 'StopServices' })
 if ([int]$restore[0].Values[2] -ge [int]$stop[0].Values[2] -or $restore[0].Values[1] -notmatch 'NOT UPGRADINGPRODUCTCODE') { throw 'Restauração deve ocorrer antes de parar/remover, preservando upgrade.' }
