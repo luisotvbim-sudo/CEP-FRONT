@@ -2,7 +2,7 @@
 
 Implementação iniciada na branch `codex/power-action-menu` e integrada ao MSI na branch `codex/installer-integrado`. Contrato importado integralmente de `CEP-API/codex/power-action-check`, commit `cf15a5c1365f1a240b40829a3edd2e83307939da`, arquivo `docs/openapi-current.json`. Os dois snapshots e os tipos gerados estão alinhados. A API e o PostgreSQL locais foram executados em Docker; o WPF confirmou o transporte até a API com uma conta inexistente, sem utilizar conta ou fontes reais.
 
-> Aditivo do MSI 0.4.2: o host mantém uma única instância por sessão e oferece **Reiniciar CEP Horas** quando o WebView2 falha. A recuperação encerra somente os processos do CEP Horas e os subprocessos WebView2 pertencentes à instância, preserva o perfil anterior e reabre com perfil limpo. O serviço de controle permanece ativo e nenhuma ação de energia é executada.
+> Aditivo do MSI 0.4.3: o host mantém uma única instância por sessão e oferece **Reiniciar CEP Horas** quando o WebView2 falha. A recuperação encerra somente os processos do CEP Horas e os subprocessos WebView2 pertencentes à instância, preserva o perfil anterior e reabre com perfil limpo. O serviço de controle permanece ativo e nenhuma ação de energia é executada.
 
 > Produção em 01/10/2026: CEP API `b36c6e1`, migração `PowerActionOverrides`, PIN dedicado e CEP-FRONT `a4a0a4d` implantados. O segredo foi provisionado interativamente sem eco e não foi incluído em código, documentação ou pacote.
 

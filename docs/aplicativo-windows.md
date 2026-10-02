@@ -25,7 +25,7 @@ Executar `.local/package/CEP-Horas-win-x64/CepHoras.exe`. Manter toda a pasta ju
 
 O bundle ZIP de teste contém `app/` e `install.ps1`, que instala no perfil Windows e cria atalho, sem substituir instalação existente. Ainda não é uma distribuição assinada. Não confundir o ZIP executável com o MSIX `UNSIGNED`, que serve apenas para inspeção e não deve ser instalado/distribuído.
 
-O instalador corporativo atual é gerado por `./scripts/build-corporate-msi.ps1 -Version 0.4.2`. Ele produz um único MSI self-contained com WPF, WebView2, serviço `CepHorasControl`, políticas de energia, inicialização automática e material de recuperação da TI. O build e a inspeção estrutural não instalam o pacote nem aplicam políticas nesta máquina. Consulte [Instalador corporativo](instalador-corporativo.md).
+O instalador corporativo atual é gerado por `./scripts/build-corporate-msi.ps1 -Version 0.4.3`. Ele produz um único MSI self-contained com WPF, WebView2, serviço `CepHorasControl`, políticas de energia, inicialização automática e material de recuperação da TI. O build e a inspeção estrutural não instalam o pacote nem aplicam políticas nesta máquina. Consulte [Instalador corporativo](instalador-corporativo.md).
 
 O host mantém uma única instância por sessão. Quando o serviço já iniciou o CEP Horas em segundo plano, abrir o atalho sinaliza a instância existente e mostra sua janela. Em falha de inicialização ou navegação, o botão **Reiniciar CEP Horas** encerra os processos do próprio host e os subprocessos WebView2 vinculados, move o perfil local para um backup recuperável, inicia um perfil limpo e reabre a janela. O serviço de controle permanece ativo e nenhum outro serviço ou aplicativo do Windows é encerrado.
 

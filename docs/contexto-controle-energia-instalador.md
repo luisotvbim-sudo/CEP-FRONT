@@ -157,7 +157,7 @@ sudo docker compose --env-file .env -f compose.production.yaml run --rm --no-dep
 2. Executar as migrações e confirmar `/health/ready`.
 3. Provisionar o PIN de produção de forma interativa, sem registrá-lo em histórico, Git ou logs.
 4. Implantar o `cep-front` atualizado e validar `https://cep.lat/healthz` e o proxy de mesma origem para `/api/`.
-5. Distribuir o MSI 0.4.2 em uma VM ou máquina piloto com autorização administrativa.
+5. Distribuir o MSI 0.4.3 em uma VM ou máquina piloto com autorização administrativa.
 6. Validar login, PIN incorreto, rate limit, PIN correto, expiração em cinco minutos, as três ações, contagem de dez segundos, cancelamento, retorno às regras normais e contingência com indisponibilidade real da API.
 7. Somente depois expandir para as demais máquinas.
 
@@ -210,14 +210,14 @@ dotnet run --project desktop/CepHoras.Desktop.Tests -c Release
 dotnet run --project desktop/CepHoras.Control.Tests -c Release
 dotnet run --project desktop/CepHoras.Updates.Tests -c Release
 node scripts/test-desktop.mjs
-./scripts/build-corporate-msi.ps1 -Version 0.4.2
+./scripts/build-corporate-msi.ps1 -Version 0.4.3
 ```
 
-Na entrega do PIN em 01/10/2026 passaram 83 testes unitários, 174 testes Playwright em desktop/mobile, 189 verificações .NET do desktop, 16 verificações do atualizador, testes do serviço, lint, TypeScript, builds Vite e WPF e a inspeção estrutural do MSI 0.4.1. No aditivo de recuperação, o desktop passou 200 verificações, incluindo instância única, sinalização da janela, preservação do perfil corrompido e consumo idempotente do pedido de recuperação; build Release, serviço, atualizador e inspeção estrutural do MSI 0.4.2 também passaram. Nenhuma ação real de energia foi executada.
+Na entrega do PIN em 01/10/2026 passaram 83 testes unitários, 174 testes Playwright em desktop/mobile, 189 verificações .NET do desktop, 16 verificações do atualizador, testes do serviço, lint, TypeScript, builds Vite e WPF e a inspeção estrutural do MSI 0.4.1. No aditivo de recuperação, o desktop passou 200 verificações, incluindo instância única, sinalização da janela, preservação do perfil corrompido e consumo idempotente do pedido de recuperação; build Release, serviço, atualizador e inspeção estrutural do MSI 0.4.3 também passaram. Nenhuma ação real de energia foi executada.
 
 ## Recuperação da tela branca do WebView2
 
-No MSI 0.4.2 ou posterior, uma falha de inicialização ou navegação mostra **Reiniciar CEP Horas**. O botão fecha as instâncias do CEP Horas na sessão, encerra somente os subprocessos WebView2 vinculados, preserva o perfil anterior como backup, cria um perfil limpo e reabre a janela. O `CepHorasControl` permanece ativo; nenhum serviço genérico do Windows é encerrado.
+No MSI 0.4.3 ou posterior, uma falha de inicialização ou navegação mostra **Reiniciar CEP Horas**. O botão fecha as instâncias do CEP Horas na sessão, encerra somente os subprocessos WebView2 vinculados, preserva o perfil anterior como backup, cria um perfil limpo e reabre a janela. O `CepHorasControl` permanece ativo; nenhum serviço genérico do Windows é encerrado.
 
 Se a recuperação automática não puder ser usada, confirme que `wwwroot/index.html` e os assets existem junto ao aplicativo e que o processo WebView2 foi iniciado. Feche o CEP Horas, preserve e renomeie o perfil:
 
@@ -234,11 +234,11 @@ Abra novamente o aplicativo para o WebView2 criar um perfil limpo. Mantenha o di
 | CEP-API — PIN e override | `main` / `c0b398f` | Implementação funcional |
 | CEP-API — precisão PostgreSQL | `main` / `b36c6e1` | Contrato de referência e testes aprovados |
 | CEP-FRONT — instalador integrado | `codex/installer-integrado`, alinhada à `main`; base histórica `3798f2a` | MSI, bloqueio nativo, liberação administrativa e documentação consolidada |
-| CEP-FRONT — liberação administrativa | `main` / `a22380c` | Front, WPF e contrato; incorporados ao MSI 0.4.2 com recuperação do WebView2 |
+| CEP-FRONT — liberação administrativa | `main` / `a22380c` | Front, WPF e contrato; incorporados ao MSI 0.4.3 com recuperação do WebView2 |
 
 Em produção, a CEP API `b36c6e1`, a migração `PowerActionOverrides`, o PIN dedicado e o CEP-FRONT `a4a0a4d` foram implantados em 01/10/2026. Saúde pública e proxy responderam HTTP 200; o endpoint de liberação respondeu 401 sem autenticação. O valor do PIN não foi registrado neste documento.
 
-O MSI 0.4.0 instalado anteriormente não possui a interface de PIN. O MSI 0.4.1 possui o PIN, mas ainda permite que o atalho abra uma segunda instância concorrente. Para usar a liberação de cinco minutos com instância única e recuperação forçada, instale o MSI 0.4.2 ou posterior.
+O MSI 0.4.0 instalado anteriormente não possui a interface de PIN. O MSI 0.4.1 possui o PIN, mas ainda permite que o atalho abra uma segunda instância concorrente. Para usar a liberação de cinco minutos com instância única e recuperação forçada, instale o MSI 0.4.3 ou posterior.
 
 ## Decisões que não devem ser alteradas silenciosamente
 
