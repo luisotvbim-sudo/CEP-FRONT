@@ -11,6 +11,8 @@ internal static class Program
     {
         try
         {
+            if (args.SequenceEqual(["--run-update"]))
+                return MsiUpdateRunner.RunAsync().GetAwaiter().GetResult();
             if (args.SequenceEqual(["--service"]))
             {
                 ServiceBase.Run(new ControlService());

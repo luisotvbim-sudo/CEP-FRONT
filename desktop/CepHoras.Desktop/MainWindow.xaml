@@ -7,7 +7,7 @@
     <Border x:Name="UpdateBanner" Grid.Row="0" Visibility="Collapsed" Background="#FFF0E6" BorderBrush="#DA5D1E" BorderThickness="0,0,0,1" Padding="12">
       <DockPanel LastChildFill="True">
         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-          <Button x:Name="UpdateNowButton" Content="Atualizar" Click="UpdateNow_Click" Padding="12,6" Margin="8,0,0,0" />
+          <Button x:Name="UpdateNowButton" Content="Atualizar agora" Click="UpdateNow_Click" Padding="12,6" Margin="8,0,0,0" />
           <Button x:Name="UpdateLaterButton" Content="Depois" Click="UpdateLater_Click" Padding="12,6" Margin="8,0,0,0" />
         </StackPanel>
         <TextBlock x:Name="UpdateMessage" Text="Nova versão disponível." VerticalAlignment="Center" TextWrapping="Wrap" />

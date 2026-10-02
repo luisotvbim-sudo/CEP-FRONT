@@ -1,5 +1,7 @@
 # Conciliação de horas — especificação funcional do produto
 
+> Aditivo de 02/10/2026: o MSI 0.4.7 incorpora atualização pelo serviço Windows a partir de releases estáveis, com manifesto assinado e verificação do pacote. O funcionário escolhe **Atualizar agora** ou **Depois**; as versões seguintes dispensam credenciais administrativas e acesso manual da TI ao computador. A manutenção preserva as políticas de energia. Instalação bootstrap, troca real entre versões e recuperação no Windows ainda dependem de homologação em piloto; ver [atualizador MSI](../atualizador-msi.md).
+
 > Ajuste do MSI 0.4.6 em 02/10/2026: uma senha diária incorreta apenas limpa e mantém o foco no campo; a janela não exibe mensagem de erro nem revela outro detalhe da validação.
 
 > Correção do MSI 0.4.5 em 02/10/2026: fechar o CEP Horas com a senha diária também restaura o estado original das políticas de energia e atualiza o shell do Windows. A abertura manual reaplica as políticas antes de retomar a supervisão. Logoff e reinício do serviço restabelecem a proteção para que a próxima sessão não nasça liberada.

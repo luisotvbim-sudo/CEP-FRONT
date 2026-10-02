@@ -15,5 +15,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../CepHoras.Control.Protocol/CepHoras.Control.Protocol.csproj" />
+    <ProjectReference Include="../CepHoras.Updates/CepHoras.Updates.csproj" />
   </ItemGroup>
 </Project>

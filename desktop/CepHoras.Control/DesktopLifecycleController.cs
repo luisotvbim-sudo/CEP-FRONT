@@ -6,10 +6,13 @@ internal sealed class DesktopLifecycleController(
     DesktopSupervisionState state,
     Action restorePolicy,
     Action applyPolicy,
-    Action<string, string> audit)
+    Action<string, string> audit,
+    Func<bool>? maintenance = null)
 {
     internal ControlResponse Suspend(uint sessionId, string sid)
     {
+        if (maintenance?.Invoke() == true)
+            return new("update_maintenance", "A atualização está em andamento; os controles de energia permanecem ativos.");
         restorePolicy();
         state.Suspend(sessionId, sid);
         audit("desktop-supervision-suspended-policy-restored", sid);
@@ -18,6 +21,8 @@ internal sealed class DesktopLifecycleController(
 
     internal ControlResponse Resume(uint sessionId, string sid)
     {
+        if (maintenance?.Invoke() == true)
+            return new("update_maintenance", "Aguarde o término da atualização.");
         applyPolicy();
         if (state.Resume(sessionId, sid))
             audit("desktop-supervision-resumed-policy-applied", sid);

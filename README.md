@@ -47,7 +47,7 @@ Use uma conta existente no navegador ou no executável desktop. Não há credenc
 O instalador corporativo unificado inclui o aplicativo, inicialização automática, serviço `CepHorasControl` e políticas locais de energia. Nas áreas autenticadas, o menu discreto oferece Desligar, Reiniciar, Hibernar e Verificar status. A API decide conforme a análise/tolerância do usuário; uma ação liberada aguarda dez segundos e pode ser cancelada. Quando a API realmente não responde no transporte, o host permite a contingência local. Veja [menu de energia](docs/menu-energia.md) e [instalador corporativo](docs/instalador-corporativo.md).
 
 ```powershell
-./scripts/build-corporate-msi.ps1 -Version 0.4.6
+./scripts/build-corporate-msi.ps1 -Version 0.4.7 -UpdateSigningKeyPath '<chave local da TI protegida por DPAPI>'
 ```
 
 O MSI é por máquina e exige autorização administrativa. Ele altera direitos e políticas do Windows; instalação, ações reais e restauração devem ser homologadas primeiro numa VM ou máquina piloto. Builds portáteis e o navegador não executam ações de energia.
@@ -58,7 +58,7 @@ Desde o MSI 0.4.4, o menu aberto com o botão direito no ícone do CEP Horas per
 
 A página pública `/download` apresenta o pacote Windows de teste, requisitos, instruções e links da release. Ela não inicia uma sessão nem consulta a API. O download usa uma tag fixa do GitHub para não confundir versões de teste com o MSIX assinado.
 
-A integração do instalador com bandeja, WebView2 e teste de popup nativo está descrita em [Aplicativo Windows](docs/aplicativo-windows.md). A distribuição assinada e a atualização real entre versões continuam pendentes. O handoff específico para adaptar o atualizador histórico de MSIX ao MSI corporativo está em [Contexto do atualizador MSI](docs/contexto-atualizador-msi.md).
+A integração do instalador com bandeja, WebView2 e teste de popup nativo está descrita em [Aplicativo Windows](docs/aplicativo-windows.md). O MSI 0.4.7 inclui o atualizador pelo serviço: busca releases estáveis, apresenta **Atualizar agora/Depois** e aplica pacotes validados sem pedir credenciais administrativas ao usuário. A descoberta ocorre ao abrir, a cada seis horas e por **Verificar atualizações** na bandeja. A instalação inicial requer administrador. [Atualizador MSI](docs/atualizador-msi.md) descreve chave de publicação, manifesto assinado e piloto entre duas versões. Homologação real e distribuição permanecem pendentes até evidência operacional. O [contexto anterior](docs/contexto-atualizador-msi.md) preserva o desenho e o histórico.
 
 Pré-requisitos adicionais: .NET SDK 10 e Microsoft Edge WebView2 Runtime.
 
@@ -85,13 +85,13 @@ dotnet publish desktop/CepHoras.Desktop -c Release -r win-x64 --self-contained f
 
 O script valida o pacote e os arquivos copiados, instala em `%LOCALAPPDATA%/Programs/Conceito/CEP Horas` e cria o atalho `CEP Horas` no menu Iniciar. Ele se recusa a substituir uma instalação ou um atalho existente. Esse instalador local de teste **não recebe atualizações** e não migra automaticamente para MSIX.
 
-O caminho de atualização do desktop é um pacote MSIX assinado, distribuído como release pública no GitHub. O app MSIX consulta releases `desktop-vX.Y.Z.W` ao abrir e a cada 6 horas enquanto estiver aberto. Quando encontrar uma versão maior com o asset `CEP-Horas-win-x64.msix`, mostra “Atualizar” na própria janela; após o clique, verifica SHA-256 e identidade do pacote e abre o Instalador de Aplicativos do Windows. O Windows valida a assinatura antes da instalação. A checagem não roda no instalador local de teste nem no navegador. Para construir um pacote estrutural de teste, **não instalável nem distribuível**:
+O fluxo histórico MSIX consulta releases `desktop-vX.Y.Z.W` ao abrir e a cada seis horas. Com uma versão maior e asset `CEP-Horas-win-x64.msix`, apresenta **Atualizar**, verifica SHA-256 e identidade e abre o Instalador de Aplicativos; o Windows valida a assinatura MSIX. Esse fluxo é separado do MSI corporativo 0.4.7 e não roda no instalador local de teste nem no navegador. Para construir um MSIX estrutural de teste, **não instalável nem distribuível**:
 
 ```powershell
 ./scripts/build-desktop-msix.ps1 -Publisher 'CN=Conceito Engenharia' -UnsignedForTest
 ```
 
-Para distribuir, é necessário obter assinatura confiável, gerar o MSIX assinado com `-CertificateThumbprint`, validar a instalação/atualização em outro PC e publicar o asset em uma release estável com tag e versão correspondentes. Ainda não há certificado nem release desktop; portanto a atualização real **não está ativada**. O pacote MSIX é histórico. O MSI corporativo atual é self-contained, inicia o aplicativo em cada logon, mantém a execução em bandeja e instala o serviço de controle. A migração planejada usa uma versão MSI bootstrap instalada manualmente e atualizações seguintes validadas/executadas pelo serviço; o desenho e os critérios de segurança estão no [contexto do atualizador MSI](docs/contexto-atualizador-msi.md).
+A distribuição MSIX ainda depende de certificado confiável e homologação próprios. O MSI corporativo self-contained inicia em cada logon, mantém o aplicativo em bandeja e instala o serviço de controle. Seu bootstrap 0.4.7 inclui a pública de confiança e o atualizador do serviço; as próximas releases usam manifesto com assinatura destacada RSA-PSS. Essa assinatura autentica o canal de atualização e não equivale a Authenticode do MSI. O procedimento e os limites de homologação estão em [atualizador MSI](docs/atualizador-msi.md).
 
 O [handoff do aplicativo Windows](docs/desktop-handoff.md) registra o estado testado, dependências de notificações, estratégia de atualização ainda pendente e os passos para continuar em outro computador.
 

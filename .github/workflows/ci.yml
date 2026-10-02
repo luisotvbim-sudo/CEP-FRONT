@@ -58,3 +58,5 @@ jobs:
       - run: dotnet build desktop/CepHoras.Desktop -c Release
       - run: dotnet run --project desktop/CepHoras.Updates.Tests -c Release
       - run: dotnet run --project desktop/CepHoras.Desktop.Tests -c Release
+      - run: dotnet build desktop/CepHoras.Control -c Release
+      - run: dotnet run --project desktop/CepHoras.Control.Tests -c Release

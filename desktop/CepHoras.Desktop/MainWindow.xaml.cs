@@ -37,6 +37,7 @@ public partial class MainWindow : Window
     private bool exiting;
     private bool initialized;
     private bool testPopup;
+    private bool updatePopup;
     private System.Windows.Forms.NotifyIcon? tray;
     private readonly DispatcherTimer notificationTimer = new() { Interval = TimeSpan.FromSeconds(60) };
     private NotificationDelivery? notifications;
@@ -69,6 +70,7 @@ public partial class MainWindow : Window
             System.Windows.Application.Current.SessionEnding -= OnSessionEnding;
             notificationTimer.Stop();
             updateTimer.Stop();
+            msiStatusTimer.Stop();
             tray?.Dispose();
             Browser.Dispose();
             session?.Dispose();
@@ -105,6 +107,7 @@ public partial class MainWindow : Window
             notifications = new NotificationDelivery(session);
             ConfigureTray();
             if (managedInstallation) _ = ResumeDesktopSupervision();
+            if (managedInstallation) StartMsiUpdates();
             notificationTimer.Tick += async (_, _) => await notifications.Poll(ShowNotificationSummary);
             notificationTimer.Start();
             var webViewDataFolder = Path.Combine(
@@ -230,10 +233,16 @@ public partial class MainWindow : Window
         tray.ContextMenuStrip.Items.Add("Abrir CEP Horas", null, (_, _) => OpenWindow(false));
         tray.ContextMenuStrip.Items.Add("Minhas notificações", null, (_, _) => OpenWindow(true));
         tray.ContextMenuStrip.Items.Add("Testar notificação", null, (_, _) => ShowTestNotification());
+        if (managedInstallation)
+            tray.ContextMenuStrip.Items.Add("Verificar atualizações", null, async (_, _) =>
+            {
+                OpenWindow(false);
+                await CheckMsiUpdates();
+            });
         tray.ContextMenuStrip.Items.Add(new System.Windows.Forms.ToolStripSeparator());
         tray.ContextMenuStrip.Items.Add("Fechar CEP Horas", null, async (_, _) => await RequestProtectedExit());
         tray.DoubleClick += (_, _) => OpenWindow(false);
-        tray.BalloonTipClicked += (_, _) => OpenWindow(!testPopup);
+        tray.BalloonTipClicked += (_, _) => OpenWindow(!testPopup && !updatePopup);
         tray.BalloonTipShown += (_, _) => RecordNativeEvent("popup-shown-by-windows");
 #if !DEBUG
         // Only the stable per-user installation registers Run. Portable previews must
@@ -298,7 +307,7 @@ public partial class MainWindow : Window
 
     private async Task RequestProtectedExit()
     {
-        if (closingWithPassword || closed) return;
+        if (closingWithPassword || closed || installingUpdate) return;
         var dialog = new ClosePasswordDialog();
         if (IsVisible) dialog.Owner = this;
         if (dialog.ShowDialog() != true) return;
@@ -331,6 +340,7 @@ public partial class MainWindow : Window
 
     private void ForceRestart_Click(object sender, RoutedEventArgs e)
     {
+        if (installingUpdate) return;
         ForceRestartButton.IsEnabled = false;
         StartupStatus.Text = "Fechando os componentes do CEP Horas e recriando o navegador local…";
         try
@@ -388,6 +398,7 @@ public partial class MainWindow : Window
     private void ShowNotificationSummary(int count)
     {
         if (closed || tray is null) return;
+        updatePopup = false;
         testPopup = false;
         tray?.ShowBalloonTip(10_000, "CEP Horas", $"Você tem {count} nova(s) notificação(ões). Abra a central para conferir as mensagens e seus horários originais.", System.Windows.Forms.ToolTipIcon.Info);
         RecordNativeEvent("notification-summary-requested");
@@ -396,6 +407,7 @@ public partial class MainWindow : Window
     private void ShowTestNotification()
     {
         if (closed || tray is null) return;
+        updatePopup = false;
         testPopup = true;
         tray.ShowBalloonTip(10_000, "CEP Horas · teste de notificação",
             "Este é um teste local do aviso do Windows. Nenhuma mensagem foi enviada a outras pessoas. Clique para abrir o CEP Horas.",
@@ -421,6 +433,11 @@ public partial class MainWindow : Window
 
     private async Task CheckForUpdates()
     {
+        if (managedInstallation)
+        {
+            await CheckMsiUpdates();
+            return;
+        }
         if (closed || checkingForUpdates || installingUpdate) return;
         checkingForUpdates = true;
         try
@@ -440,6 +457,11 @@ public partial class MainWindow : Window
 
     private async void UpdateNow_Click(object sender, RoutedEventArgs e)
     {
+        if (managedInstallation)
+        {
+            await StartMsiUpdate();
+            return;
+        }
         if (availableUpdate is null || installingUpdate) return;
         installingUpdate = true;
         UpdateNowButton.IsEnabled = false;
@@ -471,7 +493,9 @@ public partial class MainWindow : Window
 
     private void UpdateLater_Click(object sender, RoutedEventArgs e)
     {
-        dismissedUpdate = availableUpdate?.Version;
+        if (installingUpdate) return;
+        dismissedUpdate = managedInstallation && Version.TryParse(availableMsiVersion, out var version)
+            ? version : availableUpdate?.Version;
         UpdateBanner.Visibility = Visibility.Collapsed;
     }
 

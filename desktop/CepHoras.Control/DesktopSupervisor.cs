@@ -10,8 +10,13 @@ internal sealed class DesktopSupervisor
 {
     private readonly string executable = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "CepHoras.exe"));
     private readonly DesktopSupervisionState state;
+    private readonly Func<bool> maintenance;
 
-    internal DesktopSupervisor(DesktopSupervisionState state) => this.state = state;
+    internal DesktopSupervisor(DesktopSupervisionState state, Func<bool>? maintenance = null)
+    {
+        this.state = state;
+        this.maintenance = maintenance ?? (() => false);
+    }
 
     internal async Task Run(CancellationToken token)
     {
@@ -45,6 +50,7 @@ internal sealed class DesktopSupervisor
 
     private void EnsureRunning()
     {
+        if (maintenance()) return;
         if (!File.Exists(executable)) return;
         var sessionId = WTSGetActiveConsoleSessionId();
         if (sessionId == uint.MaxValue || !state.AllowsLaunch(sessionId) || IsRunning(sessionId)) return;

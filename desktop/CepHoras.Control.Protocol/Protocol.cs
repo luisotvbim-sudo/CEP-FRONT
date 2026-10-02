@@ -11,7 +11,8 @@ public sealed record ControlRequest(
     string Operation,
     string? RequestId = null,
     string? Action = null,
-    int DelaySeconds = 0);
+    int DelaySeconds = 0,
+    string? ApprovedVersion = null);
 
 public sealed record ControlResponse(
     string Code,
@@ -20,7 +21,10 @@ public sealed record ControlResponse(
     string? RequestId = null,
     string? Action = null,
     DateTimeOffset? ExecuteAt = null,
-    bool Cancelled = false);
+    bool Cancelled = false,
+    string? UpdateVersion = null,
+    string? UpdatePhase = null,
+    string? InstalledVersion = null);
 
 public static class ControlWire
 {

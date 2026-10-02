@@ -12,8 +12,8 @@
     <CustomAction Id="RollbackPolicyRestore" FileRef="ControlExe" ExeCommand="--rollback-restore" Execute="rollback" Impersonate="no" Return="check" />
     <CustomAction Id="RestorePolicy" FileRef="ControlExe" ExeCommand="--uninstall-restore" Execute="deferred" Impersonate="no" Return="check" />
     <InstallExecuteSequence>
-      <Custom Action="RollbackApplyPolicy" Before="ApplyPolicy" Condition="NOT Installed" />
-      <Custom Action="ApplyPolicy" After="InstallFiles" Condition="NOT Installed" />
+      <Custom Action="RollbackApplyPolicy" Before="ApplyPolicy" Condition="NOT Installed AND NOT WIX_UPGRADE_DETECTED" />
+      <Custom Action="ApplyPolicy" After="InstallFiles" Condition="NOT Installed AND NOT WIX_UPGRADE_DETECTED" />
       <Custom Action="RollbackPolicyRestore" Before="RestorePolicy" Condition="REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE" />
       <Custom Action="RestorePolicy" Before="StopServices" Condition="REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE" />
     </InstallExecuteSequence>
