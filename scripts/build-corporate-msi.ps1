@@ -35,7 +35,7 @@ try {
     if ($unexpected) { throw 'Payload contém configuração privada ou credenciais.' }
     $payload = Join-Path $output 'Payload.wxs'
     & ./scripts/new-msi-payload.ps1 -PublishDirectory $publish -OutputFile $payload -Corporate
-    & dotnet build desktop/CepHoras.CorporateInstaller -c Release "-p:InstallerVersion=$Version" "-p:PayloadSource=$payload" "-p:OutputPath=$artifacts\"
+    & dotnet build desktop/CepHoras.CorporateInstaller -c Release "-p:InstallerVersion=$Version" "-p:PayloadSource=$payload" "-p:OutputPath=$artifacts\" "-p:IntermediateOutputPath=$output\wix-obj\" -p:CreateHardLinksForCopyFilesToOutputDirectoryIfPossible=false -p:CreateSymbolicLinksForCopyFilesToOutputDirectoryIfPossible=false
     if ($LASTEXITCODE) { throw 'Falha no MSI.' }
     $msi = Join-Path $artifacts 'CEP-Horas-Windows-win-x64.msi'
     & ./scripts/test-corporate-msi.ps1 -PackagePath $msi

@@ -66,6 +66,8 @@ A importação pede a senha, confirma que a privada recuperada corresponde à p�
 
 Os artefatos ficam em `.local/corporate-msi/<versão>/artifacts`. O build publica React/WPF e serviço, inspeciona a estrutura MSI, assina o manifesto e verifica a assinatura com a pública embutida. O ZIP da TI inclui pacote, manifesto, assinatura, checksum, instruções e recuperação. A pasta de saída não é substituída silenciosamente.
 
+O WiX usa intermediários separados por versão e cópia física do MSI para os artefatos. Links físicos para o banco intermediário ficam desativados: compilar uma versão seguinte não pode modificar o pacote de uma release anterior e invalidar seu manifesto já assinado. Na validação de duas versões, verificar novamente ambas as assinaturas/hashes depois do segundo build.
+
 Sem `-UpdateSigningKeyPath`, o script permite um build local de inspeção e exibe aviso: o resultado não está pronto para o canal automático. Falta da pública embutida impede o build. A assinatura pode ser executada separadamente somente no pacote de nome fixo:
 
 ```powershell
