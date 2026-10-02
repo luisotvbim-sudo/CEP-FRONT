@@ -5,8 +5,8 @@ Implementação iniciada em 29/09/2026 e integrada ao instalador corporativo em 
 ## Comportamento
 
 - As telas de login, administração, análises e central pessoal continuam em React, dentro do WebView2. O host WPF cuida da sessão protegida, bandeja, popup e atualização do programa.
-- Fechar a janela mantém o processo na bandeja. No MSI corporativo, usuário comum não recebe **Sair do aplicativo**, não pode encerrar a sessão fora do fluxo autorizado e o serviço relança o processo se ele for finalizado. Administradores e builds portáteis preservam a saída para manutenção. **Sair da conta**, na interface, revoga a sessão.
-- O menu da bandeja oferece **Abrir CEP Horas**, **Minhas notificações** e **Testar notificação**. **Sair do aplicativo** aparece apenas para administrador ou instalação não gerenciada.
+- Fechar a janela mantém o processo na bandeja. No MSI corporativo, o serviço relança o processo quando ele é finalizado sem autorização. **Sair da conta**, na interface, revoga a sessão.
+- O menu da bandeja oferece **Abrir CEP Horas**, **Minhas notificações**, **Testar notificação** e **Fechar CEP Horas**. O fechamento abre uma janela de senha e aceita somente a data local em `ddMMyy` seguida de `#pec`; a validação é offline, preserva zeros iniciais e nunca registra a senha. Depois da confirmação, o serviço suspende o relançamento daquela sessão até abertura manual, nova sessão ou reinício do serviço.
 - O popup é uma notificação nativa de bandeja (`NotifyIcon.ShowBalloonTip`), não um alerta JavaScript. Clicar num resumo real abre a central no WebView2. O teste é explicitamente identificado, abre o aplicativo e não envia mensagem ao backend nem a outras pessoas.
 - Não perturbe, acessibilidade e políticas do Windows podem alterar ou suprimir a exibição. Solicitar um popup não comprova leitura; as mensagens continuam na central autenticada.
 - Recepção usa os endpoints existentes `/me/notifications` e `/me/notifications/received`, com autenticação no host. Recupera todas as páginas, protege os recibos com DPAPI e separa contas/origens. Não calcula horas ou destinatários localmente.
@@ -25,7 +25,7 @@ Executar `.local/package/CEP-Horas-win-x64/CepHoras.exe`. Manter toda a pasta ju
 
 O bundle ZIP de teste contém `app/` e `install.ps1`, que instala no perfil Windows e cria atalho, sem substituir instalação existente. Ainda não é uma distribuição assinada. Não confundir o ZIP executável com o MSIX `UNSIGNED`, que serve apenas para inspeção e não deve ser instalado/distribuído.
 
-O instalador corporativo atual é gerado por `./scripts/build-corporate-msi.ps1 -Version 0.4.3`. Ele produz um único MSI self-contained com WPF, WebView2, serviço `CepHorasControl`, políticas de energia, inicialização automática e material de recuperação da TI. O build e a inspeção estrutural não instalam o pacote nem aplicam políticas nesta máquina. Consulte [Instalador corporativo](instalador-corporativo.md).
+O instalador corporativo atual é gerado por `./scripts/build-corporate-msi.ps1 -Version 0.4.4`. Ele produz um único MSI self-contained com WPF, WebView2, serviço `CepHorasControl`, políticas de energia, inicialização automática e material de recuperação da TI. O build e a inspeção estrutural não instalam o pacote nem aplicam políticas nesta máquina. Consulte [Instalador corporativo](instalador-corporativo.md).
 
 O host mantém uma única instância por sessão. Quando o serviço já iniciou o CEP Horas em segundo plano, abrir o atalho sinaliza a instância existente e mostra sua janela. Em falha de inicialização ou navegação, o botão **Reiniciar CEP Horas** encerra os processos do próprio host e os subprocessos WebView2 vinculados, move o perfil local para um backup recuperável, inicia um perfil limpo e reabre a janela. O serviço de controle permanece ativo e nenhum outro serviço ou aplicativo do Windows é encerrado.
 

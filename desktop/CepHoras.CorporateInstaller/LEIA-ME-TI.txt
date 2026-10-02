@@ -20,8 +20,11 @@ CONTROLE LOCAL
   a politica Nao fazer nada. Pressao fisica prolongada e corte de energia nao
   podem ser bloqueados.
 - O CEP Horas inicia em cada logon. Fechar a janela minimiza para a bandeja;
-  usuario comum nao recebe Sair. O servico relanca o aplicativo se ele for
-  finalizado na sessao local ativa.
+  o menu do icone perto do relogio oferece Fechar CEP Horas mediante a senha
+  diaria local ddMMyy#pec. Depois da validacao, o servico suspende o relancamento
+  apenas nessa sessao. Abrir manualmente ou iniciar nova sessao reativa a supervisao.
+- A senha diaria de fechamento funciona offline e nao libera nenhuma acao de energia.
+  O PIN administrativo de seis digitos da API e uma credencial separada.
 - Administradores e SYSTEM permanecem como caminho de recuperacao.
 
 HOMOLOGACAO

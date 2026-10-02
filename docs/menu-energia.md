@@ -4,6 +4,8 @@ Implementação iniciada na branch `codex/power-action-menu` e integrada ao MSI 
 
 > Aditivo do MSI 0.4.3: o host mantém uma única instância por sessão e oferece **Reiniciar CEP Horas** quando o WebView2 falha. A recuperação encerra somente os processos do CEP Horas e os subprocessos WebView2 pertencentes à instância, preserva o perfil anterior e reabre com perfil limpo. O serviço de controle permanece ativo e nenhuma ação de energia é executada.
 
+> Aditivo do MSI 0.4.4: **Fechar CEP Horas**, no menu da bandeja, usa uma senha diária local `ddMMyy#pec`. Esse código offline é independente do PIN administrativo da API: ele somente autoriza encerrar o host na sessão Windows atual e não libera ações de energia.
+
 > Produção em 01/10/2026: CEP API `b36c6e1`, migração `PowerActionOverrides`, PIN dedicado e CEP-FRONT `a4a0a4d` implantados. O segredo foi provisionado interativamente sem eco e não foi incluído em código, documentação ou pacote.
 
 ## Comportamento

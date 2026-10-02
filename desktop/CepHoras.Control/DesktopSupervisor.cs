@@ -9,6 +9,11 @@ namespace CepHoras.Control;
 internal sealed class DesktopSupervisor
 {
     private readonly string executable = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "CepHoras.exe"));
+    private readonly DesktopSupervisionState state = new();
+
+    internal void Suspend(uint sessionId, string sid) => state.Suspend(sessionId, sid);
+
+    internal bool Resume(uint sessionId, string sid) => state.Resume(sessionId, sid);
 
     internal async Task Run(CancellationToken token)
     {
@@ -44,7 +49,7 @@ internal sealed class DesktopSupervisor
     {
         if (!File.Exists(executable)) return;
         var sessionId = WTSGetActiveConsoleSessionId();
-        if (sessionId == uint.MaxValue || IsRunning(sessionId)) return;
+        if (sessionId == uint.MaxValue || !state.AllowsLaunch(sessionId) || IsRunning(sessionId)) return;
         if (!WTSQueryUserToken(sessionId, out var token)) return;
         try
         {

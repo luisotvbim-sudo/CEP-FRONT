@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Security.Principal;
 using System.Windows;
 using System.Windows.Threading;
+using CepHoras.Control.Protocol;
 using CepHoras.Updates;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Win32;
@@ -30,6 +31,7 @@ public partial class MainWindow : Window
     private bool checkingForUpdates;
 
     private bool installingUpdate;
+    private bool closingWithPassword;
 
     private bool closed;
     private bool exiting;
@@ -102,6 +104,7 @@ public partial class MainWindow : Window
             power = new PowerBridgeHandler(session);
             notifications = new NotificationDelivery(session);
             ConfigureTray();
+            if (managedInstallation) _ = ResumeDesktopSupervision();
             notificationTimer.Tick += async (_, _) => await notifications.Poll(ShowNotificationSummary);
             notificationTimer.Start();
             var webViewDataFolder = Path.Combine(
@@ -227,13 +230,8 @@ public partial class MainWindow : Window
         tray.ContextMenuStrip.Items.Add("Abrir CEP Horas", null, (_, _) => OpenWindow(false));
         tray.ContextMenuStrip.Items.Add("Minhas notificações", null, (_, _) => OpenWindow(true));
         tray.ContextMenuStrip.Items.Add("Testar notificação", null, (_, _) => ShowTestNotification());
-        if (!managedInstallation || windowsAdministrator)
-            tray.ContextMenuStrip.Items.Add("Sair do aplicativo", null, async (_, _) =>
-            {
-                if (power is not null) await power.CancelCurrent();
-                exiting = true;
-                Close();
-            });
+        tray.ContextMenuStrip.Items.Add(new System.Windows.Forms.ToolStripSeparator());
+        tray.ContextMenuStrip.Items.Add("Fechar CEP Horas", null, async (_, _) => await RequestProtectedExit());
         tray.DoubleClick += (_, _) => OpenWindow(false);
         tray.BalloonTipClicked += (_, _) => OpenWindow(!testPopup);
         tray.BalloonTipShown += (_, _) => RecordNativeEvent("popup-shown-by-windows");
@@ -276,6 +274,44 @@ public partial class MainWindow : Window
     }
 
     internal void OpenFromExternalInstance() => OpenWindow(false);
+
+    private async Task ResumeDesktopSupervision()
+    {
+        try { await ControlClient.Send(new ControlRequest("desktop-resume")); }
+        catch { /* A indisponibilidade do serviço local não deve impedir a abertura manual. */ }
+    }
+
+    private async Task RequestProtectedExit()
+    {
+        if (closingWithPassword || closed) return;
+        var dialog = new ClosePasswordDialog();
+        if (IsVisible) dialog.Owner = this;
+        if (dialog.ShowDialog() != true) return;
+
+        closingWithPassword = true;
+        try
+        {
+            if (power is not null) await power.CancelCurrent();
+            if (managedInstallation)
+            {
+                var response = await ControlClient.Send(new ControlRequest("desktop-suspend"));
+                if (response.Code != "desktop_suspended")
+                    throw new InvalidOperationException("O serviço não autorizou o fechamento.");
+            }
+            exiting = true;
+            Close();
+        }
+        catch
+        {
+            if (IsVisible)
+                System.Windows.MessageBox.Show(this, "Não foi possível autorizar o fechamento. Tente novamente ou solicite suporte à TI.",
+                    "CEP Horas", MessageBoxButton.OK, MessageBoxImage.Error);
+            else
+                System.Windows.MessageBox.Show("Não foi possível autorizar o fechamento. Tente novamente ou solicite suporte à TI.",
+                    "CEP Horas", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally { closingWithPassword = false; }
+    }
 
     private void ForceRestart_Click(object sender, RoutedEventArgs e)
     {

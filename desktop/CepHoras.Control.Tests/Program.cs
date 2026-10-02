@@ -43,6 +43,15 @@ configuration = null;
 Assert(authority.Handle(new("schedule", Guid.NewGuid().ToString(), "shutdown", 10), "userA").Code == "inactive", "missing policy denies");
 Assert(audits.All(value => !value.Contains("password", StringComparison.OrdinalIgnoreCase)), "audit has no credential");
 
+var supervision = new DesktopSupervisionState();
+Assert(supervision.AllowsLaunch(12), "supervision starts active");
+supervision.Suspend(12, "userA");
+Assert(!supervision.AllowsLaunch(12), "authorized close suspends current session");
+Assert(!supervision.Resume(12, "userB") && !supervision.AllowsLaunch(12), "another identity cannot resume suspension");
+Assert(supervision.Resume(12, "userA") && supervision.AllowsLaunch(12), "manual start resumes same identity");
+supervision.Suspend(12, "userA");
+Assert(supervision.AllowsLaunch(13) && supervision.AllowsLaunch(12), "new Windows session clears suspension");
+
 foreach (var failure in new[] { "none", "backup", "apply", "verify", "commit", "restore" })
 {
     var state = "original";

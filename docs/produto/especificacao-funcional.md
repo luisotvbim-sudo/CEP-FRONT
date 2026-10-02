@@ -1,5 +1,7 @@
 # Conciliação de horas — especificação funcional do produto
 
+> Aditivo de 02/10/2026: no MSI corporativo, o menu do ícone do CEP Horas na bandeja oferece fechamento protegido por uma senha diária local no formato `ddMMyy#pec`. A validação usa a data do computador, funciona sem internet e não envia nem persiste a senha. Um fechamento autorizado suspende o relançamento somente na sessão Windows atual; a abertura manual ou uma nova sessão reativa a supervisão. As políticas locais de energia permanecem ativas.
+
 > Aditivo de 01/10/2026: o menu de energia inclui PIN administrativo de seis dígitos para liberação temporária pessoal de cinco minutos, determinada pelo servidor. Cada ação continua consultando a API e sendo revalidada pelo host Windows. O PIN não é persistido e tentativas inválidas não prorrogam a janela existente. Contrato, dependências de ativação no backend e validação em [menu de energia](../menu-energia.md).
 
 > Aditivo do menu de energia de 30/09/2026: [comportamento e dependências](../menu-energia.md). Menu discreto nas áreas autenticadas para Desligar, Reiniciar, Hibernar e Verificar status. A CEP API decide liberação/inconclusivo/bloqueio; somente liberação agenda dez segundos no host com cancelamento. Contingência quando a API realmente não responde exige verificação nativa. Interface, bridge, serviço e MSI corporativo estão integrados; aplicação efetiva das políticas e ações reais depende de homologação elevada em máquina piloto.
@@ -65,6 +67,7 @@ O backend atual já entrega a fundação administrativa e de integração do CEP
 | Líder restrito aos próprios times | **Entregue** nas consultas atuais de times, pessoas e histórico |
 | Membro com acesso aos próprios registros | **Entregue** nas consultas atuais de pessoa e histórico |
 | Decisão pessoal e menu de energia no desktop | **Entregue** no contrato da API, interface, bridge, serviço e MSI; **homologação operacional pendente** |
+| Fechamento local protegido na bandeja | **Entregue** no WPF e serviço para o MSI 0.4.4; **homologação operacional pendente** |
 | Conciliação diária, tolerâncias, calendário e divergências | **Planejado** |
 | Justificativas, decisões, alertas e notificações internas | **Planejado** |
 | Painéis, relatórios e exportações | **Planejado** |

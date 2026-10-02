@@ -1,6 +1,6 @@
 # Contexto consolidado — controle de energia e instalador do CEP Horas
 
-Atualizado em 01/10/2026. Este documento registra a intenção de produto, o contrato entre CEP-FRONT e CEP-API, as responsabilidades do aplicativo Windows, o estado do instalador e o procedimento de implantação. Ele complementa a [especificação funcional](produto/especificacao-funcional.md), o [menu de energia](menu-energia.md) e o [instalador corporativo](instalador-corporativo.md).
+Atualizado em 02/10/2026. Este documento registra a intenção de produto, o contrato entre CEP-FRONT e CEP-API, as responsabilidades do aplicativo Windows, o estado do instalador e o procedimento de implantação. Ele complementa a [especificação funcional](produto/especificacao-funcional.md), o [menu de energia](menu-energia.md) e o [instalador corporativo](instalador-corporativo.md).
 
 ## Objetivo
 
@@ -157,7 +157,7 @@ sudo docker compose --env-file .env -f compose.production.yaml run --rm --no-dep
 2. Executar as migrações e confirmar `/health/ready`.
 3. Provisionar o PIN de produção de forma interativa, sem registrá-lo em histórico, Git ou logs.
 4. Implantar o `cep-front` atualizado e validar `https://cep.lat/healthz` e o proxy de mesma origem para `/api/`.
-5. Distribuir o MSI 0.4.3 em uma VM ou máquina piloto com autorização administrativa.
+5. Distribuir o MSI 0.4.4 em uma VM ou máquina piloto com autorização administrativa.
 6. Validar login, PIN incorreto, rate limit, PIN correto, expiração em cinco minutos, as três ações, contagem de dez segundos, cancelamento, retorno às regras normais e contingência com indisponibilidade real da API.
 7. Somente depois expandir para as demais máquinas.
 
@@ -210,10 +210,14 @@ dotnet run --project desktop/CepHoras.Desktop.Tests -c Release
 dotnet run --project desktop/CepHoras.Control.Tests -c Release
 dotnet run --project desktop/CepHoras.Updates.Tests -c Release
 node scripts/test-desktop.mjs
-./scripts/build-corporate-msi.ps1 -Version 0.4.3
+./scripts/build-corporate-msi.ps1 -Version 0.4.4
 ```
 
 Na entrega do PIN em 01/10/2026 passaram 83 testes unitários, 174 testes Playwright em desktop/mobile, 189 verificações .NET do desktop, 16 verificações do atualizador, testes do serviço, lint, TypeScript, builds Vite e WPF e a inspeção estrutural do MSI 0.4.1. No aditivo de recuperação, o desktop passou 200 verificações, incluindo instância única, sinalização da janela, preservação do perfil corrompido e consumo idempotente do pedido de recuperação; build Release, serviço, atualizador e inspeção estrutural do MSI 0.4.3 também passaram. Nenhuma ação real de energia foi executada.
+
+No MSI 0.4.4, o menu da bandeja acrescenta **Fechar CEP Horas**. A janela valida localmente `ddMMyy#pec`, com zeros à esquerda e ano de dois dígitos. O valor não é enviado nem persistido. A confirmação envia ao serviço autenticado um pedido de suspensão vinculado ao SID e à sessão do processo instalado; a abertura manual envia a retomada. A senha diária não substitui o PIN de seis dígitos da API e não libera desligamento, reinício ou hibernação.
+
+O aditivo de fechamento passou 83 testes web, 206 verificações do desktop, testes puros do serviço, 16 verificações do atualizador, builds Release e a inspeção estrutural do MSI 0.4.4. Nenhuma ação real de energia ou alteração de política foi executada.
 
 ## Recuperação da tela branca do WebView2
 
@@ -238,7 +242,7 @@ Abra novamente o aplicativo para o WebView2 criar um perfil limpo. Mantenha o di
 
 Em produção, a CEP API `b36c6e1`, a migração `PowerActionOverrides`, o PIN dedicado e o CEP-FRONT `a4a0a4d` foram implantados em 01/10/2026. Saúde pública e proxy responderam HTTP 200; o endpoint de liberação respondeu 401 sem autenticação. O valor do PIN não foi registrado neste documento.
 
-O MSI 0.4.0 instalado anteriormente não possui a interface de PIN. O MSI 0.4.1 possui o PIN, mas ainda permite que o atalho abra uma segunda instância concorrente. Para usar a liberação de cinco minutos com instância única e recuperação forçada, instale o MSI 0.4.3 ou posterior.
+O MSI 0.4.0 instalado anteriormente não possui a interface de PIN. O MSI 0.4.1 possui o PIN, mas ainda permite que o atalho abra uma segunda instância concorrente. Para usar a liberação de cinco minutos com instância única e recuperação forçada, instale o MSI 0.4.3 ou posterior. Para também usar o fechamento protegido na bandeja, instale o MSI 0.4.4 ou posterior.
 
 ## Decisões que não devem ser alteradas silenciosamente
 

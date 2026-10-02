@@ -13,6 +13,7 @@ internal sealed class ControlService : ServiceBase
 {
     private readonly CancellationTokenSource stop = new();
     private readonly WindowsPower system = new();
+    private readonly DesktopSupervisor desktopSupervisor = new();
     private Task? listener;
     private Task? supervisor;
 
@@ -26,7 +27,7 @@ internal sealed class ControlService : ServiceBase
     protected override void OnStart(string[] args)
     {
         listener = Task.Run(Listen);
-        supervisor = Task.Run(() => new DesktopSupervisor().Run(stop.Token));
+        supervisor = Task.Run(() => desktopSupervisor.Run(stop.Token));
     }
 
     protected override void OnStop()
@@ -88,12 +89,21 @@ internal sealed class ControlService : ServiceBase
                     deadline.CancelAfter(TimeSpan.FromSeconds(5));
                     var request = await ControlWire.Read<ControlRequest>(pipe, deadline.Token);
                     var sid = CallerSid(pipe);
+                    var sessionId = TrustedClientSession(pipe);
                     ControlResponse response;
-                    if (sid is null || !TrustedClient(pipe))
+                    if (sid is null || sessionId is null)
                         response = new("access_denied", "Somente o CEP Horas instalado pode solicitar esta operação.");
                     else
                     {
-                        try { response = authority.Handle(request, sid); }
+                        try
+                        {
+                            response = request.Operation switch
+                            {
+                                "desktop-suspend" => SuspendDesktop(sessionId.Value, sid),
+                                "desktop-resume" => ResumeDesktop(sessionId.Value, sid),
+                                _ => authority.Handle(request, sid)
+                            };
+                        }
                         catch
                         {
                             response = new("service_error", "A operação não pôde ser concluída. Solicite suporte à TI.");
@@ -114,19 +124,35 @@ internal sealed class ControlService : ServiceBase
         }
     }
 
-    private static bool TrustedClient(NamedPipeServerStream pipe)
+    private ControlResponse SuspendDesktop(uint sessionId, string sid)
     {
-        if (!GetNamedPipeClientProcessId(pipe.SafePipeHandle, out var id) || id == 0) return false;
+        desktopSupervisor.Suspend(sessionId, sid);
+        PolicyStore.Audit("desktop-supervision-suspended", sid);
+        return new("desktop_suspended", "O CEP Horas pode ser fechado nesta sessão.");
+    }
+
+    private ControlResponse ResumeDesktop(uint sessionId, string sid)
+    {
+        if (desktopSupervisor.Resume(sessionId, sid))
+            PolicyStore.Audit("desktop-supervision-resumed", sid);
+        return new("desktop_resumed", "A supervisão do CEP Horas está ativa.");
+    }
+
+    private static uint? TrustedClientSession(NamedPipeServerStream pipe)
+    {
+        if (!GetNamedPipeClientProcessId(pipe.SafePipeHandle, out var id) || id == 0) return null;
         try
         {
             using var process = Process.GetProcessById(checked((int)id));
             var actual = Path.GetFullPath(process.MainModule?.FileName ?? "");
             var expected = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "CepHoras.exe"));
-            return string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase) &&
-                   (File.GetAttributes(expected) & FileAttributes.ReparsePoint) == 0;
+            if (!string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase) ||
+                (File.GetAttributes(expected) & FileAttributes.ReparsePoint) != 0)
+                return null;
+            return checked((uint)process.SessionId);
         }
         catch (Exception error) when (error is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception or IOException)
-        { return false; }
+        { return null; }
     }
 
     [DllImport("kernel32.dll", SetLastError = true)]
