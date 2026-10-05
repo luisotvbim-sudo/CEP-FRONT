@@ -4,7 +4,7 @@ Revisão documental de 04/10/2026. Front auditado: `main` `eb63dbdc7f7bf83d0a4b5
 
 ## Contrato disponível e consumido
 
-[OpenAPI real](openapi-backend-current.json) e [OpenAPI consumido](openapi.json) possuem **52 paths e 72 schemas**, com operações/componentes alinhados à API de referência. Os dois arquivos Front são idênticos na base; a diferença de ordem de tags em relação ao arquivo da API não muda operações/schemas. Tipos: `src/auth/api-schema.d.ts`.
+[OpenAPI real](openapi-backend-current.json) e [OpenAPI consumido](openapi.json) incluem o contrato aditivo de acompanhamento pessoal, gerado na API da branch `codex/acompanhamento-usuario` em 05/10/2026 sobre `e13b804a288220e636c23acf8b792a9799b69157`. Os três snapshots são idênticos nesta entrega; tipos em `src/auth/api-schema.d.ts`. A base auditada anterior tinha 52 paths/72 schemas. Esta branch exige a nova API para o resumo; 404 mantém acesso ao histórico/avisos e não é transporte offline.
 
 | Recurso | Estado implementado |
 |---|---|
@@ -15,6 +15,7 @@ Revisão documental de 04/10/2026. Front auditado: `main` `eb63dbdc7f7bf83d0a4b5
 | Times/usuários/auditoria | Telas administrativas; Líder/Membro recebem consultas autorizadas |
 | Sincronização/histórico | Normal 7 dias, full administrativo até 90; registros e resumos diários calculados na API |
 | Análises/notificações | Configurações/agendas globais, prévia/envio, caixa pessoal, leitura/recebimento, histórico e snapshots de análise |
+| Acompanhamento pessoal | GET autenticado próprio, períodos oficiais, situação, corte e valores/limites das fontes; [contrato do consumidor](acompanhamento-pessoal.md) |
 | Energia | Decisão pessoal, verificação/status e liberação PIN temporária; execução local requer MSI corporativo compatível |
 
 GET de análises consulta resultados persistidos, sem nova importação. Histórico armazenado não certifica completude/atualidade das fontes. O cliente apresenta `null`, qualidade, períodos e cortes retornados; não recalcula saldo, tolerância, destinatários ou autorização.

@@ -14,6 +14,7 @@ var allowed = new (string Method, string Path)[]
 {
     ("POST", "/me/time-control/power-action-unlock"),
     ("POST", "/me/time-control/power-action-check"), ("GET", "/me/time-control/power-action-status"),
+    ("GET", "/me/time-control/overview"),
     ("GET", "/me"), ("GET", "/admin/organizations"), ("POST", "/admin/organizations"),
     ("GET", "/organization/users"), ("PATCH", $"/organization/users/{id}"),
     ("GET", "/organization/invitations"), ("POST", "/organization/invitations"),
@@ -48,6 +49,7 @@ Check(!ApiRoutePolicy.Allows("GET", $"/me/notifications/{id}/read"), "Read ackno
 Check(!ApiRoutePolicy.Allows("POST", "/time-control/settings"), "Settings requires PATCH");
 Check(!ApiRoutePolicy.Allows("GET", "/me/time-control/power-action-check"), "Power check requires POST");
 Check(!ApiRoutePolicy.Allows("POST", "/me/time-control/power-action-status"), "Power status requires GET");
+Check(!ApiRoutePolicy.Allows("POST", "/me/time-control/overview"), "Personal overview is read only");
 foreach (var method in new[] { "GET", "PATCH", "DELETE" })
     Check(!ApiRoutePolicy.Allows(method, "/me/time-control/power-action-unlock"), "PIN unlock requires exact POST");
 Check(!ApiRoutePolicy.Allows("POST", "/me/time-control/power-action-unlock?pin=123456"), "PIN must never enter query");

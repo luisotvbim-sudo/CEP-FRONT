@@ -1,4 +1,6 @@
 import { expect, type Page } from '@playwright/test'
+import { personalOverview } from './overview-fixture'
+import type { OverviewPeriod, OverviewStatus } from '../../src/user/overview-api'
 
 export const ids = {
   org: '10000000-0000-0000-0000-000000000001',
@@ -50,7 +52,13 @@ export const person = {
   invitationExpiresAt: '2099-01-01T00:00:00Z',
   invitationAcceptedAt: null,
 }
-export const memberPerson = { ...person, id: ids.memberPerson, userId: ids.memberUser, displayName: 'Bia Exemplo', email: 'bia@example.invalid' }
+export const memberPerson = {
+  ...person,
+  id: ids.memberPerson,
+  userId: ids.memberUser,
+  displayName: 'Bia Exemplo',
+  email: 'bia@example.invalid',
+}
 export const team = {
   id: ids.team,
   name: 'Projetos de teste',
@@ -75,7 +83,15 @@ export const disabledBatch = {
   })),
 }
 
-export async function fixture(page: Page, options: { role?: string; empty?: boolean; leader?: boolean } = {}) {
+export async function fixture(
+  page: Page,
+  options: {
+    role?: string
+    empty?: boolean
+    leader?: boolean
+    overviewStatus?: OverviewStatus
+  } = {},
+) {
   const calls: { path: string; method: string; body: any }[] = []
   const currentUser = { ...admin, role: options.role || admin.role }
   await page.route('**/api/v1/**', async (route) => {
@@ -86,10 +102,17 @@ export async function fixture(page: Page, options: { role?: string; empty?: bool
     const body = request.postData() ? request.postDataJSON() : undefined
     calls.push({ path: path + url.search, method, body })
     if (path === '/api/v1/admin/organizations' && method === 'GET')
-      return route.fulfill({ json: { items: [
-        { id: ids.org, name: 'Organização A', status: 'active' },
-        { id: '10000000-0000-0000-0000-000000000002', name: 'Organização B', status: 'active' },
-      ], total: 2, page: 1, pageSize: 20 } })
+      return route.fulfill({
+        json: {
+          items: [
+            { id: ids.org, name: 'Organização A', status: 'active' },
+            { id: '10000000-0000-0000-0000-000000000002', name: 'Organização B', status: 'active' },
+          ],
+          total: 2,
+          page: 1,
+          pageSize: 20,
+        },
+      })
     if (path === '/api/v1/auth/web/refresh')
       return route.fulfill({ status: 401, json: { code: 'session_expired' } })
     if (path === '/api/v1/auth/web/login')
@@ -104,8 +127,23 @@ export async function fixture(page: Page, options: { role?: string; empty?: bool
     if (path === '/api/v1/auth/web/logout') return route.fulfill({ status: 204 })
     expect(request.headers().authorization).toBe('Bearer test-access')
     if (path === '/api/v1/me') return route.fulfill({ json: currentUser })
+    if (path === '/api/v1/me/time-control/overview')
+      return route.fulfill({
+        json: personalOverview(
+          options.overviewStatus ?? (options.empty ? 'notAssociated' : 'regular'),
+          (url.searchParams.get('period') || 'daily') as OverviewPeriod,
+        ),
+      })
     if (path === '/api/v1/organization/invitations' && method === 'POST')
-      return route.fulfill({ status: 201, json: { id: ids.invitation, email: body.email, role: body.role, expiresAt: '2099-01-01T00:00:00Z' } })
+      return route.fulfill({
+        status: 201,
+        json: {
+          id: ids.invitation,
+          email: body.email,
+          role: body.role,
+          expiresAt: '2099-01-01T00:00:00Z',
+        },
+      })
     if (path === '/api/v1/organization/invitations' && method === 'GET')
       return route.fulfill({
         json: options.empty
@@ -127,7 +165,12 @@ export async function fixture(page: Page, options: { role?: string; empty?: bool
     if (path.endsWith('/people'))
       return route.fulfill({
         json: {
-          items: options.empty ? [] : [{ ...person, userId: options.role === 'user' ? ids.user : null }, ...(options.leader ? [memberPerson] : [])],
+          items: options.empty
+            ? []
+            : [
+                { ...person, userId: options.role === 'user' ? ids.user : null },
+                ...(options.leader ? [memberPerson] : []),
+              ],
           total: options.empty ? 0 : options.leader ? 2 : 1,
           page: Number(url.searchParams.get('page') || 1),
           pageSize: 12,
@@ -148,7 +191,17 @@ export async function fixture(page: Page, options: { role?: string; empty?: bool
     if (path === `/api/v1/organization/users/${ids.user}` && method === 'PATCH')
       return route.fulfill({ json: { ...admin, ...body, products: body.products ?? [] } })
     if (path === '/api/v1/organization/audit')
-      return route.fulfill({ json: [{ id: 'audit-1', createdAt: '2026-09-21T12:00:00Z', action: 'user.updated', actorUserId: ids.user, targetUserId: ids.user }] })
+      return route.fulfill({
+        json: [
+          {
+            id: 'audit-1',
+            createdAt: '2026-09-21T12:00:00Z',
+            action: 'user.updated',
+            actorUserId: ids.user,
+            targetUserId: ids.user,
+          },
+        ],
+      })
     if (path.endsWith('/assignments/' + ids.assignment + '/end'))
       return route.fulfill({ json: { id: ids.assignment, effectiveTo: body.effectiveTo } })
     if (path.endsWith('/assignments'))
@@ -165,12 +218,31 @@ export async function fixture(page: Page, options: { role?: string; empty?: bool
                   effectiveFrom: '2026-01-01',
                   effectiveTo: null,
                 },
-                ...(options.leader ? [{ id: '80000000-0000-0000-0000-000000000002', userId: ids.memberUser, userDisplayName: memberPerson.displayName, userEmail: memberPerson.email, role: 'member', effectiveFrom: '2026-01-01', effectiveTo: null }] : []),
+                ...(options.leader
+                  ? [
+                      {
+                        id: '80000000-0000-0000-0000-000000000002',
+                        userId: ids.memberUser,
+                        userDisplayName: memberPerson.displayName,
+                        userEmail: memberPerson.email,
+                        role: 'member',
+                        effectiveFrom: '2026-01-01',
+                        effectiveTo: null,
+                      },
+                    ]
+                  : []),
               ]
             : { id: ids.assignment, ...body },
       })
     if (path.endsWith('/teams'))
-      return route.fulfill({ json: method === 'GET' ? options.role === 'user' && !options.leader ? [] : [team] : { ...team, name: body.name } })
+      return route.fulfill({
+        json:
+          method === 'GET'
+            ? options.role === 'user' && !options.leader
+              ? []
+              : [team]
+            : { ...team, name: body.name },
+      })
     if (path.endsWith('/teams/' + ids.team)) return route.fulfill({ json: { ...team, ...body } })
     if (path.endsWith('/history'))
       return route.fulfill({
@@ -182,10 +254,28 @@ export async function fixture(page: Page, options: { role?: string; empty?: bool
             ? []
             : [
                 {
-                  workforcePersonId: url.searchParams.get('workforcePersonId') === ids.memberPerson ? ids.memberPerson : ids.person,
-                  displayName: url.searchParams.get('workforcePersonId') === ids.memberPerson ? memberPerson.displayName : person.displayName,
-                  email: url.searchParams.get('workforcePersonId') === ids.memberPerson ? memberPerson.email : person.email,
-                  days: [{ day: '2026-09-20', mondaySeconds: 0, vrSeconds: null, deltaSeconds: null, partial: false, issues: ['incomplete'] }],
+                  workforcePersonId:
+                    url.searchParams.get('workforcePersonId') === ids.memberPerson
+                      ? ids.memberPerson
+                      : ids.person,
+                  displayName:
+                    url.searchParams.get('workforcePersonId') === ids.memberPerson
+                      ? memberPerson.displayName
+                      : person.displayName,
+                  email:
+                    url.searchParams.get('workforcePersonId') === ids.memberPerson
+                      ? memberPerson.email
+                      : person.email,
+                  days: [
+                    {
+                      day: '2026-09-20',
+                      mondaySeconds: 0,
+                      vrSeconds: null,
+                      deltaSeconds: null,
+                      partial: false,
+                      issues: ['incomplete'],
+                    },
+                  ],
                   records: [
                     {
                       id: 'record-1',
