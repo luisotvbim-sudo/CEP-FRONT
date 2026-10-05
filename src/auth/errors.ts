@@ -5,6 +5,7 @@ export class AuthError extends Error {
     public readonly code?: string,
     public readonly status?: number,
     public readonly transportFailure = false,
+    public readonly retryAfterSeconds?: number,
   ) {
     super(message)
     this.name = 'AuthError'
@@ -13,13 +14,25 @@ export class AuthError extends Error {
 
 export type ApiProblem = { code?: string; correlationId?: string }
 
-export function apiFailure(status: number, value: unknown): AuthError {
+export function apiFailure(status: number, value: unknown, retryAfter?: string | null): AuthError {
   const raw = value && typeof value === 'object' ? (value as Record<string, unknown>) : {}
   const problem: ApiProblem = {
     code: typeof raw.code === 'string' ? raw.code : undefined,
     correlationId: typeof raw.correlationId === 'string' ? raw.correlationId : undefined,
   }
-  return new AuthError(describeError(status, problem), problem.correlationId, problem.code, status)
+  const delay = retryAfter
+    ? /^\d+$/.test(retryAfter)
+      ? Number(retryAfter)
+      : (Date.parse(retryAfter) - Date.now()) / 1000
+    : undefined
+  return new AuthError(
+    describeError(status, problem),
+    problem.correlationId,
+    problem.code,
+    status,
+    false,
+    delay !== undefined && Number.isFinite(delay) ? Math.max(1, Math.ceil(delay)) : undefined,
+  )
 }
 
 export function errorMessage(error: unknown): AuthError {

@@ -13,7 +13,13 @@ type BridgeEvent = {
     id?: string
     ok?: boolean
     result?: unknown
-    error?: { status?: number; code?: string; correlationId?: string; transportFailure?: boolean }
+    error?: {
+      status?: number
+      code?: string
+      correlationId?: string
+      transportFailure?: boolean
+      retryAfterSeconds?: number
+    }
   }
 }
 export type WebViewBridge = {
@@ -54,6 +60,7 @@ export class DesktopAuthClient implements AuthClient {
             parsed.code,
             parsed.status,
             failure.transportFailure === true,
+            failure.retryAfterSeconds,
           )
           if (failure.code === 'session_expired')
             this.listeners.forEach((listener) => listener(error))
@@ -124,7 +131,9 @@ export class DesktopAuthClient implements AuthClient {
       { method, path, body },
       method === 'POST' && path.startsWith('/organization/time-control/synchronizations')
         ? 385_000
-        : 65_000,
+        : method === 'GET' && path.startsWith('/me/time-control/overview')
+          ? 110_000
+          : 65_000,
     )
   }
 }

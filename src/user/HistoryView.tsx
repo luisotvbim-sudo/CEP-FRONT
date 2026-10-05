@@ -9,10 +9,12 @@ export function HistoryView({
   api,
   person,
   title,
+  nested = false,
 }: {
   api: AdminApi
   person: Person
   title: string
+  nested?: boolean
 }) {
   const {
     from,
@@ -32,6 +34,8 @@ export function HistoryView({
   return (
     <>
       <PageHeading
+        eyebrow="JORNADA"
+        level={nested ? 'h2' : 'h1'}
         title={title}
         description="Totais importados por dia. Expanda uma data para conferir as atividades e os registros de ponto."
       />

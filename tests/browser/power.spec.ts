@@ -150,11 +150,13 @@ for (const profile of [
       await expect(menu(page)).toBeVisible()
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    // Read both rectangles in one frame: the personal overview can expand while loading.
     expect(
-      await menu(page).evaluate((el) => el.getBoundingClientRect().top),
-    ).toBeGreaterThanOrEqual(
-      await page.locator('.admin-app').evaluate((el) => el.getBoundingClientRect().bottom),
-    )
+      await menu(page).evaluate((el) => {
+        const app = document.querySelector('.admin-app')!
+        return el.getBoundingClientRect().top - app.getBoundingClientRect().bottom
+      }),
+    ).toBeGreaterThanOrEqual(0)
     if (profile.role === 'organizationAdmin')
       await page.screenshot({
         path: `.local/power-menu-${testInfo.project.name}.png`,

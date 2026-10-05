@@ -2,22 +2,91 @@ import { expect, test } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 import { fixture, ids } from './admin-fixture'
 
-test('daily history groups sources, expands with keyboard, preserves seconds and resets on filters', async ({ page }) => {
+test('daily history groups sources, expands with keyboard, preserves seconds and resets on filters', async ({
+  page,
+}) => {
   await fixture(page)
-  await page.route('**/history?**', (route) => route.fulfill({ json: {
-    from: '2026-09-01', to: '2026-09-21', generatedAt: '2026-09-21T12:00:00Z',
-    people: [{ workforcePersonId: ids.person, displayName: 'Pessoa de teste', days: [
-      { day: '2026-09-01', mondaySeconds: 31801, vrSeconds: 32580, deltaSeconds: -779, partial: false, issues: [] },
-      { day: '2026-09-02', mondaySeconds: 7200, vrSeconds: 3600, deltaSeconds: 3600, partial: false, issues: [] },
-      { day: '2026-09-03', mondaySeconds: 0, vrSeconds: 0, deltaSeconds: 0, partial: false, issues: [] },
-    ], records: [
-      { id: '1', workDate: '2026-09-01', source: 'monday', title: 'Projeto A', durationSeconds: 14400, state: 'closed' },
-      { id: '2', workDate: '2026-09-01', source: 'monday', title: 'Projeto B', durationSeconds: 17401, state: 'closed' },
-      { id: '3', workDate: '2026-09-01', source: 'vrMais', durationSeconds: 32580, state: 'reported', detailsJson: '{"timeCards":["08:00","12:00","13:00","18:03"]}' },
-      { id: '4', workDate: '2026-09-02', source: 'monday', durationSeconds: 7200, state: 'closed' },
-      { id: '5', workDate: '2026-09-03', source: 'monday', durationSeconds: 0, state: 'closed' },
-    ] }],
-  } }))
+  await page.route('**/history?**', (route) =>
+    route.fulfill({
+      json: {
+        from: '2026-09-01',
+        to: '2026-09-21',
+        generatedAt: '2026-09-21T12:00:00Z',
+        people: [
+          {
+            workforcePersonId: ids.person,
+            displayName: 'Pessoa de teste',
+            days: [
+              {
+                day: '2026-09-01',
+                mondaySeconds: 31801,
+                vrSeconds: 32580,
+                deltaSeconds: -779,
+                partial: false,
+                issues: [],
+              },
+              {
+                day: '2026-09-02',
+                mondaySeconds: 7200,
+                vrSeconds: 3600,
+                deltaSeconds: 3600,
+                partial: false,
+                issues: [],
+              },
+              {
+                day: '2026-09-03',
+                mondaySeconds: 0,
+                vrSeconds: 0,
+                deltaSeconds: 0,
+                partial: false,
+                issues: [],
+              },
+            ],
+            records: [
+              {
+                id: '1',
+                workDate: '2026-09-01',
+                source: 'monday',
+                title: 'Projeto A',
+                durationSeconds: 14400,
+                state: 'closed',
+              },
+              {
+                id: '2',
+                workDate: '2026-09-01',
+                source: 'monday',
+                title: 'Projeto B',
+                durationSeconds: 17401,
+                state: 'closed',
+              },
+              {
+                id: '3',
+                workDate: '2026-09-01',
+                source: 'vrMais',
+                durationSeconds: 32580,
+                state: 'reported',
+                detailsJson: '{"timeCards":["08:00","12:00","13:00","18:03"]}',
+              },
+              {
+                id: '4',
+                workDate: '2026-09-02',
+                source: 'monday',
+                durationSeconds: 7200,
+                state: 'closed',
+              },
+              {
+                id: '5',
+                workDate: '2026-09-03',
+                source: 'monday',
+                durationSeconds: 0,
+                state: 'closed',
+              },
+            ],
+          },
+        ],
+      },
+    }),
+  )
   await page.getByRole('button', { name: 'Ver histórico' }).click()
   await page.getByRole('button', { name: 'Consultar histórico' }).click()
   await expect(page.getByRole('button', { name: /Expandir dia/ })).toHaveCount(3)
@@ -34,7 +103,10 @@ test('daily history groups sources, expands with keyboard, preserves seconds and
   const vr = page.getByRole('region', { name: 'VR Mais em 01/09/2026', exact: true })
   await vr.getByText('Detalhes do registro').click()
   await expect(vr.getByText('Batidas informadas: 08:00 · 12:00 · 13:00 · 18:03')).toBeVisible()
-  expect((await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()).violations).toEqual([])
+  expect(
+    (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze())
+      .violations,
+  ).toEqual([])
   await page.getByLabel('Fonte', { exact: true }).selectOption('monday')
   await expect(page.getByRole('button', { name: /Recolher dia/ })).toHaveCount(0)
   await expect(page.getByText('Projeto A', { exact: true })).toHaveCount(0)
@@ -47,7 +119,7 @@ for (const leader of [false, true]) {
       await page.getByRole('button', { name: 'Meus times' }).click()
       await page.getByRole('button', { name: 'Projetos de teste' }).click()
       await page.getByRole('button', { name: /Bia Exemplo/ }).click()
-    }
+    } else await page.getByRole('button', { name: 'Meu histórico', exact: true }).click()
     await page.getByRole('button', { name: 'Consultar histórico' }).click()
     await expect(page.getByRole('columnheader', { name: 'Duração Monday' })).toBeVisible()
     await page.getByRole('button', { name: 'Expandir dia 20/09/2026' }).click()
@@ -59,9 +131,26 @@ for (const leader of [false, true]) {
 
 test('older API keeps expandable records without locally invented totals', async ({ page }) => {
   await fixture(page)
-  await page.route('**/history?**', (route) => route.fulfill({ json: { people: [{
-    workforcePersonId: ids.person, records: [{ id: 'old', workDate: '2026-09-20', source: 'monday', title: 'Registro antigo', durationSeconds: 3600 }],
-  }] } }))
+  await page.route('**/history?**', (route) =>
+    route.fulfill({
+      json: {
+        people: [
+          {
+            workforcePersonId: ids.person,
+            records: [
+              {
+                id: 'old',
+                workDate: '2026-09-20',
+                source: 'monday',
+                title: 'Registro antigo',
+                durationSeconds: 3600,
+              },
+            ],
+          },
+        ],
+      },
+    }),
+  )
   await page.getByRole('button', { name: 'Ver histórico' }).click()
   await page.getByRole('button', { name: 'Consultar histórico' }).click()
   await expect(page.getByRole('status')).toContainText('Resumo diário indisponível')

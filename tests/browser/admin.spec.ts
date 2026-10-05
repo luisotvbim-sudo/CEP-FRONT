@@ -169,8 +169,12 @@ test('member sees only the operational area and their scoped history', async ({ 
   const calls = await fixture(page, { role: 'user' })
   await expect(page.getByRole('heading', { name: 'Minha jornada' })).toBeVisible()
   await expect(page.getByRole('navigation', { name: 'Navegação administrativa' })).toHaveCount(0)
-  expect((await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()).violations).toEqual([])
+  expect(
+    (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze())
+      .violations,
+  ).toEqual([])
   await expect(page.getByRole('button', { name: 'Meus times' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Meu histórico', exact: true }).click()
   await page.getByRole('button', { name: 'Consultar histórico' }).click()
   await expect(page.getByText('Duração indisponível não foi convertida em zero.')).toBeVisible()
   expect(calls.some((c) => c.path.includes(`workforcePersonId=${ids.person}`))).toBe(true)
@@ -181,7 +185,9 @@ test('member sees only the operational area and their scoped history', async ({ 
   expect(calls.some((c) => c.path.includes('/organization/invitations'))).toBe(false)
 })
 
-test('leader keeps personal view and inspects only a member of a managed team', async ({ page }) => {
+test('leader keeps personal view and inspects only a member of a managed team', async ({
+  page,
+}) => {
   const calls = await fixture(page, { role: 'user', leader: true })
   await expect(page.getByRole('heading', { name: 'Minha jornada' })).toBeVisible()
   await page.getByRole('button', { name: 'Meus times' }).click()
@@ -190,9 +196,11 @@ test('leader keeps personal view and inspects only a member of a managed team', 
   await page.getByRole('button', { name: /Bia Exemplo/ }).click()
   await page.getByRole('button', { name: 'Consultar histórico' }).click()
   await expect(page.getByRole('heading', { name: 'Registros de Bia Exemplo' })).toBeVisible()
-  expect(calls.some((call) => call.path.includes(`workforcePersonId=${ids.memberPerson}`))).toBe(true)
+  expect(calls.some((call) => call.path.includes(`workforcePersonId=${ids.memberPerson}`))).toBe(
+    true,
+  )
   await page.getByRole('button', { name: 'Minha jornada' }).click()
-  await expect(page.getByRole('heading', { name: 'Meu histórico' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Minha jornada' })).toBeVisible()
 })
 
 test('leader loses a selected member when the managed-team link disappears', async ({ page }) => {
@@ -212,41 +220,73 @@ test('server denial does not reveal a managed member history', async ({ page }) 
   await page.getByRole('button', { name: 'Meus times' }).click()
   await page.getByRole('button', { name: 'Projetos de teste' }).click()
   await page.getByRole('button', { name: /Bia Exemplo/ }).click()
-  await page.route('**/time-control/history?*', (route) => route.fulfill({ status: 403, json: { code: 'forbidden' } }))
+  await page.route('**/time-control/history?*', (route) =>
+    route.fulfill({ status: 403, json: { code: 'forbidden' } }),
+  )
   await page.getByRole('button', { name: 'Consultar histórico' }).click()
   await expect(page.getByRole('alert')).toContainText('não tem acesso')
   await expect(page.getByRole('heading', { name: 'Registros de Bia Exemplo' })).toHaveCount(0)
 })
 
-test('member does not follow an unknown synchronization after another user starts it', async ({ page }) => {
+test('member does not follow an unknown synchronization after another user starts it', async ({
+  page,
+}) => {
   await fixture(page, { role: 'user' })
   await page.getByRole('button', { name: 'Atualização', exact: true }).click()
   await expect(page.getByText('Integração desabilitada', { exact: true })).toHaveCount(2)
-  await page.route('**/synchronizations?full=false', (route) => route.fulfill({ status: 409, json: { code: 'sync_already_running' } }))
+  await page.route('**/synchronizations?full=false', (route) =>
+    route.fulfill({ status: 409, json: { code: 'sync_already_running' } }),
+  )
   await page.getByRole('button', { name: 'Atualizar últimos 7 dias' }).click()
   await expect(page.getByRole('alert')).toContainText('Já existe uma sincronização em andamento')
-  await expect(page.getByRole('heading', { name: 'Outra atualização está em andamento' })).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: 'Outra atualização está em andamento' }),
+  ).toBeVisible()
   await expect(page.getByText('Integração desabilitada', { exact: true })).toHaveCount(0)
 })
 
-test('coordinator edits users without dropping products and sees administrative audit', async ({ page }) => {
+test('coordinator edits users without dropping products and sees administrative audit', async ({
+  page,
+}) => {
   const calls = await fixture(page)
   await page.getByRole('button', { name: 'Usuários', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Usuários e coordenadores' })).toBeVisible()
-  expect((await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()).violations).toEqual([])
+  expect(
+    (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze())
+      .violations,
+  ).toEqual([])
   await page.getByRole('button', { name: 'Gerenciar' }).click()
   await page.getByLabel('Situação da conta').selectOption('suspended')
   await expect(page.getByRole('button', { name: 'Salvar usuário' })).toBeDisabled()
   await page.getByLabel(/Entendo que mudar papel/).check()
   await page.getByRole('button', { name: 'Salvar usuário' }).click()
-  expect(calls.some((call) => call.method === 'PATCH' && call.path.includes(`/users/${ids.user}`) && call.body.role === 'organizationAdmin' && call.body.status === 'suspended' && call.body.products === null)).toBe(true)
+  expect(
+    calls.some(
+      (call) =>
+        call.method === 'PATCH' &&
+        call.path.includes(`/users/${ids.user}`) &&
+        call.body.role === 'organizationAdmin' &&
+        call.body.status === 'suspended' &&
+        call.body.products === null,
+    ),
+  ).toBe(true)
   await page.getByLabel('E-mail corporativo').fill('coordenador@example.invalid')
   await page.getByRole('button', { name: 'Criar convite' }).click()
   await expect(page.getByText(/Convite criado e enfileirado/)).toBeVisible()
-  expect(calls.some((call) => call.method === 'POST' && call.path.includes('/organization/invitations') && call.body.role === 'organizationAdmin')).toBe(true)
+  expect(
+    calls.some(
+      (call) =>
+        call.method === 'POST' &&
+        call.path.includes('/organization/invitations') &&
+        call.body.role === 'organizationAdmin',
+    ),
+  ).toBe(true)
   await page.getByRole('button', { name: 'Auditoria', exact: true }).click()
   await expect(page.getByText('user.updated')).toBeVisible()
-  expect((await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()).violations).toEqual([])
+  expect(
+    (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze())
+      .violations,
+  ).toEqual([])
   expect(calls.some((call) => call.path.includes('/organization/audit'))).toBe(true)
 })
 
