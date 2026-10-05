@@ -34,6 +34,27 @@ internal static class SessionTests
     {
         string DirectoryFor(string name) => Path.Combine(root, name);
 
+        var overviewReads = 0;
+        using (var session = new ApiSession(Api, new Handler(request =>
+        {
+            if (request.RequestUri!.AbsolutePath == "/api/v1/auth/login") return Task.FromResult(Tokens());
+            if (request.RequestUri.AbsolutePath == "/api/v1/me") return Task.FromResult(Ok(User));
+            check(request.Method == HttpMethod.Get && request.Content is null, "Overview must remain read only");
+            check(request.RequestUri.PathAndQuery == "/api/v1/me/time-control/overview?period=sprint", "Overview lost the official period query");
+            check(request.Headers.Authorization?.Parameter == "fixture-access", "Overview lost native session authorization");
+            var response = ++overviewReads == 1 ? Error(HttpStatusCode.TooManyRequests, "rate_limited") : Error(HttpStatusCode.NotFound, "not_found");
+            if (overviewReads == 1) response.Headers.RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(TimeSpan.FromSeconds(120));
+            return Task.FromResult(response);
+        }), DirectoryFor("personal-overview")))
+        {
+            await session.Execute("login", Login);
+            var query = JsonSerializer.SerializeToElement(new { method = "GET", path = "/me/time-control/overview?period=sprint" });
+            var limit = await Failure(session.Execute("api", query));
+            check(limit.Status == 429 && limit.RetryAfterSeconds == 120 && !limit.TransportFailure, "Overview lost Retry-After or treated an HTTP error as offline");
+            var oldApi = await Failure(session.Execute("api", query));
+            check(oldApi.Status == 404 && !oldApi.TransportFailure && oldApi.RetryAfterSeconds is null, "Old API was treated as transport offline");
+        }
+
         var refreshes = 0;
         var reads = 0;
         using (var session = new ApiSession(Api, new Handler(async request =>
