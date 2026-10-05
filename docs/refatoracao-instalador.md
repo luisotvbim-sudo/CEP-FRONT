@@ -68,3 +68,11 @@ Artefatos locais no checkout gerenciado, em `.local/corporate-msi/0.4.10/artifac
 - `SHA256SUMS.txt`: hash do MSI. Não há manifesto/assinatura do canal automático neste build.
 
 UpgradeCode conferido `{8D0D0DC8-E744-42E7-A57A-20F489145ED8}`; ProductCode deste pacote `{E47F8D44-51A8-4BF3-AC29-0FA5AA927BE2}`. Inspeção de tabelas confirmou preflight Windows/WebView2 antes da transação, serviço LocalSystem, stop/aguardo antes de restore/remove, rollback, ACL e payload. Não comprova comportamento elevado em uma instalação real.
+
+## Conferência do PR e da entrega
+
+[PR draft #13](https://github.com/luisotvbim-sudo/CEP-FRONT/pull/13), base `codex/contexto-instalador-atual`, contém código `dd5feb0` e registro do build `3e9242f`. A cópia central em `CEP-ORQUESTRADOR/.local/entregas/cep-horas-0.4.10/` foi conferida por SHA-256 e é idêntica ao MSI original. O pacote continua `NotSigned` e imutável; mudanças posteriores de documentação/verificação não alteram a origem de seu código nem constituem outro build/release.
+
+Na [CI inicial](https://github.com/luisotvbim-sudo/CEP-FRONT/actions/runs/37257852693), `desktop` passou. `validate` passou lint, Vitest e build, mas o E2E terminou com 193/194: auditoria de contraste do preview desktop mediu `4.47:1` durante a transição de fundo de um botão, frente ao mínimo `4.5:1`. Os estilos do preview não foram alterados em relação à base `1911a31`; o snapshot ocorreu antes do fim da transição existente. O ajuste se limita ao teste, aguardando animações da navegação antes da auditoria de estados assentados, conservando todas as regras Axe. A CI seguinte deve ser conferida no PR antes de promover o draft; os resultados locais anteriores não são tratados como aprovação dessa CI.
+
+O probe local observou `4.4759:1` a 12–22 ms da troca, com animação ativa; depois de 205 ms, as animações terminaram e o contraste foi `5.0434:1`. O contraste breve preexistente foi preservado, sem correção CSS neste pacote. O teste ajustado passou seis repetições desktop/mobile, mais lint e diff-check; não usa sleep fixo, redução global de movimento ou exclusão de regra Axe.
