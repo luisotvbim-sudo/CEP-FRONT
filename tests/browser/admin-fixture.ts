@@ -1,5 +1,5 @@
 import { expect, type Page } from '@playwright/test'
-import { personalOverview } from './overview-fixture'
+import { personalOverview } from '../../src/user/overview-fixture'
 import type { OverviewPeriod, OverviewStatus } from '../../src/user/overview-api'
 
 export const ids = {
