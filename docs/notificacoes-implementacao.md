@@ -1,26 +1,31 @@
-# Implementação de análises e notificações
+# Análises e notificações — integração atual
 
-Entrega de 29/09/2026, integrada ao contrato real da CEP API desta mesma entrega. Os snapshots `openapi-backend-current.json`, `openapi.json` e os tipos gerados precisam ser publicados junto com o cliente. Implantar primeiro o backend correspondente.
+Contexto revisto em 04/10/2026. Código auditado: Front `eb63dbd`, API `b36c6e1`. Regras aprovadas em [contrato funcional](contrato-analises-notificacoes.md); visão e pendências em [especificação](produto/especificacao-funcional.md). Snapshots e tipos já incluem as operações deste recurso. Esta revisão não executou testes, envio ou homologação de produção.
 
 ## Interface autenticada
 
-- Coordenadores e SystemAdmin acessam configurações globais, tolerância simétrica e agendas com horário, finalidade e mensagem. Edição e exclusão incluem a versão do registro; conflitos exigem recarregar. A tela informa que a mudança alcança todas as organizações.
-- Envio instantâneo aceita uma pessoa associada a uma conta ou todos os destinatários elegíveis do escopo. Prévia de destinatários, datas e corte vem do servidor. Diário, semanal e sprint são regras do backend. A confirmação é invalidada ao editar o envio; uma resposta de rede incerta conserva a chave de idempotência.
-- Histórico distingue solicitação na fila de processamento concluído; não afirma entrega ao Windows. A central pessoal permite ler explicitamente; abrir o detalhe não marca leitura nem corrige as horas.
-- Análises exibem totais, diferenças, dias parciais, problemas e situação das fontes recebidos da API. O navegador não recalcula jornadas, tolerâncias ou períodos. Dados ausentes continuam indisponíveis. Relatórios filtram período, pessoa, dia e tipo de ocorrência no servidor.
-- SystemAdmin pode abrir configurações globais e a própria central sem selecionar uma organização. Operações de pessoas e envio exigem organização selecionada. Líder/membro recebem apenas a consulta autorizada pela API.
+- Coordenadores e `SystemAdmin` editam tolerância/automação e agendas **globais** com horário, finalidade, mensagem e versão. Conflito exige atualizar o registro; a tela informa o alcance de todas as organizações. Salvar não significa disparar.
+- Envio manual administra uma pessoa associada à conta ou todos os destinatários elegíveis da organização. Prévia resolve quantidade, datas e corte no servidor; o processamento terá seu próprio corte. Editar destinatário/mensagem/período invalida a confirmação.
+- `requestId` é conservado após resposta incerta; repetir a mesma solicitação usa a mesma identidade, sem criar envio silencioso extra. O servidor revalida autorização e conteúdo e aplica seus limites de frequência.
+- Histórico de envios distingue pedido em fila do processamento. Não comprova popup/recebimento/leitura. A central permite marcar cada mensagem lida explicitamente; abrir detalhe não marca leitura nem corrige horas.
+- Análises mostram totais/diferenças/dias/problemas/fontes da API. **GET analyses lista snapshots persistidos**; atualizar consulta não importa/reanalisa fontes. Relatórios conservam corte e versão originais, mesmo que o histórico bruto mude.
+- `SystemAdmin` abre configurações globais e central própria sem organização; pessoas/envio/relatórios exigem `organizationId` selecionado. Caixa pessoal não se transforma na caixa de outra organização.
+- Membro recebe análises próprias; Líder recebe seu escopo atual. Falta de vínculo, identidade ou resultado não equivale a zero horas/coerência.
 
-## Windows
+O frontend não calcula período, tolerância ou destinatários. Total agregado nulo não vira subtotal válido. Dia corrente/qualidade incompleta e valores desconhecidos são mostrados como recebidos. Calendário, casos/justificativas/aprovações e exportação continuam planejados.
 
-- WPF permanece na bandeja ao fechar a janela. O menu oferece abrir, abrir a central, testar um popup local e fechar o aplicativo mediante a senha diária offline do MSI 0.4.4. A instalação por usuário registra início em segundo plano em `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`; builds portáteis e Debug não alteram a inicialização. MSIX usa a tarefa do manifesto. Veja [aplicativo Windows](aplicativo-windows.md); assinatura e instalação MSIX ainda precisam de homologação.
-- O host nativo consulta pendentes após login/retomada e a cada minuto. Coleta todas as páginas antes de confirmar recebimento para não deslocar resultados da paginação.
-- Identificadores recebidos são persistidos com DPAPI, separados pela origem da API e pela conta. Nenhum token ou corpo de mensagem entra no React ou nesse arquivo de recibos. O arquivo não contém uma cópia offline das análises; detalhes continuam na central autenticada.
-- Um popup resume o lote de pendentes. Novas chegadas próximas são agrupadas, com intervalo mínimo de cinco minutos entre popups. A central conserva cada mensagem com sua data original. Recebimento não equivale a leitura.
-- Falha na consulta ou confirmação é retomada no próximo ciclo. Sem conectividade de rede ao iniciar, o arquivo de sessão é preservado e a retomada é tentada novamente. Uma resposta incerta durante rotação de refresh exige login, preservando a proteção contra replay já existente.
-- A configuração de notificações do Windows/Não perturbe pode suprimir um popup; a central permanece a referência de mensagens. O Windows não calcula horas. O instalador corporativo aplica o controle local de energia, mas a decisão online vem do endpoint autenticado da CEP API; somente a indisponibilidade real do transporte ativa a contingência local.
+## Recebimento Windows
 
-## Validação
+`NotificationDelivery` consulta pendentes depois do login/retomada e a cada minuto. Recupera todas as páginas antes de confirmar, evitando que confirmação desloque a paginação. Inclui mensagens antigas já geradas enquanto o PC esteve desligado; não reconstrói execuções que o servidor nunca gerou.
 
-Testes de contrato verificam escopo global versus organizacional, chave de idempotência e central pessoal. Playwright cobre configurações, exclusão, confirmação/retentativa de envio, valores desconhecidos, leitura explícita e acessibilidade. O teste WPF/WebView2 com API descartável verifica 101 pendentes em duas páginas, confirmação após coleta, recibos DPAPI, reinício e preservação dos tokens no host.
+IDs recebidos são gravados com DPAPI por conta e origem API antes de `POST /me/notifications/received`, em lotes de até 100 IDs. O ledger contém IDs, sem tokens/corpos de mensagem; não é cache offline de análises. Falha na consulta, gravação ou confirmação preserva a possibilidade de retentativa no ciclo seguinte.
 
-Essa validação com dados fictícios não comprova cobertura Monday/VR real nem assinatura/publicação do instalador. O fluxo autenticado com dados reais e as políticas de notificação do Windows de cada estação precisam de homologação operacional.
+Um popup nativo de bandeja resume o lote, com intervalo mínimo de cinco minutos entre resumos. A central conserva as mensagens e datas originais; receber não marca leitura. Não perturbe/políticas Windows podem suprimir exibição; popup solicitado não prova leitura. Clicar no resumo abre a mesma central autenticada. O teste de popup é identificado e não envia mensagem ao backend.
+
+Sem rede na inicialização, o arquivo de sessão é preservado para retomada. Resposta incerta na rotação de refresh exige login, sem replay. Tokens permanecem no host; notificações não concedem acesso a dados cujo escopo foi revogado. Inicialização/bandeja/fechamento variam por instalação: [aplicativo Windows](aplicativo-windows.md).
+
+## Fontes, agenda e evidência
+
+Tolerância inicial: 30 minutos nos dois sentidos, limite exato permitido. Automação nasce desativada. Agendas 10h/11h50/17h têm finalidade explícita, excluem sábado/domingo; relatório diário continua. Feriados/férias/escalas não têm calendário completo. O worker recupera slots do mesmo dia, com corte original; não recompõe dias passados nunca enfileirados.
+
+O [contrato](contrato-analises-notificacoes.md) detalha períodos, integridade e limites. Testes existentes de browser/contrato/nativo usam dados fictícios e API descartável. Para alteração funcional, verificar versão/conflito global, escopo, idempotência/resposta incerta, valores nulos, leitura explícita, todas as páginas antes de ACK, reinício e isolamento DPAPI. Homologação exige Monday/VR reais, perfis autorizados e políticas de notificação/instalação em Windows. CI não substitui essa evidência.

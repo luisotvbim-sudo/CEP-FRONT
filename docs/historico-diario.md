@@ -1,23 +1,27 @@
-# Histórico agrupado por dia
+# Histórico diário — contrato e apresentação
 
-Implementação local de 29/09/2026, compartilhada por Histórico administrativo, Meu histórico e Histórico da pessoa nos times. Navegador e WebView usam o mesmo componente `DailyHistory`.
+Revisado em 04/10/2026, Front `eb63dbd` e API `b36c6e1`. Histórico administrativo, próprio e de pessoa dos times compartilham `DailyHistory`, `useHistory` e `history-data.ts`. Ver [contexto](CONTEXTO-ATUAL.md) e [compatibilidade](compatibilidade-backend.md).
 
-- Cada data com registros tem uma linha inicialmente fechada: duração Monday, jornada VR Mais e diferença Monday − VR, com sinal e descrição.
-- Expandir mostra as duas fontes, suas atividades, durações, estados e os detalhes já disponíveis (horários, batidas, atualização e link de origem).
-- O filtro de fonte restringe os registros detalhados e os dias encontrados. O resumo desses dias considera ambas as fontes, evitando diferenças artificiais causadas pelo filtro.
-- Mudanças de período, pessoa ou fonte limpam os resultados e a expansão anterior.
-- Durações permanecem em segundos, sem arredondamento da diferença; datas civis mantêm a data da API e horários usam São Paulo.
+## Comportamento existente
 
-## Contrato e limite dos números
+- Cada data com registros aparece inicialmente fechada, com Monday, VR e diferença Monday − VR retornados pela API, sinal e descrição.
+- Expandir mostra registros das fontes, atividades/durações/estados e detalhes disponíveis: horários, batidas, atualização e link HTTPS de origem. Campo não fornecido permanece indisponível.
+- Filtro de fonte restringe detalhes e dias encontrados; resumo do dia usa ambas as identidades para evitar diferença artificial pelo filtro.
+- Alterar pessoa, período ou fonte invalida consulta/resultados/expansão anteriores. Resposta atrasada de um contexto anterior é descartada.
+- Durações preservam segundos e podem ultrapassar 24h; não arredondar antes da comparação. Datas civis conservam o dia da API; instantes são apresentados em São Paulo.
 
-`GET /api/v1/organization/time-control/history` conserva os parâmetros e `records`; cada pessoa recebe também `days: TimeAnalysisDay[]` (`day`, `mondaySeconds`, `vrSeconds`, `deltaSeconds`, `partial`, `issues`). O backend reutiliza `TimeAnalysisEngine` com proteção específica para registros armazenados. O React não calcula totais.
+## Contrato e significado dos números
 
-Os números descrevem os registros importados, não certificam a cobertura/completude das fontes nem são saldo trabalhista oficial. Monday ausente, duração nula/inválida ou cronômetro aberto não viram zero. VR ausente/inconsistente impede diferença; a jornada VR do dia corrente fica indisponível porque o histórico armazenado não permite prolongar batidas até a hora da consulta. Dias futuros não recebem estimativas. A consulta não busca Monday/VR nem envia notificações.
+`GET /api/v1/organization/time-control/history` aceita período inclusivo de até 90 dias, pessoa/fonte conforme contrato e autorização. Cada pessoa possui `records` e `days: TimeAnalysisDay[]`: dia, `mondaySeconds`, `vrSeconds`, `deltaSeconds`, `partial` e `issues`. O React agrupa/apresenta; o motor e os totais pertencem à API.
 
-Análises e notificações já apresentam uma linha por dia a partir do seu próprio resultado persistido. Elas mantêm o corte e os valores originais; não se substitui uma análise passada pelos registros atuais do histórico.
+Os dados descrevem importações armazenadas; não certificam cobertura/completude/atualidade nem saldo trabalhista. A consulta não busca Monday/VR, não envia avisos e não prolonga timers até agora. Monday ausente/nulo/inválido/aberto não vira zero. VR ausente/inconsistente impede diferença; VR do dia corrente fica nulo, pois esse snapshot não permite extrapolar batidas. Dias futuros não recebem estimativas.
 
-Implantar primeiro o backend atualizado. Com uma API anterior, o front agrupa e permite abrir os registros, mas informa que o resumo diário está indisponível, sem inventar totais. Não há mudança de autenticação, escopo, banco, migrations ou ponte desktop.
+Análises/notificações usam seus próprios snapshots e cortes. Não substituir um aviso passado por registros atuais nem usar histórico importado para liberar energia; o fluxo normal usa análise ao vivo na API. Override administrativo ativo por PIN pode liberar temporariamente sem análise, e continua sujeito à revalidação nativa.
 
-## Validação
+Quando uma API anterior não retorna `days`, a interface ainda permite agrupar/abrir registros e informa resumo indisponível. Não fabricar totais para esconder incompatibilidade. Mudança de contrato deve seguir [compatibilidade](compatibilidade-backend.md), implantando a API correspondente antes do front dependente.
 
-Snapshots obtidos do Swagger da aplicação local compilada, sem conexão ao banco local. Testes de integração usam PostgreSQL isolado via Testcontainers e fontes de teste; testes de navegador usam respostas simuladas identificadas no código. Isso não equivale a homologação autenticada com os dados de produção.
+## Acesso e validação
+
+Autorização é da API e segue vínculos vigentes hoje, mesmo para datas antigas. Não atribuir horas a times históricos nem tratar ausência de pessoa no escopo como zero. Ao perder vínculo, seleções/resultados de outra pessoa não podem conceder acesso.
+
+Nesta reescrita houve inspeção de código/contrato, sem testes autenticados ou fontes reais. Testes de fixtures existentes verificam agrupamento, imutabilidade, nulabilidade, contexto e apresentação. Homologação futura deve comprovar IDs/fontes, período de 90 versus 91 dias, datas São Paulo, sessão aberta/importação incompleta, fonte filtrada e tentativas fora do escopo. Swagger, PostgreSQL de teste e respostas simuladas não comprovam integração de produção.
