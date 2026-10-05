@@ -1,48 +1,96 @@
-# Instalador corporativo integrado
+# Instalador corporativo do CEP Horas
 
-Implementação de 30/09/2026 na branch `codex/installer-integrado`, construída sobre o menu autenticado e o contrato da CEP API `cf15a5c`.
+Reconciliado em 04/10/2026. Este guia descreve o MSI por máquina, serviço e políticas. Use o [contexto do instalador](CONTEXTO-INSTALADOR.md) para identificar a branch antes de construir ou distribuir.
 
-O atualizador MSI ainda não foi implementado. O estado do atualizador MSIX existente, a versão bootstrap proposta e o handoff completo para continuidade estão em [Contexto do atualizador MSI](contexto-atualizador-msi.md).
+## Qual base usar
 
-## Componentes
+| Base conferida | Script de build | Escopo disponível |
+|---|---|---|
+| `main` `eb63dbdc7f7bf83d0a4b51ee5567ed5aa80c138c` | Padrão 0.4.3 | Instalação corporativa, PIN/energia, instância única e recuperação completa do WebView2. |
+| `codex/installer-integrado` `dc58bde1617e6e1af6b61bea87c87fb5da9366a9` | Padrão 0.4.6 | Inclui fechamento diário protegido e restauração/retomada das políticas. |
+| `codex/msi-auto-updater` `95fbf5c4ff982916edacba5406d4b569d8007be8` | Padrão 0.4.7 | Inclui atualizador MSI assinado; 0.4.8 é o piloto seguinte e 0.4.9 acrescenta recuperação/carregamento nativos. [PR #9](https://github.com/luisotvbim-sudo/CEP-FRONT/pull/9). |
 
-O MSI 0.4.6 inclui a interface de liberação por PIN conforme a CEP API `main` `b36c6e1`, abertura de instância única, recuperação forçada do WebView2 e fechamento local protegido na bandeja com restauração temporária das políticas do Windows. Uma tentativa incorreta de fechamento apenas limpa e refoca o campo, sem mensagem visível. O host permite somente o POST exato de liberação e continua revalidando cada ação no servidor. O PIN da API nunca atravessa o named pipe nem pertence ao serviço ou ao pacote. Detalhes de expiração, rollout e testes em [menu de energia](menu-energia.md).
+O atualizador está implementado na terceira base e não na main analisada. A presença deste guia numa branch não altera o código daquele checkout. Versão de artefato não comprova release publicada ou instalada; o SHA e o parâmetro de build precisam ser registrados juntos.
 
-- Um único MSI por máquina instala React/WPF, o serviço `CepHorasControl`, inicialização em cada logon e a recuperação da TI.
-- O serviço roda como `LocalSystem`. Usuário comum não recebe permissão para parar ou configurar o serviço.
-- O WPF fecha a janela para a bandeja. O menu do ícone perto do relógio oferece **Fechar CEP Horas**, protegido pela senha diária local `ddMMyy#pec`; o serviço restaura a política original e suspende o relançamento somente depois da validação e apenas na sessão atual.
-- Abrir novamente o atalho sinaliza a instância existente e traz a janela para a frente. Em falha de carregamento, **Reiniciar CEP Horas** encerra somente processos do CEP Horas/WebView2 da sessão, preserva o perfil anterior como backup e abre um perfil limpo; o serviço de proteção permanece ativo.
-- O host revalida a ação na API; não confia no objeto devolvido pelo JavaScript. Somente `allowed` agenda. `blocked`, `indeterminate`, respostas inválidas e erros HTTP bloqueiam.
-- Se a API não responder no transporte, o host confirma por uma consulta independente e permite a contingência. Qualquer resposta HTTP significa que a API está alcançável.
-- Desligar, Reiniciar e Hibernar usam atraso fixo de dez segundos. Cancelar é idempotente e pertence à mesma identidade Windows que solicitou.
+## Pacote e componentes
 
-## Políticas
+O pacote `CEP-Horas-Windows-win-x64.msi` instala em `C:\Program Files\Conceito CEP Horas`, no escopo da máquina, com autorização administrativa inicial. Ele reúne React/assets locais, host WPF self-contained, serviço `CepHorasControl`, inicialização em logon, atalhos e mecanismo de recuperação. WebView2 Runtime é requisito da máquina; não distribuir somente o executável sem seu payload.
 
-O instalador salva o estado anterior antes da primeira alteração e então:
+O serviço roda como `LocalSystem`. ACLs restringem gravação na instalação e no estado privilegiado a Administradores/SYSTEM; usuário comum não recebe direito de parar/configurar o serviço. O pipe nega rede e valida SID interativo e o caminho do `CepHoras.exe` instalado antes de aceitar o protocolo fixo. Não existe execução genérica de comando, URL ou arquivo fornecido pelo usuário.
 
-- restringe `SeShutdownPrivilege` e `SeRemoteShutdownPrivilege` a `SYSTEM` e Administradores;
-- ativa `HidePowerOptions` no escopo da máquina;
-- desativa desligamento na tela sem login;
-- define toque curto do botão de energia, botão de sono e fechamento da tampa como **Não fazer nada** em AC e bateria;
-- preserva administradores/SYSTEM como recuperação.
+O MSI conserva `ProductName=CEP Horas`, `Manufacturer=Conceito`, plataforma x64, `ALLUSERS=1` e `UpgradeCode=8D0D0DC8-E744-42E7-A57A-20F489145ED8`. `MajorUpgrade` rejeita downgrade. Não trocar essas identidades numa correção comum: isso modifica descoberta, upgrade, desinstalação e confiança.
 
-O WPF cancela encerramento de sessão não autorizado do usuário comum. Pressão física prolongada, corte de energia, firmware, administrador/SYSTEM, atualização crítica do Windows e GPO de domínio permanecem fora da garantia.
+O aplicativo usa instância única por sessão Windows. Abrir o atalho sinaliza a instância existente e apresenta a janela; não inicia outra instância para disputar o perfil WebView2. Fechar a janela envia para a bandeja. A sessão da API continua no host, com DPAPI `CurrentUser`; React e serviço não recebem tokens.
 
-## Build e testes
+## Política de energia
+
+Antes da primeira alteração, o controle salva um snapshot dos direitos e valores afetados, em armazenamento privado de Administradores/SYSTEM. A aplicação é transacional, verifica o resultado e conserva caminhos de rollback/restauração.
+
+| Configuração | Estado corporativo aplicado |
+|---|---|
+| `SeShutdownPrivilege` e `SeRemoteShutdownPrivilege` | Somente Administradores e SYSTEM. |
+| `HidePowerOptions` | Ativo no escopo da máquina. |
+| Desligamento sem login | Desabilitado. |
+| Botão físico curto de energia, botão de sono e tampa | Não fazer nada, em AC e bateria. |
+
+O WPF trata encerramento de sessão não autorizado de usuário comum. A API autoriza a ação pessoal e o WPF revalida; o serviço agenda dez segundos e permite cancelamento, conforme [menu de energia](menu-energia.md).
+
+O controle exige Windows cliente x64, build ≥26100 e famílias de edição Professional/Enterprise/Education. Isso corresponde a Windows 11 24H2 ou posterior nessas edições. Windows 10, Home e Server não estão suportados pelo controle analisado. A condição x64 do MSI não substitui a validação mais estrita feita por `PolicyStore` ao aplicar políticas.
+
+Pressão prolongada do botão, corte de energia, firmware, administrador/SYSTEM, GPO de domínio e operações críticas do Windows ficam fora da garantia. O pacote não desativa UAC/antivírus nem modifica o domínio. Conferir efeitos de GPO e Windows Update no piloto; não inferir resistência a políticas externas.
+
+## Fechamento protegido e retomada
+
+Esta capacidade está nas bases integrada/atualizador e não na main 0.4.3. **Fechar CEP Horas**, no menu da bandeja, pede uma verificação diária local calculada pelo relógio Windows. Ela funciona offline, é distinta do PIN de seis dígitos administrado pela API e não é uma credencial de alta segurança. Sua fórmula/valor não pertence a este documento, capturas ou logs.
+
+O WPF valida o campo e envia a operação restrita de suspensão. O serviço primeiro restaura o snapshot original das políticas e notifica o shell; somente com sucesso suspende o relançamento para o SID/sessão e permite ao host fechar. Se a restauração falhar, o host permanece aberto. A suspensão é por sessão, mas os direitos/registros restaurados têm escopo de máquina: não prometer isolamento desse efeito entre sessões simultâneas.
+
+Abrir manualmente reaplica e verifica políticas antes de retomar supervisão. Reinício do serviço e eventos de fim/bloqueio/desconexão da sessão reaplicam a proteção. Direitos de usuário do Windows ficam integralmente refletidos em novos tokens de logon; a atualização visual do shell é solicitada imediatamente, sem prometer troca instantânea de todos os tokens existentes.
+
+Na branch do atualizador, manutenção MSI usa estado separado e nunca restaura políticas pelo fechamento protegido. Durante manutenção, a suspensão manual e novas ações de energia são recusadas.
+
+## Recuperação da interface
+
+Desde 0.4.3, **Reiniciar CEP Horas** encerra somente processos CEP Horas da sessão e subprocessos WebView2 vinculados à instância, preserva o perfil anterior como backup e inicia perfil limpo. O serviço permanece ativo para supervisão/proteção; não encerra serviços genéricos do Windows nem executa energia.
+
+Na evolução 0.4.9 da branch do atualizador, o WPF mostra carregamento até detectar conteúdo visível em `#root`. Navegação HTML bem-sucedida sozinha não é suficiente. Timeout de 30 segundos, root vazio após carregamento e falhas do renderizador oferecem **Recarregar interface** na recuperação, rodapé e bandeja. A recarga preserva perfil/sessão; se o navegador precisa ser recriado, usa a recuperação completa. Esperas de encerramento não bloqueiam a thread visual.
+
+Os eventos técnicos limitados ficam em `%LOCALAPPDATA%\Conceito\CepHoras\Diagnostics\webview.jsonl`, com rotação limitada e sem URLs, texto de página, credenciais ou dados de conta. O perfil fica em `%LOCALAPPDATA%\Conceito\CepHoras\WebView2`; preservar backup em recuperação assistida. Não divulgar o perfil ou arquivos DPAPI em Issues. Este mecanismo melhora detecção/recuperação, mas não prova a causa da tela branca reportada nem resolve automaticamente um banner de atualizador indisponível.
+
+## Construção
+
+Pré-requisitos: Node/pnpm conforme README, .NET SDK 10, Windows/PowerShell e dependências WiX do projeto. Conferir branch, SHA, diretório e versão antes de executar. Exemplos para as bases sem atualizador:
 
 ```powershell
-dotnet run --project desktop/CepHoras.Control.Tests -c Release
+# Executar somente no checkout main 0.4.3.
+./scripts/build-corporate-msi.ps1 -Version 0.4.3
+```
+
+```powershell
+# Executar somente no checkout integrado 0.4.6.
 ./scripts/build-corporate-msi.ps1 -Version 0.4.6
 ```
 
-Os testes do serviço usam um executor falso e não alteram política nem energia. O teste MSI lê o banco do pacote sem instalar e verifica escopo, serviço, custom actions elevadas, rollback, restauração antes da remoção, ACL e payload.
+Na branch do atualizador, construir bootstrap/piloto com a identidade de publicação aprovada, seguindo [build e assinatura](atualizador-msi.md). Esses parâmetros/scripts de assinatura não estão presentes em todas as bases. Sem assinatura válida, o pacote não está pronto para o canal automático.
 
-O aditivo 0.4.3 passou 200 verificações do desktop, incluindo exclusão de segunda instância, ativação da janela já iniciada, pedido de recuperação, backup do perfil WebView2 e idempotência. O upgrade local terminou com código MSI 0; após eliminar a instância antiga mantida em memória pelo Restart Manager, o serviço iniciou somente a versão nova e abrir o atalho manteve um único processo responsivo.
+Artefatos ficam em `.local/corporate-msi/<versão>/artifacts`; o script recusa substituir saída existente silenciosamente. Preservar pacotes produzidos e hashes; nova versão não deve mudar bytes de uma release anterior. Registrar o commit do build sem incluir chaves, sessão ou dados pessoais.
 
-No aditivo 0.4.4, a senha de fechamento usa exatamente dia, mês e ano com dois dígitos e o sufixo minúsculo `#pec`. Ela é validada no WPF pelo relógio local, não aparece na interface ou nos logs e não depende da CEP API. O serviço aceita suspensão/retomada somente do `CepHoras.exe` instalado e associa a suspensão à identidade e à sessão Windows do processo. Reiniciar o serviço, abrir o aplicativo manualmente ou trocar de sessão restabelece a supervisão. Esse mecanismo é operacional, não uma credencial de alta segurança: um administrador capaz de mudar o relógio, o binário ou o serviço permanece um caminho de recuperação.
+O ZIP de teste instalado por `install-desktop.ps1`, a execução portátil e o MSIX são canais separados. O teste local não se converte automaticamente em MSI corporativo. O fluxo MSIX usa identidade/certificado e não instala o serviço deste pacote; seus testes não comprovam o atualizador MSI.
 
-Correção 0.4.5: antes de confirmar o fechamento, o serviço restaura o snapshot original dos direitos e políticas e transmite a atualização de política ao shell. Se a restauração falhar, o aplicativo permanece aberto. Ao abrir novamente, o serviço aplica e verifica as restrições antes de retirar a suspensão. Logoff e início do serviço também reaplicam a proteção. Alterações de direitos de usuário do Windows são materializadas integralmente em novos tokens de logon; a atualização visual das opções nativas é solicitada imediatamente.
+## Upgrade, remoção e recuperação administrativa
 
-O aditivo 0.4.4 passou 83 testes web, 206 verificações do desktop, testes puros do serviço e 16 verificações do atualizador. WPF e serviço compilaram em Release sem avisos; o MSI passou pela inspeção estrutural. Os testes não executaram desligamento, reinício, hibernação nem alteração de política.
+O upgrade mantém políticas e troca payload/serviço. Na base do atualizador, ações de aplicação/rollback de políticas pertencem à instalação inicial; restauração na remoção exige `NOT UPGRADINGPRODUCTCODE`. Não liberar controles de energia como efeito colateral de `MajorUpgrade`.
 
-A instalação elevada, aplicação efetiva das políticas, relançamento em outra conta, as três ações reais e a desinstalação precisam de homologação em VM/computador piloto. O pacote não instala certificado, não modifica domínio e não desativa UAC ou antivírus.
+Na desinstalação comum, a restauração das políticas é agendada antes de parar/remover o serviço, com journal de rollback. Não apagar o snapshot manualmente: ele conserva o estado anterior necessário à recuperação. Os artefatos da TI incluem instruções/ferramenta administrativa do pacote; usar somente o mecanismo da base instalada e conservar evidência de retorno. Administradores/SYSTEM continuam disponíveis para recuperação.
+
+Antes de implantar o front/PIN, o backend correspondente precisa ter migration versionada, backup validado e PIN provisionado interativamente. Instruções operacionais do servidor pertencem ao CEP-API/CEP-VM; a documentação do instalador não comprova que essas operações estão atuais em produção.
+
+## Verificação e aceite
+
+Fontes comuns: [Package.wxs](../desktop/CepHoras.CorporateInstaller/Package.wxs), [build](../scripts/build-corporate-msi.ps1), [teste estrutural](../scripts/test-corporate-msi.ps1), [PolicyStore](../desktop/CepHoras.Control/PolicyStore.cs), [ControlService](../desktop/CepHoras.Control/ControlService.cs), [PowerAuthority](../desktop/CepHoras.Control/PowerAuthority.cs). Fontes específicas: [ciclo de fechamento integrado](https://github.com/luisotvbim-sudo/CEP-FRONT/blob/dc58bde1617e6e1af6b61bea87c87fb5da9366a9/desktop/CepHoras.Control/DesktopLifecycleController.cs) e [recarga 0.4.9](https://github.com/luisotvbim-sudo/CEP-FRONT/blob/95fbf5c4ff982916edacba5406d4b569d8007be8/desktop/CepHoras.Desktop/MainWindow.WebView.cs).
+
+Testes puros do serviço usam executor falso; inspeção MSI lê o banco sem instalar. Compilação/CI, mocks e inspeção estrutural são evidências distintas da homologação Windows. Esta revisão documental não executou novas suítes ou ações reais.
+
+O piloto da [Issue #7](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/7) deve registrar instalação com administrador e uso com conta comum; políticas em Iniciar/Alt+F4/login/botão curto/tampa; login/retomada; decisões e PIN/expiração; três ações/cancelamento; fechamento/retomada e múltiplas sessões; WebView2; upgrade e desinstalação/restauração. O piloto do atualizador acrescenta os critérios do [guia MSI](atualizador-msi.md).
+
+Conferir a frota e edições pela [Issue #11](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/11), validar recuperação 0.4.9 pela [Issue #12](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/12) e só ampliar de VM para PC piloto, duas/três máquinas e restante da equipe depois de resultados verificáveis. Nenhuma versão instalada ou rollout está sendo declarado concluído por este guia.
