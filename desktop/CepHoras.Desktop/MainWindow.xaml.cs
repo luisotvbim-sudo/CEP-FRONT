@@ -348,6 +348,10 @@ public partial class MainWindow : Window
                 if (response.Code != "desktop_suspended")
                     throw new InvalidOperationException("O serviço não autorizou o fechamento.");
                 WindowsPolicyNotification.NotifyShell();
+                if (WindowsShutdownAccess.HasShutdownPrivilege() == false)
+                    System.Windows.MessageBox.Show(
+                        "As configurações de energia foram restauradas. Esta sessão do Windows ainda usa as permissões da versão anterior. Salve seu trabalho e saia e entre no Windows uma vez para liberar os controles. O CEP Horas será fechado.",
+                        "CEP Horas — atualizar sessão do Windows", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             exiting = true;
             Close();

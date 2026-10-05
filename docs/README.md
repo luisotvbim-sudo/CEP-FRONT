@@ -20,6 +20,7 @@ Contexto reescrito em 04/10/2026 após revisão do código. Comece por [CONTEXTO
 | [Contexto do instalador](CONTEXTO-INSTALADOR.md) / [instalador corporativo](instalador-corporativo.md) | Serviço, políticas Windows, empacotamento, bases e homologação |
 | [Atualizador MSI](atualizador-msi.md) | Contrato de distribuição e implementação da branch PR #9, fora da main auditada |
 | [Instalador 0.4.11](instalador-0.4.11.md) | Integração da main, recuperação durável de energia, verificação Windows, assinatura do atualizador e aceite de piloto |
+| [Liberação de energia 0.4.12](liberacao-energia-0.4.12.md) | Direitos originais preservados, restauração ao fechar e migração de sessões antigas |
 | [Refatoração / piloto 0.4.10](refatoracao-instalador.md) | Evidência histórica do piloto anterior; sucedido pelo pacote 0.4.11 |
 | [Deploy web](../deploy/README.md) | Contêiner, proxy de borda e operação do front web |
 

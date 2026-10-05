@@ -219,6 +219,7 @@ Console.WriteLine("PASS: fixed power actions, ten-second scheduling, idempotency
 Console.WriteLine("PASS: update owner/version/expiry, recovery, maintenance power cancellation and status projection. Privileged MSI/ACL/StopServices validation remains deferred to a SYSTEM pilot.");
 await ServiceReliabilityChecks.Run();
 PowerRecoveryChecks.Run();
+PolicyProfileChecks.Run();
 
 static void Assert(bool value, string message)
 {

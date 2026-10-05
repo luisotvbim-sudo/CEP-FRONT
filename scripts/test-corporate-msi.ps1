@@ -20,7 +20,10 @@ foreach ($expected in @(
     @('ApplyPolicy', '--apply-policy'),
     @('RollbackApplyPolicy', '--rollback-apply'),
     @('RestorePolicy', '--uninstall-restore'),
-    @('RollbackPolicyRestore', '--rollback-restore')
+    @('RollbackPolicyRestore', '--rollback-restore'),
+    @('UpgradePolicy', '--upgrade-policy'),
+    @('RollbackPolicyUpgrade', '--rollback-policy-upgrade'),
+    @('FinishPolicyUpgrade', '--finish-policy-upgrade')
 )) {
     $row = @($actions | Where-Object { $_.Values[0] -eq $expected[0] })
     if ($row.Count -ne 1 -or $row[0].Values[2] -ne $expected[1] -or (([int]$row[0].Values[1]) -band 0xC00) -ne 0xC00) { throw "Ação MSI ausente ou não elevada: $($expected[0])" }
@@ -31,6 +34,18 @@ $files = @($sequence | Where-Object { $_.Values[0] -eq 'InstallFiles' })
 if ([int]$apply[0].Values[2] -le [int]$files[0].Values[2] -or $apply[0].Values[1] -cne 'NOT Installed AND NOT WIX_UPGRADE_DETECTED') { throw 'Política inicial deve ser aplicada depois dos arquivos, preservando a política anterior durante upgrades.' }
 $rollbackApply = @($sequence | Where-Object { $_.Values[0] -eq 'RollbackApplyPolicy' })
 if ($rollbackApply.Count -ne 1 -or $rollbackApply[0].Values[1] -cne 'NOT Installed AND NOT WIX_UPGRADE_DETECTED') { throw 'Rollback de upgrade não pode restaurar/liberar a política anterior.' }
+$upgradePolicy = @($sequence | Where-Object { $_.Values[0] -eq 'UpgradePolicy' })
+$rollbackUpgrade = @($sequence | Where-Object { $_.Values[0] -eq 'RollbackPolicyUpgrade' })
+$finishUpgrade = @($sequence | Where-Object { $_.Values[0] -eq 'FinishPolicyUpgrade' })
+$startServices = @($sequence | Where-Object { $_.Values[0] -eq 'StartServices' })
+if ($upgradePolicy.Count -ne 1 -or $rollbackUpgrade.Count -ne 1 -or $finishUpgrade.Count -ne 1 -or
+    $upgradePolicy[0].Values[1] -cne 'NOT Installed AND WIX_UPGRADE_DETECTED' -or
+    $rollbackUpgrade[0].Values[1] -cne $upgradePolicy[0].Values[1] -or $finishUpgrade[0].Values[1] -cne $upgradePolicy[0].Values[1] -or
+    [int]$files[0].Values[2] -ge [int]$rollbackUpgrade[0].Values[2] -or
+    [int]$rollbackUpgrade[0].Values[2] -ge [int]$upgradePolicy[0].Values[2] -or
+    [int]$upgradePolicy[0].Values[2] -ge [int]$startServices[0].Values[2]) { throw 'Migração de política precisa de checkpoint/rollback após arquivos e antes do serviço; limpeza somente no commit MSI.' }
+$commitType = @($actions | Where-Object { $_.Values[0] -eq 'FinishPolicyUpgrade' })
+if (([int]$commitType[0].Values[1] -band 0x200) -ne 0x200) { throw 'Checkpoint de migração só pode ser removido no commit MSI.' }
 $restore = @($sequence | Where-Object { $_.Values[0] -eq 'RestorePolicy' })
 $stop = @($sequence | Where-Object { $_.Values[0] -eq 'StopServices' })
 $remove = @($sequence | Where-Object { $_.Values[0] -eq 'RemoveFiles' })

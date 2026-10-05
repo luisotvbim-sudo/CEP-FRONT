@@ -28,7 +28,7 @@ Antes da primeira alteração, o controle salva um snapshot dos direitos e valor
 
 | Configuração | Estado corporativo aplicado |
 |---|---|
-| `SeShutdownPrivilege` e `SeRemoteShutdownPrivilege` | Somente Administradores e SYSTEM. |
+| `SeShutdownPrivilege` e `SeRemoteShutdownPrivilege` | Desde 0.4.12, atribuições originais preservadas; versões anteriores restringiam a Administradores/SYSTEM. |
 | `HidePowerOptions` | Ativo no escopo da máquina. |
 | Desligamento sem login | Desabilitado. |
 | Botão físico curto de energia, botão de sono e tampa | Não fazer nada, em AC e bateria. |
@@ -45,7 +45,7 @@ Esta capacidade está nas bases integrada/atualizador e não na main 0.4.3. **Fe
 
 O WPF valida o campo e envia a operação restrita de suspensão. O serviço primeiro restaura o snapshot original das políticas e notifica o shell; somente com sucesso suspende o relançamento para o SID/sessão e permite ao host fechar. Se a restauração falhar, o host permanece aberto. A suspensão é por sessão, mas os direitos/registros restaurados têm escopo de máquina: não prometer isolamento desse efeito entre sessões simultâneas.
 
-Abrir manualmente reaplica e verifica políticas antes de retomar supervisão. Reinício do serviço e eventos de fim/bloqueio/desconexão da sessão reaplicam a proteção. Direitos de usuário do Windows ficam integralmente refletidos em novos tokens de logon; a atualização visual do shell é solicitada imediatamente, sem prometer troca instantânea de todos os tokens existentes.
+Desde [0.4.12](liberacao-energia-0.4.12.md), por escolha explícita do usuário, os direitos originais de logon são preservados. O bloqueio controla menus e botões por registros; permite comandos externos que usam direitos existentes. Fechar restaura esses registros e pede atualização do shell. Abrir manualmente, reinício do serviço e eventos de sessão reaplicam os registros e a supervisão sem retirar direitos de logon. Uma sessão que perdeu a permissão com a versão antiga precisa sair/entrar uma vez; o host informa essa condição sem encerrar a sessão automaticamente. GPO e restrições anteriores são preservadas.
 
 Na branch do atualizador, manutenção MSI usa estado separado e nunca restaura políticas pelo fechamento protegido. Durante manutenção, a suspensão manual e novas ações de energia são recusadas.
 

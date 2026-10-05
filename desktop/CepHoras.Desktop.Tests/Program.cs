@@ -94,6 +94,7 @@ try
     WebViewProfileRecoveryTests.Run(Check, directory);
     WebViewLifecycleTests.Run(Check);
     DailyClosePasswordTests.Run(Check);
+    WindowsShutdownAccessTests.Run(Check);
 }
 finally
 {

@@ -31,7 +31,7 @@ internal sealed class AdminWindow : Window
         {
             Margin = new Thickness(0, 16, 0, 16),
             TextWrapping = TextWrapping.Wrap,
-            Text = "O instalador ativa automaticamente as restrições para usuários comuns. O CEP Horas consulta a API e o serviço local executa Desligar, Reiniciar ou Hibernar. Sem resposta da API, a contingência local permite a ação.\n\nEsta ferramenta é exclusiva da TI e restaura as permissões e políticas existentes antes da instalação. Administradores e SYSTEM permanecem como recuperação. Faça novo logon depois de aplicar ou restaurar políticas."
+            Text = "O instalador ativa automaticamente as restrições dos controles de energia do Windows e preserva os direitos originais da conta. O CEP Horas consulta a API e o serviço local executa Desligar, Reiniciar ou Hibernar. A contingência exige falha de transporte confirmada pelo aplicativo.\n\nEsta ferramenta é exclusiva da TI e restaura as permissões e políticas existentes antes da instalação. Administradores e SYSTEM permanecem como recuperação. Sessões criadas pela versão antiga precisam sair e entrar no Windows uma vez para reconhecer os direitos restaurados."
         });
         var verify = new Button
         {

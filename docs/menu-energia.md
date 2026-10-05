@@ -70,6 +70,8 @@ Falha Monday/VR, banco indisponível com resposta HTTP, autenticação, PIN, cor
 
 Fechar a janela normalmente envia o host para a bandeja. Desde a branch integrada 0.4.6, **Fechar CEP Horas** usa uma verificação diária local independente do PIN. O serviço restaura políticas antes de suspender relançamento para aquela sessão; abrir manualmente reaplica proteção. Essa restauração muda configurações da máquina, por isso múltiplas sessões precisam ser avaliadas no piloto. A main 0.4.3 não contém essa função.
 
+A [correção 0.4.12](liberacao-energia-0.4.12.md) preserva os direitos de logon originais para permitir restaurar os controles sem abandonar a sessão a cada fechamento. A escolha foi explicitamente aprovada, incluindo o limite de permitir comandos externos de desligamento. Não muda a decisão/revalidação da API dentro do CEP. Sessões antigas sem permissão exigem uma renovação inicial; GPO original não é removida.
+
 No [pacote 0.4.11](instalador-0.4.11.md), manutenção MSI cancela pedidos conhecidos desta instância, bloqueia novos agendamentos e preserva políticas. Pedido herdado após crash ou intenção sem confirmação exige cancelamento explícito do titular, com ID e broker original; manutenção/recarga/startup não o cancelam automaticamente. Não usa `desktop-suspend`. Recuperar/recarregar o WebView2 não agenda ação de energia nem encerra o serviço.
 
 ## Fontes e validação
