@@ -1,0 +1,102 @@
+.overview-panel {
+  min-width: 0;
+}
+.overview-controls,
+.overview-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: end;
+}
+.overview-controls label {
+  display: block;
+  margin-bottom: 6px;
+}
+.overview-controls select {
+  min-width: 180px;
+}
+.overview-situation {
+  margin: 24px 0;
+  padding: 20px;
+  border-left: 3px solid #758079;
+  background: #f4f6f4;
+  border-radius: 8px;
+}
+.overview-situation h2 {
+  margin-top: 0;
+}
+.overview-difference,
+.overview-incomplete {
+  border-left-color: #9a741f;
+  background: #fcf9f1;
+}
+.overview-regular {
+  border-left-color: #427257;
+}
+.overview-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 24px 0 12px;
+}
+.overview-metrics > div {
+  padding: 16px;
+  border: 1px solid #dce2dd;
+  border-radius: 10px;
+}
+.overview-metrics dt {
+  font-size: 0.85rem;
+  color: #566159;
+}
+.overview-metrics dd {
+  margin: 10px 0 0;
+  font-size: 1.6rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.overview-attention {
+  padding-left: 20px;
+}
+.overview-attention li {
+  margin: 16px 0;
+}
+.overview-attention span {
+  display: block;
+  margin-top: 6px;
+  color: #566159;
+}
+.overview-details {
+  margin: 24px 0;
+  padding: 16px 0;
+  border-top: 1px solid #dce2dd;
+  border-bottom: 1px solid #dce2dd;
+}
+.overview-details summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.overview-notice {
+  padding: 16px;
+  margin-top: 20px;
+  background: #fcf9f1;
+  border: 1px solid #ded4b6;
+  border-radius: 8px;
+}
+.overview-panel button:focus-visible,
+.overview-panel summary:focus-visible {
+  outline: 3px solid #427257;
+  outline-offset: 4px;
+}
+@media (max-width: 640px) {
+  .overview-metrics {
+    grid-template-columns: 1fr;
+  }
+  .overview-controls > div,
+  .overview-controls select {
+    width: 100%;
+    min-width: 0;
+  }
+  .overview-situation {
+    padding: 16px;
+  }
+}

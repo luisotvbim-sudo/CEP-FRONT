@@ -9,10 +9,11 @@ Contexto reescrito em 04/10/2026 após revisão do código. Comece por [CONTEXTO
 | [Contexto atual](CONTEXTO-ATUAL.md) | Funcionamento, arquitetura, sessão, escopos, bases e pendências para retomar |
 | [Especificação](produto/especificacao-funcional.md) | Intenção de produto, estado implementado/planejado e IDs RN/RF/CA/D |
 | [Compatibilidade](compatibilidade-backend.md) | API de referência e processo de alinhamento do contrato |
-| [OpenAPI real](openapi-backend-current.json) / [consumido](openapi.json) | Contrato técnico; 52 paths/72 schemas na referência auditada |
+| [OpenAPI real](openapi-backend-current.json) / [consumido](openapi.json) | Contrato técnico, incluindo o acompanhamento pessoal aditivo |
 | [Análises e notificações — contrato](contrato-analises-notificacoes.md) | Aditivo funcional que prevalece neste recurso |
 | [Análises e notificações — integração](notificacoes-implementacao.md) | Telas, Windows, persistência/recebimento e limites de evidência |
 | [Histórico diário](historico-diario.md) | Dados importados, agrupamento e números autoritativos |
+| [Acompanhamento pessoal](acompanhamento-pessoal.md) | Consulta atual, corte, dias de atenção, recuperação e compatibilidade |
 | [Ativação de convite](contrato-ativacao-convite.md) / [reenvio](contrato-reenvio-convite.md) | Contratos, sessão e fila de e-mail |
 | [Aplicativo Windows](aplicativo-windows.md) | Host, bandeja, popup, sessão, canais e verificações |
 | [Menu de energia](menu-energia.md) | Decisão API, PIN, revalidação e contingência |

@@ -126,21 +126,24 @@ export function Pagination({
   )
 }
 export function PageHeading({
-  eyebrow = 'ADMINISTRAÇÃO',
+  eyebrow = 'CEP HORAS',
   title,
   description,
   action,
+  level = 'h1',
 }: {
   eyebrow?: string
   title: string
   description: string
   action?: ReactNode
+  level?: 'h1' | 'h2'
 }) {
+  const Heading = level
   return (
     <div className="admin-page-heading">
       <div>
         <div className="eyebrow">{eyebrow}</div>
-        <h1>{title}</h1>
+        <Heading>{title}</Heading>
         <p>{description}</p>
       </div>
       {action}

@@ -19,6 +19,8 @@ A auditoria não encontrou release MSI estável nem comprovação de homologaç�
 
 ## Capacidades existentes
 
+- [Acompanhamento pessoal](docs/acompanhamento-pessoal.md) com consulta automática, situação/corte, dias de atenção e detalhe progressivo; requer o contrato aditivo da API.
+
 - Login web/nativo, retomada, refresh rotativo, logout, recuperação/redefinição de senha e [ativação de convite sem emissão de sessão](docs/contrato-ativacao-convite.md).
 - Pessoas, associação por IDs Monday/VR, convite e [reenvio administrativo](docs/contrato-reenvio-convite.md), diretórios paginados e sincronização normal de 7 dias ou administrativa de até 90 dias.
 - Administração de organizações, usuários, times, vínculos com vigência e auditoria; Membro/Líder recebem respostas autorizadas pela API.

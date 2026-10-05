@@ -91,7 +91,9 @@ export class HttpAuthClient implements AuthClient {
         signal: AbortSignal.timeout(
           path.startsWith('/organization/time-control/synchronizations') && method === 'POST'
             ? 180_000
-            : 20_000,
+            : path.startsWith('/me/time-control/overview')
+              ? 100_000
+              : 20_000,
         ),
       })
     } catch {
@@ -102,7 +104,11 @@ export class HttpAuthClient implements AuthClient {
       )
     }
     if (!response.ok) {
-      throw apiFailure(response.status, await response.json().catch(() => null))
+      throw apiFailure(
+        response.status,
+        await response.json().catch(() => null),
+        response.headers.get('Retry-After'),
+      )
     }
     return response
   }
@@ -231,6 +237,7 @@ export class HttpAuthClient implements AuthClient {
       !(method === 'POST' && path === '/me/time-control/power-action-check') &&
       !(method === 'POST' && path === '/me/time-control/power-action-unlock') &&
       !(method === 'GET' && /^\/me\/time-control\/power-action-status(\?|$)/.test(path)) &&
+      !(method === 'GET' && /^\/me\/time-control\/overview(\?|$)/.test(path)) &&
       path.split('?')[0] !== '/admin/organizations' &&
       path !== '/me'
     )

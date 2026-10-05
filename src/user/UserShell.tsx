@@ -6,13 +6,14 @@ import { AuthError, type AuthClient, type AuthSession } from '../auth/auth-clien
 import { FormNotice } from '../components/FormNotice'
 import { AdminApi, type Assignment, type Person, type Team } from '../admin/api'
 import { HistoryView } from './HistoryView'
+import { PersonalOverview } from './PersonalOverview'
 import { SyncPage } from '../admin/SyncPage'
 import { sourceLabel, syncLabels, timestamp, today } from '../admin/format'
 import { Badge, Empty, Loading, PageHeading, QueryError } from '../admin/ui'
 import '../admin/admin.css'
 import { Analyses, Inbox, useNotificationApi, useOpenInbox } from '../notifications'
 
-type Page = 'mine' | 'teams' | 'sync' | 'notifications' | 'analyses' | 'teamAnalyses'
+type Page = 'mine' | 'history' | 'teams' | 'sync' | 'notifications' | 'analyses' | 'teamAnalyses'
 
 function LatestSources({ api }: { api: AdminApi }) {
   const latest = useQuery(async () => {
@@ -110,7 +111,13 @@ function TeamHistory({ api, team, people }: { api: AdminApi; team: Team; people:
         )}
       </div>
       {selected && (
-        <HistoryView key={selected.id} api={api} person={selected} title="Histórico da pessoa" />
+        <HistoryView
+          key={selected.id}
+          api={api}
+          person={selected}
+          title="Histórico da pessoa"
+          nested
+        />
       )}
     </>
   )
@@ -138,6 +145,7 @@ export function UserShell({
   const selectedTeam = managed.find((team) => team.id === teamId) ?? null
   const navigation = [
     { id: 'mine' as const, label: 'Minha jornada', icon: History },
+    { id: 'history' as const, label: 'Meu histórico', icon: History },
     ...(managed.length ? [{ id: 'teams' as const, label: 'Meus times', icon: UsersRound }] : []),
     { id: 'sync' as const, label: 'Atualização', icon: RefreshCw },
     { id: 'notifications' as const, label: 'Minhas notificações', icon: History },
@@ -214,11 +222,21 @@ export function UserShell({
         <main className="admin-content">
           <FormNotice error={logout.error} />
           {activePage === 'mine' && (
+            <PersonalOverview
+              client={client}
+              onHistory={() => setPage('history')}
+              onNotifications={() => setPage('notifications')}
+            />
+          )}
+          {activePage === 'history' && (
             <>
-              <PageHeading
-                title="Minha jornada"
-                description="Consulte seus registros brutos e a situação da última atualização solicitada por você."
-              />
+              {!self && (
+                <PageHeading
+                  eyebrow="ACOMPANHAMENTO PESSOAL"
+                  title="Meu histórico"
+                  description="Registros importados e associação da sua conta."
+                />
+              )}
               <div className="admin-panel">
                 <h2>Situação das fontes</h2>
                 <LatestSources api={api} />

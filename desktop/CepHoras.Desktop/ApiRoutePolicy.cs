@@ -12,6 +12,7 @@ internal static class ApiRoutePolicy
         if (path == "/me/time-control/power-action-unlock" && method == "POST") return true;
         if (route == "/me/time-control/power-action-check" && method == "POST") return true;
         if (route == "/me/time-control/power-action-status" && method == "GET") return true;
+        if (route == "/me/time-control/overview" && method == "GET") return true;
         if (route == "/time-control/settings" && method is "GET" or "PATCH") return true;
         if (route == "/time-control/notification-schedules" && method is "GET" or "POST") return true;
         if (Regex.IsMatch(route, "^/time-control/notification-schedules/[0-9a-fA-F-]{36}$") && method is "PATCH" or "DELETE") return true;

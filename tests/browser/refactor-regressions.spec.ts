@@ -123,6 +123,7 @@ test('late team history cannot appear after returning to the personal view', asy
   await expect.poll(() => started).toBe(true)
   await page.getByRole('button', { name: 'Minha jornada', exact: true }).click()
   release()
+  await page.getByRole('button', { name: 'Meu histórico', exact: true }).click()
   await page.getByRole('button', { name: 'Consultar histórico' }).click()
   await expect(
     page.getByText('Nenhum registro importado neste período', { exact: true }),

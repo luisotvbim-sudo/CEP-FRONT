@@ -34,6 +34,8 @@ Ativar convite retorna 204 sem sessão/token/cookie; depois o usuário faz login
 
 ## Pessoas, sincronização e histórico
 
+Desde a entrega em branch de 05/10/2026, Minha jornada usa [acompanhamento pessoal](acompanhamento-pessoal.md), com consulta automática ao endpoint aditivo da API, situação/corte e detalhe progressivo. Meu histórico mantém a leitura importada em página própria. A nova interface depende da API compatível; sua presença nesta branch não comprova publicação web ou integração no piloto MSI.
+
 Diretórios Monday/VR são paginados no backend; a interface escolhe IDs internos ativos e ainda não associados. Correspondência por e-mail exato/único é sugestão, exige confirmação humana. Nomes iguais não criam associação automática. Associar/convidar enfileira e-mail, sem provar entrega.
 
 Atualização normal reavalia hoje e os seis dias anteriores; reprocessamento completo/carga inicial administrativa cobre até 90 dias. Não é delta puro por cursor. Fontes apresentam tentativa, resultado, contagens/cobertura e falhas independentes; última tentativa não significa último sucesso. Membro/Líder não recebem a opção de reprocessamento administrativo, e sua última tentativa é a que solicitaram.

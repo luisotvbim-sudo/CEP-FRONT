@@ -1,6 +1,6 @@
 import type { Analysis } from './api'
 import { date, duration, timestamp } from '../admin/format'
-import { issueLabels, dispatchLabels } from './labels'
+import { issueLabels } from './labels'
 
 export function AnalysisDetails({ value }: { value: Analysis }) {
   return (
@@ -30,12 +30,17 @@ export function AnalysisDetails({ value }: { value: Analysis }) {
       {value.sources?.map((source) => (
         <p key={source.source} className="muted">
           {source.source === 'monday' ? 'Monday' : 'VR Mais'}:{' '}
-          {dispatchLabels[source.status ?? ''] ?? source.status ?? 'Indisponível'} ·{' '}
+          {source.status === 'complete' ? 'Leitura completa' : 'Leitura incompleta'} ·{' '}
           {timestamp(source.observedAt)}
-          {source.errorCode ? ` · ${source.errorCode}` : ''}
+          {source.errorCode ? ' · Não foi possível concluir esta leitura.' : ''}
         </p>
       ))}
-      <div className="table-scroll">
+      <div
+        className="table-scroll"
+        role="region"
+        aria-label="Detalhes diários da análise"
+        tabIndex={0}
+      >
         <table>
           <thead>
             <tr>
@@ -58,8 +63,12 @@ export function AnalysisDetails({ value }: { value: Analysis }) {
                 <td>{duration(day.deltaSeconds)}</td>
                 <td>
                   {day.issues?.length
-                    ? day.issues.map((issue) => issueLabels[issue] ?? issue).join(' · ')
-                    : 'Dentro da tolerância'}
+                    ? day.issues
+                        .map((issue) => issueLabels[issue] ?? 'Informações a revisar')
+                        .join(' · ')
+                    : day.deltaSeconds == null
+                      ? 'Informações insuficientes'
+                      : 'Dentro da tolerância'}
                 </td>
               </tr>
             ))}

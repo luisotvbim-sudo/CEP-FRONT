@@ -4,6 +4,7 @@ export type BridgeFailure = {
   correlationId?: string
   transportFailure?: boolean
   requestId?: string
+  retryAfterSeconds?: number
 }
 type BridgeEvent = {
   data: { id?: string; ok?: boolean; result?: unknown; error?: BridgeFailure }
@@ -45,6 +46,9 @@ function validFailure(value: unknown): value is BridgeFailure {
       value.correlationId === null ||
       (typeof value.correlationId === 'string' && value.correlationId.length <= 200)) &&
     (value.transportFailure === undefined || typeof value.transportFailure === 'boolean') &&
+    (value.retryAfterSeconds === undefined ||
+      (typeof value.retryAfterSeconds === 'number' &&
+        Number.isFinite(value.retryAfterSeconds) && value.retryAfterSeconds >= 0)) &&
     (value.requestId === undefined ||
       value.requestId === null ||
       (typeof value.requestId === 'string' &&
