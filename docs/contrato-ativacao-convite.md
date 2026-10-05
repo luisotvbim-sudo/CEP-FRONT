@@ -1,6 +1,6 @@
 # Ativação de convite — contrato frontend
 
-Implementado na branch `codex/invitation-activation`. Requer publicação do backend antes do frontend; sem migration.
+Contrato implementado nas bases auditadas em 04/10/2026: CEP-API `b36c6e1` e CEP-FRONT `eb63dbd`. A ativação já faz parte dessas bases; publicação e homologação de um ambiente são evidências separadas. [Contexto atual](CONTEXTO-ATUAL.md) e [compatibilidade](compatibilidade-backend.md).
 
 ## Experiência
 
@@ -12,10 +12,6 @@ O formulário pede e-mail do convite, nome, código, senha e confirmação. Senh
 
 `POST /api/v1/auth/invitations/activate`, anônimo, limitado pela política `auth` por IP/rota.
 
-```json
-{"email":"pessoa@example.com","code":"codigo-recebido","displayName":"Pessoa","password":"senha-escolhida","client":null}
-```
-
 Usa `AcceptInvitationRequest`: email obrigatório até 320 caracteres; code até 50; displayName até 200; password 12–200. `client` opcional.
 
 Sucesso: **204 sem corpo, sem cookies e sem criação de sessão ou emissão de tokens**. A conta é ativada, recebe os acessos do convite e conserva a associação Monday/VR quando existir. Mostrar “Conta ativada” e retornar ao login. O navegador entra via `/auth/web/login`; desktop utiliza seu login nativo. O código não é uma senha de login.
@@ -25,3 +21,5 @@ Erros: `invalid_invitation` (400, inválido/expirado/revogado/utilizado ou tenta
 Convites valem 48 horas; cinco erros esgotam o código. Reenvio é administrativo e invalida o código anterior. Não acrescentar reenvio anônimo. A fila transacional e proteção dos códigos permanecem inalteradas.
 
 O endpoint antigo `/auth/invitations/accept` continua retornando `TokenResponse` para clientes existentes; não deve ser usado pelo novo formulário web. O adaptador Windows expõe somente `activate-invitation`, com campos explícitos e sem devolver tokens ao React.
+
+As regras acima foram conferidas no contrato/código; esta revisão documental não ativou contas, enviou e-mail ou homologou o ambiente publicado. A validação futura deve incluir código inválido/expirado/revogado, tentativas, domínio, vínculo da pessoa, resposta perdida e login seguro após sucesso.

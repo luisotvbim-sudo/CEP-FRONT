@@ -1,8 +1,10 @@
 # Pessoas — reenvio de convite
 
+Contrato conferido em 04/10/2026, API `b36c6e1` e Front `eb63dbd`. A revisão é documental; não reenviou convites nem comprovou entrega SMTP. Ver [contexto atual](CONTEXTO-ATUAL.md).
+
 A tela Pessoas oferece **Reenviar convite** para convites pendentes, tanto válidos quanto expirados. Não é necessário aguardar 48 horas. A ação não se aplica a contas já vinculadas nem a convites aceitos, revogados ou ausentes. Se a consulta complementar de convites não confirmar o estado, atualizar os dados antes de oferecer a ação.
 
-## Contrato existente (sem nova rota ou migration)
+## Contrato existente
 
 - Consultar pessoas por `GET /api/v1/organization/time-control/people` e convites por `GET /api/v1/organization/invitations`; relacionar `person.invitationId` com `invitation.id`.
 - Enviar **POST /api/v1/organization/invitations/{invitationId}/resend**, sem corpo. Requer autenticação administrativa. `SystemAdmin` informa `organizationId` na query; `OrganizationAdmin` fica limitado à própria organização. Manter o mesmo escopo nas consultas e no envio.
@@ -18,4 +20,4 @@ Antes de enviar, confirmar destinatário, substituição do código e renovaçã
 
 Após 204, mostrar **Novo convite com link de ativação colocado na fila de envio. Isso não confirma a entrega do e-mail.** Atualizar pessoas e convites. Em caso de conflito, preservar a mensagem de suporte e permitir atualizar o estado; o servidor decide se o convite ainda pode ser reenviado.
 
-O endpoint já existe no OpenAPI; não há alteração de schema ou tipos. A lista complementar retorna até 200 convites: estado ausente não deve ser interpretado como pendente.
+O endpoint está no OpenAPI consumido pelo cliente. A lista complementar retorna até 200 convites: estado ausente não deve ser interpretado como pendente. Servidor revalida o estado no envio; repetir POST depois de resposta incerta não é uma retentativa automática autorizada.

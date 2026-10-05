@@ -1,35 +1,59 @@
-# Atualização do MSI corporativo
+# Atualizador MSI: implementação e publicação
 
-Implementação em 02/10/2026, sobre `codex/installer-current` `dc58bde`, no checkout isolado `codex/msi-auto-updater`. O objetivo é distribuir o CEP Horas para aproximadamente 40 computadores sem colocar credenciais administrativas ou do GitHub nos clientes. O [handoff anterior](contexto-atualizador-msi.md) permanece como registro do desenho e dos critérios de aceite.
+Reconciliado em 04/10/2026. Este guia descreve **somente** a implementação de `codex/msi-auto-updater`, base `95fbf5c4ff982916edacba5406d4b569d8007be8`, do [PR #9](https://github.com/luisotvbim-sudo/CEP-FRONT/pull/9). O código não está na `main` `eb63dbdc` nem na base integrada `dc58bde`. Este documento pode estar nessas branches para consulta; não significa que os comandos/funcionalidades já existam nelas.
 
-## Canal e raiz de confiança
+O objetivo é atualizar o MSI corporativo em aproximadamente 40 computadores com contas comuns, após um bootstrap instalado por administrador. WPF apresenta **Atualizar agora/Depois**; serviço confirma e instala a versão aprovada sem pedir credenciais administrativas ao funcionário. Instalação sem clique permanece uma mudança funcional não aprovada. API, deploy web, PostgreSQL e MSIX são ciclos separados; não há endpoint da CEP API nem token GitHub no cliente para essa função.
 
-O canal MSI usa releases públicas de `luisotvbim-sudo/CEP-FRONT`, tag canônica `installer-vX.Y.Z`, com três assets de nomes fixos:
+## Bases e evidência
+
+| Base/versão | Situação do código |
+|---|---|
+| Main 0.4.3 | Sem atualizador MSI. |
+| Integrado 0.4.6 | Sem atualizador MSI; primeira migração para o bootstrap requer instalação administrativa. |
+| Atualizador 0.4.7 | Bootstrap com raiz de confiança, protocolo e executor privilegiado. É o padrão do script nessa base. |
+| Atualizador 0.4.8 | Primeira versão seguinte proposta para homologar atualização 0.4.7 → 0.4.8. |
+| Atualizador 0.4.9 | Acrescenta carregamento/recarga WebView2 e detecção de conteúdo vazio; construir a partir dessa branch. |
+
+A inspeção do código confirma implementação. CI, assinatura de artefato e inspeção MSI não comprovam instalação/upgrade, recuperação externa da chave ou distribuição. As [Issues #6](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/6), [#7](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/7), [#11](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/11) e [#12](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/12) concentram o aceite pendente. Release estável, versões instaladas e operação atual não foram confirmadas por esta revisão.
+
+## Canal e autenticidade
+
+O canal fixo é o GitHub público `luisotvbim-sudo/CEP-FRONT`, tag canônica `installer-vX.Y.Z`. A release possui três assets com nomes exatos:
 
 - `CEP-Horas-Windows-win-x64.msi`;
 - `CEP-Horas-Windows-win-x64.manifest.json`;
 - `CEP-Horas-Windows-win-x64.manifest.sig`.
 
-O manifesto possui exatamente `product`, `version`, `asset`, `size` e `sha256`. O publicador escreve JSON compacto em UTF-8 sem BOM, com um LF final. A assinatura destacada é RSA-PSS com SHA-256 sobre esses bytes exatos; o `.sig` contém os bytes binários, não Base64. O hash é hexadecimal minúsculo e cobre o MSI completo. O limite do pacote é 512 MiB.
+O manifesto contém exatamente `product`, `version`, `asset`, `size` e `sha256`; duplicatas/campos adicionais são rejeitados. `product` é `Conceito.CepHoras`, `asset` é o nome fixo do MSI e `version` tem três partes canônicas, dentro dos limites MSI. O pacote deve ter até 512 MiB; manifesto até 64 KiB e assinatura até 1024 bytes.
 
-A chave pública RSA 3072 em `desktop/CepHoras.Updates/MsiUpdatePublicKey.pem` é um recurso embutido no assembly compartilhado pelo serviço e pelo WPF. A chave privada pertence somente à publicação. O serviço valida a assinatura, a origem fixa, tamanho, hash e a identidade interna do banco MSI: `ProductName=CEP Horas`, `Manufacturer=Conceito`, `UpgradeCode=8D0D0DC8-E744-42E7-A57A-20F489145ED8`, versão correspondente e plataforma x64. O publicador também confere `ALLUSERS=1`.
+A pública RSA 3072 de `desktop/CepHoras.Updates/MsiUpdatePublicKey.pem` é embutida no assembly compartilhado. A privada existe somente na publicação. A assinatura destacada RSA-PSS/SHA-256 cobre os bytes originais do manifesto **antes** de interpretar o JSON. O publicador produz UTF-8 sem BOM, JSON compacto e LF final; `.sig` é binário, não Base64. O SHA-256 cobre todo o MSI. Reformatar o manifesto ou alterar um asset depois de assinado invalida a release.
 
-Esta é uma assinatura destacada de atualização. Ela não equivale a Authenticode no executável/MSI, nem elimina os avisos de confiança do Windows na instalação manual bootstrap. A verificação elevada depende da chave pública instalada no bootstrap, não somente de um hash informado pela própria release. Release draft/prerelease não entra no canal estável.
+Além de assinatura/hash/tamanho, conferir identidade interna MSI: `ProductName=CEP Horas`, `Manufacturer=Conceito`, `UpgradeCode=8D0D0DC8-E744-42E7-A57A-20F489145ED8`, versão correspondente, x64 e `ALLUSERS=1`. Serviço e executor refazem as validações; a origem/hash sozinhos não autorizam execução como SYSTEM.
 
-A descoberta lê manifesto e assinatura pelos caminhos fixos `releases/latest/download/<asset>`, sem consultar a API REST do GitHub. Assim a frota de 40 computadores na mesma saída de internet não consome a cota de 60 consultas REST anônimas por IP/hora. A versão só é interpretada depois de autenticar os bytes; o pacote é obtido na tag canônica `installer-v<versão assinada>`. Manifesto e assinatura de releases diferentes são rejeitados. Na publicação, marcar a release estável MSI como **latest**; releases de outros canais, como MSIX, devem usar `--latest=false`.
+A assinatura destacada autentica o canal; não é Authenticode do executável/MSI e não elimina os avisos de confiança do Windows no bootstrap. Não substituir essa raiz de confiança por um hash hospedado ao lado do arquivo ou por credencial administrativa no cliente.
 
-## Criar e preservar a identidade de publicação
+## Descoberta e origem
 
-Usar Windows e PowerShell 7. Criar a identidade uma vez, antes de compilar o bootstrap:
+A descoberta usa `releases/latest/download/<manifesto ou assinatura>`, sem API REST do GitHub. Isso evita consumir a cota REST anônima compartilhada pelas máquinas atrás da mesma saída. Versão assinada determina a URL canônica `releases/download/installer-v<versão>/<MSI>`; pacote de outra tag/caminho é rejeitado.
+
+Só HTTPS em porta padrão, sem credencial/fragmento, para `github.com`, `release-assets.githubusercontent.com` e `objects.githubusercontent.com`; no máximo cinco redirecionamentos, todos conferidos. Download temporário é removido em falha e só passa ao nome final após tamanho, hash e identidade válidos. Manifesto/assinatura de releases diferentes falham na autenticação.
+
+O serviço consulta novamente ao confirmar uma instalação e exige que a versão continue sendo a aprovada e maior que a instalada. Uma versão igual/menor não é instalada. WPF consulta ao abrir, a cada seis horas e pela bandeja; falha de GitHub/rede não bloqueia o uso normal do CEP Horas.
+
+**Regra de publicação:** somente release MSI estável homologada deve ser marcada `latest`. Draft/prerelease não são o canal distribuído. Releases de outros canais devem usar `--latest=false`. O cliente usa os assets de `latest`, não uma leitura de flags draft/prerelease por REST; manter essa convenção é responsabilidade do publicador. Um draft baixado pela TI não comprova descoberta pelo cliente anônimo.
+
+## Chave de publicação e recuperação
+
+Os scripts exigem Windows e PowerShell 7. Gerar uma identidade apenas no computador de publicação da TI, antes do bootstrap:
 
 ```powershell
 ./scripts/new-msi-update-key.ps1 `
   -PrivateKeyPath .local/update-signing/publisher.key
 ```
 
-O script não substitui arquivos existentes. A privada PKCS#8 fica protegida por DPAPI `CurrentUser`; o arquivo permite acesso somente ao usuário atual, Administradores e SYSTEM. Apenas a pública SPKI PEM deve entrar no Git. O script não imprime nem grava privada em PEM plaintext. Builds e pastas de artefatos não devem receber o `.key`.
+O script não substitui arquivos existentes. A privada PKCS#8 fica protegida por DPAPI `CurrentUser`; ACL permite usuário atual, Administradores e SYSTEM. A privada não é escrita em PEM plaintext, impressa, copiada para build/release ou versionada. Somente a pública SPKI PEM entra no código.
 
-DPAPI vincula a chave ao usuário/perfil Windows que a protegeu. Copiar `publisher.key` sozinho não constitui recuperação portátil. Antes de usar o canal para a equipe, a TI precisa exportar e guardar um backup criptografado e provar que consegue recuperá-lo:
+DPAPI vincula o arquivo ao usuário/perfil que o protegeu. Copiar `publisher.key` sozinho não é recuperação portátil. Antes do rollout, criar backup criptografado e provar recuperação mantendo a mesma pública:
 
 ```powershell
 ./scripts/new-msi-update-key.ps1 `
@@ -38,23 +62,23 @@ DPAPI vincula a chave ao usuário/perfil Windows que a protegeu. Copiar `publish
   -RecoveryBackupPath .local/update-signing/publisher.encrypted.pk8
 ```
 
-A exportação pede senha e confirmação no terminal, sem argumentos ou impressão da senha. O backup DER PKCS#8 usa AES-256-CBC e PBKDF2-SHA256 com 600 mil iterações. Guardar o arquivo fora da máquina de publicação e a senha em um cofre separado. Nenhum dos dois pertence à release, ao MSI ou ao repositório.
+A exportação pede senha/confirmação interativas, sem argumento ou impressão. O DER PKCS#8 usa AES-256-CBC e PBKDF2-SHA256 com 600 mil iterações. Guardar o backup fora da máquina de publicação e a senha em cofre separado. Nenhum dos dois pertence ao Git, MSI, ZIP da TI publicado ou release.
 
-Em outra máquina/perfil, preservar a pública aprovada e importar para um caminho novo, sem substituir outra privada:
+Em outro perfil/máquina, usar a pública aprovada e caminho novo para a privada:
 
 ```powershell
 ./scripts/new-msi-update-key.ps1 `
   -PrivateKeyPath .local/update-signing/publisher.key `
   -PublicKeyPath desktop/CepHoras.Updates/MsiUpdatePublicKey.pem `
   -ImportRecoveryBackup `
-  -RecoveryBackupPath '<caminho local do backup criptografado>'
+  -RecoveryBackupPath '<backup criptografado em armazenamento local seguro>'
 ```
 
-A importação pede a senha, confirma que a privada recuperada corresponde à pública já distribuída e protege novamente com DPAPI do usuário atual. A privada descriptografada existe apenas em memória e é limpa ao concluir. Não gerar outra identidade para cada versão: isso impediria que o bootstrap confiasse nas próximas atualizações. Rotação de confiança exige uma entrega específica de compatibilidade.
+Importação pede senha, confere que a privada corresponde à pública distribuída e reprotege por DPAPI do usuário atual. O plaintext existe em memória e é limpo ao concluir. Não gerar identidade nova a cada versão: bootstrap deixaria de confiar nas atualizações. Rotação de confiança exige estratégia de compatibilidade própria.
 
 ## Build e assinatura
 
-`0.4.7` é o bootstrap manual; `0.4.8` é a primeira atualização automática do piloto. O build padrão é `0.4.7`. O pacote instalado 0.4.6 ainda exige uma primeira atualização manual administrativa.
+Executar somente no checkout da implementação, registrando SHA revisado e versão. Bootstrap 0.4.7 requer instalação manual administrativa; 0.4.8 serve ao primeiro piloto:
 
 ```powershell
 ./scripts/build-corporate-msi.ps1 -Version 0.4.7 `
@@ -64,11 +88,11 @@ A importação pede a senha, confirma que a privada recuperada corresponde à p�
   -UpdateSigningKeyPath .local/update-signing/publisher.key
 ```
 
-Os artefatos ficam em `.local/corporate-msi/<versão>/artifacts`. O build publica React/WPF e serviço, inspeciona a estrutura MSI, assina o manifesto e verifica a assinatura com a pública embutida. O ZIP da TI inclui pacote, manifesto, assinatura, checksum, instruções e recuperação. A pasta de saída não é substituída silenciosamente.
+O build publica React/WPF/serviço, inspeciona o banco MSI e gera/verifica manifesto assinado. Artefatos ficam em `.local/corporate-msi/<versão>/artifacts`; saída existente não é substituída silenciosamente. ZIP da TI inclui pacote, manifesto, assinatura, checksum, instruções e recuperação do aplicativo, sem privada/backup de assinatura.
 
-O WiX usa intermediários separados por versão e cópia física do MSI para os artefatos. Links físicos para o banco intermediário ficam desativados: compilar uma versão seguinte não pode modificar o pacote de uma release anterior e invalidar seu manifesto já assinado. Na validação de duas versões, verificar novamente ambas as assinaturas/hashes depois do segundo build.
+Intermediários WiX são separados por versão e o MSI é copiado fisicamente; links físicos/simbólicos ficam desativados. Após construir a segunda versão, conferir novamente hashes/assinaturas de ambas: construir outra release não pode modificar bytes de uma anterior.
 
-Sem `-UpdateSigningKeyPath`, o script permite um build local de inspeção e exibe aviso: o resultado não está pronto para o canal automático. Falta da pública embutida impede o build. A assinatura pode ser executada separadamente somente no pacote de nome fixo:
+Sem `-UpdateSigningKeyPath`, o build permite inspeção local com aviso; o resultado não está pronto para o canal automático. Falta da pública embutida impede o build. Para assinar separadamente o pacote de nome fixo:
 
 ```powershell
 ./scripts/sign-msi-update.ps1 `
@@ -76,11 +100,11 @@ Sem `-UpdateSigningKeyPath`, o script permite um build local de inspeção e exi
   -Version 0.4.7 -SigningKeyPath .local/update-signing/publisher.key
 ```
 
-O assinador usa `ProductVersion` lido do MSI, rejeita divergência com a versão pedida, confere identidade/plataforma e só gera artefatos quando a privada corresponde à pública. Manifesto/assinatura existentes não são sobrescritos. Não renomear ou editar os assets depois da assinatura; qualquer byte diferente no manifesto invalida a assinatura.
+O assinador confere ProductVersion/identidade/x64/escopo e correspondência privada/pública antes de produzir os assets; não sobrescreve manifesto/assinatura existentes. Não editar/renomear os assets assinados nem reutilizar a mesma versão para bytes novos.
 
-## Preparar a release pela TI
+## Preparar e publicar release
 
-A autenticação `gh` existe somente no computador de publicação da TI. O aplicativo consulta releases públicas sem token. A release deve apontar para o commit revisado que produziu o pacote. Preparar inicialmente como draft, com notas em arquivo local:
+Autenticação `gh` pertence somente ao computador da TI. A release aponta ao commit revisado que gerou o pacote. Preparar como draft e manter notas sanitizadas em arquivo:
 
 ```powershell
 $version = '0.4.7'
@@ -94,30 +118,54 @@ gh release create "installer-v$version" `
   --notes-file .local/release-notes-msi.txt
 ```
 
-Depois da homologação, publicar uma versão MSI como latest: `gh release edit "installer-v$version" --repo luisotvbim-sudo/CEP-FRONT --draft=false --latest`. Essa ação altera o canal que todos os clientes consultam. Antes dela, o draft pode ser revisado e baixado pela TI autenticada; os clientes não o descobrem.
+Depois da revisão/homologação, o responsável pode publicar essa release como latest:
 
-Inspecionar assets/tag/versão e as evidências do build antes de publicar. A publicação é uma ação explícita do responsável, separada do script de build. Não substituir bytes de uma versão publicada; uma correção recebe versão/tag nova. Releases draft não permitem comprovar a descoberta no canal estável. Para o piloto `0.4.8`, publicar no canal somente quando os únicos clientes bootstrap habilitados forem as máquinas piloto; assim a descoberta real pode ser testada antes das demais 40 instalações.
+```powershell
+gh release edit "installer-v$version" `
+  --repo luisotvbim-sudo/CEP-FRONT --draft=false --latest
+```
 
-## Operação e aceite do piloto
+Essa publicação muda o canal consultado por todos os bootstraps habilitados. Para testar a descoberta real de 0.4.8, manter somente máquinas piloto com bootstrap até concluir o aceite. A publicação é ação separada do build; estes exemplos não a executam. Correção de uma versão publicada exige versão/tag nova.
 
-WPF apresenta disponibilidade e solicita apenas uma operação fechada ao serviço. O serviço confirma novamente a release, baixa em armazenamento privado, valida e inicia a instalação. Não recebe URL, caminho, token ou argumentos arbitrários do usuário. O modo de manutenção de atualização é separado do fechamento diário: a atualização não restaura as políticas de energia. O fluxo histórico MSIX permanece separado do MSI.
+## Serviço, manutenção e executor
 
-Os arquivos e o journal ficam em `%ProgramData%\Conceito.CepHoras.Updates`, com acesso somente a SYSTEM e Administradores. A raiz específica evita alterar pastas compartilhadas de outros aplicativos. O serviço usa uma cópia privada do executor e do runtime para que a instalação possa substituir e reiniciar o próprio serviço. Falha de inicialização do atualizador mantém a proteção e supervisão existentes. O MSI não agenda restauração de política durante rollback de upgrade; políticas iniciais e sua reversão pertencem à primeira instalação.
+WPF envia somente `update-check`, `update-start`, `update-status` e `update-ready` pelo protocolo fechado, com a versão aprovada quando exigida. O serviço autentica o processo instalado, SID/sessão/PID e instante de criação; o aceite `ready` deve pertencer à instância que iniciou aquela tentativa. Não aceita URL, caminho, credencial ou argumento MSI arbitrário.
 
-O controle de energia do produto exige Windows 11 Pro, Enterprise ou Education 24H2 ou superior. Uma sessão adicional com CEP Horas ainda aberto impede a atualização até que feche; o executor retorna falha em 45 segundos e não encerra à força aplicativos de outra sessão. O piloto deve conferir essa condição e a retomada após reboot.
+O estado/pacote/journal ficam em `%ProgramData%\Conceito.CepHoras.Updates`, apenas SYSTEM/Administradores, com recusa de links/reparse points e bloqueio exclusivo entre processos. Estados são `downloading`, `ready`, `installing`, `success` e `failed`. O serviço confirma release, baixa/valida, copia executor/runtime para diretório privado e grava manutenção antes de cancelar energia pendente.
 
-Antes do rollout, instalar `0.4.7` manualmente numa VM Windows/PC piloto e usar uma conta padrão para trocar para `0.4.8`. Verificar:
+`ready`/`installing` suspendem somente relançamento durante manutenção, bloqueiam novas ações de energia e preservam políticas. O fechamento diário `desktop-suspend` é outro mecanismo e não pode ser reutilizado para atualização. Falha de inicialização do atualizador conserva o controle/supervisão já existentes; estado de manutenção ilegível é tratado conservadoramente.
 
-1. Aviso/bandeja, **Depois** e confirmação de **Atualizar agora**.
-2. Instalação sem pedir credencial administrativa ao usuário comum.
-3. MSI alterado, assinatura de outra identidade, versão/UpgradeCode divergentes e downgrade rejeitados.
-4. Uma única instalação concorrente, falha MSI e reinício no meio da manutenção.
-5. Serviço/aplicativo novos, uma única instância, sessão/notificações e retomada da supervisão.
-6. Políticas de energia preservadas durante update e fechamento diário ainda funcionando de forma independente.
-7. Recuperação da chave de publicação por backup, com a mesma pública.
+Após WPF confirmar prontidão e encerrar sua árvore WebView2, o executor SYSTEM privado espera até 45 segundos por qualquer host instalado ainda em execução. Uma outra sessão aberta impede a troca; não encerra à força aplicativos de outras sessões. O executor confere journal/identidade, mantém arquivo validado protegido e inicia apenas o `msiexec.exe` do Windows com argumentos fixos.
 
-Depois do piloto, ampliar para dois ou três computadores antes dos demais. Compilação, inspeção do banco MSI e testes de segurança em memória não comprovam `0.4.7 -> 0.4.8` real, políticas no Windows, recuperação em cliente ou entrega nas 40 máquinas. Registrar versão, fase, código de saída e evidências sanitizadas; não registrar sessão, senha/PIN ou chave privada.
+O executor e seu runtime sobrevivem à parada/substituição do serviço por `StopServices`/`MajorUpgrade`; a instalação não depende do processo antigo continuar vivo. Timeout MSI de 30 minutos é registrado, mas o executor mantém manutenção/bloqueio enquanto o instalador estiver ativo, em vez de matar a transação e declarar recuperação prematura.
 
-## Estado das evidências
+Sucesso requer retorno 0 ou 3010 **e** versão instalada correspondente. 3010 mantém aviso de reinício e é reconciliado após novo boot. Reinício/expiração com tentativa interrompida gera falha, sem concluir só porque um arquivo já mostra a versão nova antes de `InstallFinalize`. Ao terminar, o executor tenta iniciar somente o serviço fixo instalado; o serviço reconcilia estado e retoma supervisão. A recuperação efetiva e rollback do Windows Installer precisam de teste real.
 
-Os scripts de publicador estão implementados e separados da instalação/publicação. O histórico anterior de 16 verificações MSIX não representa o atualizador MSI. Build integrado, assinatura do artefato e testes do novo cliente/serviço devem ser registrados pela entrega correspondente. Instalação elevada no piloto, troca real `0.4.7 -> 0.4.8`, backup externo recuperado e rollout ainda exigem evidência humana/operacional; não foram executados por estes scripts.
+## Piloto obrigatório
+
+Instalar bootstrap com administrador em VM Windows compatível, depois em PC piloto com conta comum. Usar duas versões produzidas com a mesma pública, registrar SHA/build/hash e resultados sanitizados. Verificar:
+
+1. Descoberta real no canal estável; aviso/bandeja; **Depois** e **Atualizar agora**.
+2. Atualização sem pedir credenciais administrativas ao funcionário; sessão independente da API.
+3. Recusa de pacote alterado, assinatura de outra identidade, manifesto/tag/versão/UpgradeCode/escopo divergentes e downgrade.
+4. Concorrência, clique/resposta de status simultâneos e sessão Windows adicional aberta.
+5. Manutenção sem restaurar políticas, cancelamento de energia pendente e fechamento diário independente.
+6. Executor sobrevivendo à troca do próprio serviço; falha MSI/rollback e reboot durante manutenção.
+7. Nova versão efetiva, serviço/supervisão ativos, instância única, sessão/notificações e recuperação WebView2.
+8. Código 3010/reinício; tentativa interrompida; nova tentativa sem manutenção permanente.
+9. Recuperação do backup de publicação em outro perfil/máquina, mantendo pública aprovada e assinatura válida.
+
+O banner **O atualizador precisa de revisão da TI** corresponde a indisponibilidade de inicialização local e exige diagnóstico próprio. Não afirmar correção por a descoberta deixar de usar REST ou por haver recarga do WebView2. Preservar somente versão, fase, código de saída e diagnóstico técnico; não copiar sessão, senha diária, PIN, chave, perfil ou dados pessoais.
+
+Depois de VM/PC piloto, ampliar para duas ou três máquinas antes das demais. A frota precisa cumprir build ≥26100/edições corporativas conforme [instalador](instalador-corporativo.md). Esta reconciliação não executou instalação, publicação, teste de chave ou rollout.
+
+## Código e verificações por entrega
+
+Referências fixadas na base implementada, disponíveis mesmo ao ler este guia pela main:
+
+- [MsiRelease](https://github.com/luisotvbim-sudo/CEP-FRONT/blob/95fbf5c4ff982916edacba5406d4b569d8007be8/desktop/CepHoras.Updates/MsiRelease.cs), [MsiGitHubUpdates](https://github.com/luisotvbim-sudo/CEP-FRONT/blob/95fbf5c4ff982916edacba5406d4b569d8007be8/desktop/CepHoras.Updates/MsiGitHubUpdates.cs) e [identidade MSI](https://github.com/luisotvbim-sudo/CEP-FRONT/blob/95fbf5c4ff982916edacba5406d4b569d8007be8/desktop/CepHoras.Updates/MsiPackageIdentity.cs).
+- [MsiUpdateCoordinator](https://github.com/luisotvbim-sudo/CEP-FRONT/blob/95fbf5c4ff982916edacba5406d4b569d8007be8/desktop/CepHoras.Control/MsiUpdateCoordinator.cs), [UpdateStore](https://github.com/luisotvbim-sudo/CEP-FRONT/blob/95fbf5c4ff982916edacba5406d4b569d8007be8/desktop/CepHoras.Control/UpdateStore.cs), [UpdateState](https://github.com/luisotvbim-sudo/CEP-FRONT/blob/95fbf5c4ff982916edacba5406d4b569d8007be8/desktop/CepHoras.Control/UpdateState.cs) e [executor SYSTEM](https://github.com/luisotvbim-sudo/CEP-FRONT/blob/95fbf5c4ff982916edacba5406d4b569d8007be8/desktop/CepHoras.Control/MsiUpdateRunner.cs).
+- [WPF de atualização](https://github.com/luisotvbim-sudo/CEP-FRONT/blob/95fbf5c4ff982916edacba5406d4b569d8007be8/desktop/CepHoras.Desktop/MainWindow.MsiUpdates.cs) e [recarga/carregamento](https://github.com/luisotvbim-sudo/CEP-FRONT/blob/95fbf5c4ff982916edacba5406d4b569d8007be8/desktop/CepHoras.Desktop/MainWindow.WebView.cs).
+- [Chave/recuperação](https://github.com/luisotvbim-sudo/CEP-FRONT/blob/95fbf5c4ff982916edacba5406d4b569d8007be8/scripts/new-msi-update-key.ps1), [assinador](https://github.com/luisotvbim-sudo/CEP-FRONT/blob/95fbf5c4ff982916edacba5406d4b569d8007be8/scripts/sign-msi-update.ps1) e [build](https://github.com/luisotvbim-sudo/CEP-FRONT/blob/95fbf5c4ff982916edacba5406d4b569d8007be8/scripts/build-corporate-msi.ps1).
+
+Ao alterar esse fluxo, executar suítes `CepHoras.Updates.Tests`, `CepHoras.Control.Tests`, `CepHoras.Desktop.Tests`, builds Release e inspeção estrutural MSI apropriados. Testes históricos de MSIX não são cobertura do MSI; registrar separadamente o que foi executado. O aceite operacional acima é independente dessas verificações.
