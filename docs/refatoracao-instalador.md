@@ -42,4 +42,29 @@ Centralizações de shells/filtros/formatação sem defeito comprovado foram man
 
 ## Verificações
 
-Registros finais de comandos, contagens, SHA, pacote e SHA-256 serão anexados aqui ao concluir o build. SDK portátil oficial .NET 10.0.401, com SHA-512 conferido, e Chromium Playwright ficam exclusivamente em `.local`; Node/pnpm seguem o lockfile. Nenhum MSI foi instalado, nenhuma política do Windows aplicada e nenhuma ação real de energia executada.
+Build novo concluído em 05/10/2026 a partir do commit de código `dd5feb02a6e8173614432087f35121946fa994c0`, com checkout limpo. SDK portátil oficial .NET 10.0.401, com SHA-512 conferido, e Chromium Playwright ficam exclusivamente em `.local`; Node/pnpm seguem o lockfile. Nenhum MSI foi instalado, nenhuma política do Windows aplicada e nenhuma ação real de energia executada.
+
+| Verificação | Resultado |
+|---|---|
+| `pnpm lint` e `pnpm build` | PASS; TypeScript e Vite |
+| `pnpm exec vitest run src --exclude '**/.local/**'` | 97 testes PASS; exclusão das cópias de baseline |
+| Playwright completo | 192 casos desktop/mobile PASS |
+| Playwright após ACK da Inbox | 22 casos de notifications/lifecycle PASS; 28 casos de notifications/refactor também PASS |
+| `dotnet run --project desktop/CepHoras.Desktop.Tests -c Release` | 274 verificações PASS |
+| `dotnet run --project desktop/CepHoras.Control.Tests -c Release` | 108 verificações de confiabilidade e duas suites legadas PASS |
+| `dotnet run --project desktop/CepHoras.Updates.Tests -c Release` | MSIX 16, MSI 80 e preflight 4: PASS |
+| `node scripts/test-desktop.mjs` | WPF/WebView2 real PASS: loading, root/HTML vazio, JS bloqueado, recuperação após download simulado falho, bandeja/resume, recriação no mesmo perfil, allowlist, DPAPI e logout |
+| `node scripts/test-desktop-init-failure.mjs` | Falha de configuração antes da sessão: diagnóstico nativo, processo preservado por 2,2 s, sem browser/ready/recovery/perfil/sessão; encerrado somente o filho do teste. Não inspeciona visualmente os botões por UIA |
+| `./scripts/build-corporate-msi.ps1 -Version 0.4.10` | Release win-x64 self-contained; WiX sem erros/avisos; tabelas MSI PASS |
+| Contratos | `docs/openapi.json`, snapshot real e `src/auth/api-schema.d.ts` sem alterações |
+
+Os cenários nativos usam fixture sem marker de instalação gerenciada e sem acesso ao serviço privilegiado. O handler de energia só é criado em instalação gerenciada; uma instalação desktop sem serviço conserva reload/logout operantes.
+
+Artefatos locais no checkout gerenciado, em `.local/corporate-msi/0.4.10/artifacts/`:
+
+- `CEP-Horas-Windows-win-x64.msi`: 99.593.662 bytes; ProductVersion `0.4.10`; Authenticode `NotSigned`; SHA-256 `beb2f5162f7caf4902793e74d3e168457fbe85bf483695ac6926e076ca06c109`.
+- `CEP-Horas-Windows-0.4.10-TI.zip`: 164.036.832 bytes; SHA-256 `0eca4445f3949157ad4bdafaa1f43b43ba1ae4e96ada0d315f8ec4bba057902d`; inclui MSI, guia TI sem fórmula/valor de fechamento, hashes e ferramenta de recuperação.
+- `BUILD-EVIDENCE.json`: SHA de origem/base, versão, tamanho, hashes, assinatura, propriedades MSI, resultados e limites. Está junto aos artefatos, fora do ZIP já gerado.
+- `SHA256SUMS.txt`: hash do MSI. Não há manifesto/assinatura do canal automático neste build.
+
+UpgradeCode conferido `{8D0D0DC8-E744-42E7-A57A-20F489145ED8}`; ProductCode deste pacote `{E47F8D44-51A8-4BF3-AC29-0FA5AA927BE2}`. Inspeção de tabelas confirmou preflight Windows/WebView2 antes da transação, serviço LocalSystem, stop/aguardo antes de restore/remove, rollback, ACL e payload. Não comprova comportamento elevado em uma instalação real.
