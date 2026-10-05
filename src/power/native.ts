@@ -65,6 +65,10 @@ export class NativePowerBridge implements NativePower {
             session_expired: 'Sua sessão expirou. Entre novamente.',
             power_service_changed:
               'O serviço de energia precisa de atualização ou recuperação. Confira o estado no Windows.',
+            power_uncertain:
+              'Há uma solicitação de energia pendente de revisão pelo titular ou pela TI.',
+            power_storage_unavailable:
+              'Não foi possível registrar o estado de energia. Solicite suporte à TI.',
           }
           throw new AuthError(
             messages[error.failure.code ?? ''] ??

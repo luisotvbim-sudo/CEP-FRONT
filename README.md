@@ -45,7 +45,7 @@ Abra `http://127.0.0.1:5173`. Vite encaminha `/api` para `http://127.0.0.1:8080`
 
 ## Desenvolvimento Windows
 
-Esta branch inclui a [refatoração do instalador e piloto 0.4.10](docs/refatoracao-instalador.md), vinculada à Issue central #14. Loading exige React montado e bridge funcional; recuperação automática é limitada e coordena cancelamento de energia, perfil e processos próprios. Serviço/MSI/atualizador e regressões estão documentados no relatório. Build de piloto e código em revisão não comprovam instalação, assinatura ou distribuição homologada.
+Esta branch integra a main do acompanhamento pessoal e a [entrega do instalador 0.4.11](docs/instalador-0.4.11.md), vinculada às Issues centrais #6/#7/#11/#12/#14. Loading exige React montado e bridge funcional; recuperação automática é limitada e preserva perfil/processos próprios. O serviço grava a intenção de energia antes do efeito, recupera estado incerto após crash e exige cancelamento explícito do pedido herdado. Build e testes não comprovam instalação ou distribuição homologada. O [piloto 0.4.10](docs/refatoracao-instalador.md) conserva a evidência histórica anterior.
 
 Requisitos adicionais: .NET SDK 10 e Microsoft Edge WebView2 Runtime.
 
@@ -61,7 +61,7 @@ Debug usa API local; Release usa `https://api.cep.lat`. `CEP_API_URL` permite su
 
 Web usa mesma origem, access token somente em memória e refresh em cookie `HttpOnly` protegido pela API. Desktop guarda tokens no host com DPAPI e entrega somente metadados/resultados permitidos ao React. Não armazenar tokens ou dados de horas em `localStorage`/IndexedDB nem chamar Monday/VR diretamente. Resposta incerta ao rotacionar refresh exige novo login, sem replay do token antigo.
 
-Os snapshots [real](docs/openapi-backend-current.json) e [consumido](docs/openapi.json) têm 52 paths e 72 schemas na base auditada; tipos em `src/auth/api-schema.d.ts`. Para mudança de contrato, conferir primeiro a API/commit em execução, atualizar snapshot real, comparar operações/schemas, atualizar o contrato consumido e executar `pnpm types:api` junto com cliente/allowlist correspondentes. Não regredir snapshots por consultar um servidor antigo.
+Os snapshots [real](docs/openapi-backend-current.json) e [consumido](docs/openapi.json) têm 53 paths e 77 schemas na base integrada; tipos em `src/auth/api-schema.d.ts`. Para mudança de contrato, conferir primeiro a API/commit em execução, atualizar snapshot real, comparar operações/schemas, atualizar o contrato consumido e executar `pnpm types:api` junto com cliente/allowlist correspondentes. Não regredir snapshots por consultar um servidor antigo.
 
 O [deploy web](deploy/README.md) gera somente `cep-front`, sem porta publicada. Nginx de borda fornece HTTPS e encaminha `/api/` diretamente à API independente, preservando headers/cookies e sem cache de sessão. O Nginx interno do Front rejeita `/api/`. Persistência Data Protection e migrations pertencem à implantação da API.
 

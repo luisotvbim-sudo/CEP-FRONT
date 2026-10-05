@@ -1,13 +1,14 @@
 CEP HORAS 0.4 - INSTALACAO CORPORATIVA PELA TI
 
-PILOTO 0.4.10
-Este pacote novo nao possui assinatura Authenticode nem manifesto de atualizacao
-assinado. Use somente para homologacao manual autorizada pela TI; nao pertence
-ao canal automatico e nao foi instalado nesta execucao de build.
-Se o servico falhar durante uma acao de energia, o host antigo conserva estado
-incerto e recusa confirmar cancelamento por um broker diferente. Um novo host
-ainda nao conhece a acao anterior: journal duravel e reconciliacao apos crash
-continuam pendentes. Nao declare esse cenario homologado.
+PACOTE 0.4.11
+Inclui Minha jornada, recuperacao da interface e atualizador MSI.
+O servico grava a intencao de energia antes de agendar no Windows. Apos crash,
+nao repete nem cancela automaticamente a acao anterior: o aplicativo identifica
+a solicitacao do titular e exige cancelamento explicito antes de continuar.
+Falha de disco ou estado invalido impede novas acoes ate revisao/recuperacao.
+Testes automatizados nao substituem a homologacao do pacote instalado.
+Manifesto/assinatura do atualizador sao separados da assinatura Authenticode
+do editor Windows. Confira as evidencias entregues com este build.
 
 Este e um unico instalador: aplicativo CEP Horas, inicio automatico e servico
 Windows CepHorasControl. O usuario comum usa o menu discreto no rodape do app
@@ -42,6 +43,8 @@ CONTROLE LOCAL
 
 HOMOLOGACAO
 1. Instale primeiro em VM ou computador piloto com trabalho salvo.
+   Antes, execute Verificar-Windows.ps1: informa edicao, versao, build e WebView2,
+   sem administrador, sem mudar configuracoes e sem coletar dados pessoais.
 2. Requer Windows 11 x64 Pro/Enterprise/Education 24H2+ (build >=26100) e
    WebView2 Evergreen por maquina. Instalacao inicial exige administrador;
    .NET esta incluido no pacote self-contained.
@@ -52,6 +55,9 @@ HOMOLOGACAO
    botoes fisicos, tampa, encerramento do app e relancamento pelo servico.
 7. Se houver dominio, execute gpupdate e confira se a GPO nao sobrescreveu
    as politicas locais.
+8. Em piloto descartavel, valide reinicio/crash do servico durante a contagem:
+   nenhuma repeticao automatica; cancelamento explicito pelo titular; conta
+   diferente nao recebe o identificador; falhas de disco permanecem incertas.
 
 RECUPERACAO
 - Menu Iniciar > CEP Horas - Recuperacao TI.
@@ -72,7 +78,8 @@ ATUALIZACAO MSI
   GitHub, chave privada ou senha administrativa e instalado nos clientes.
 - Atualizar agora inicia somente um MSI aprovado do canal fixo; Depois adia.
   A manutencao do update preserva as politicas e nao usa o fechamento diario.
-- Homologar 0.4.7 para 0.4.8 com conta comum em VM/PC piloto antes da equipe.
+- Homologar a versao instalada para 0.4.11 com conta comum em VM/PC piloto
+  antes de publicar no canal estavel para a equipe.
 - Build sem manifesto e assinatura validos nao pertence ao canal automatico.
 - Publicacao, backup portatil da chave e recuperacao sao responsabilidades da TI.
   O procedimento completo fica em docs/atualizador-msi.md do projeto CEP-FRONT.

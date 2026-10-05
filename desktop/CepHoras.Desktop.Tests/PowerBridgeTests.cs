@@ -49,6 +49,7 @@ internal static class PowerBridgeTests
 
     internal static async Task Run(Action<bool, string> check, string root)
     {
+        await RecoveryChecks(check, root);
         // Pre-dispatch cancellation owns the request while API authorization is awaiting.
         var authorized = new TaskCompletionSource<HttpResponseMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
         var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -308,6 +309,60 @@ internal static class PowerBridgeTests
             var terminal = JsonSerializer.SerializeToElement(await host.Execute("reconcile", Id(id)));
             check(terminal.GetProperty("state").GetString() == "terminal" && !host.SessionEndingAllowed,
                 "Confirmed journal cancellation for the original broker did not reconcile terminal state");
+        }
+    }
+
+    private static async Task RecoveryChecks(Action<bool, string> check, string root)
+    {
+        foreach (var lifecycleFirst in new[] { false, true })
+        using (var session = await Session(root, "new-host-" + lifecycleFirst, _ =>
+            throw new InvalidOperationException("Inherited request must not trigger API authorization")))
+        {
+            var inheritedId = Guid.NewGuid().ToString();
+            var replacementBroker = Guid.NewGuid().ToString();
+            var commands = new List<ControlRequest>();
+            var recovered = true;
+            var host = new PowerBridgeHandler(session, request => {
+                commands.Add(request);
+                if (request.Operation == "status") return Task.FromResult(recovered
+                    ? new ControlResponse("power_uncertain", "fixture", Active: true, RequestId: inheritedId,
+                        Action: "restart", BrokerInstanceId: replacementBroker, OriginalBrokerInstanceId: Broker)
+                    : new ControlResponse("ready", "fixture", Active: true, BrokerInstanceId: replacementBroker));
+                check(request.Operation == "cancel" && request.RequestId == inheritedId && request.BrokerInstanceId == Broker,
+                    "New host must cancel exactly the inherited request with its original broker identity");
+                recovered = false;
+                return Task.FromResult(Cancelled(request) with { BrokerInstanceId = replacementBroker, OriginalBrokerInstanceId = Broker });
+            });
+            try
+            {
+                if (lifecycleFirst) await host.QuiesceAsync();
+                else await host.Execute("schedule", Schedule(Guid.NewGuid().ToString()));
+                throw new InvalidOperationException("New host discarded inherited uncertainty");
+            }
+            catch (PowerBridgeFailure error)
+            {
+                check(error.Code == "power_recovery_required" && error.RequestId == inheritedId,
+                    "Recovery failure must identify the inherited request, never the new renderer request");
+            }
+            check(commands.All(command => command.Operation == "status") && !host.SessionEndingAllowed,
+                "New host replayed or implicitly canceled an inherited action");
+            await host.Execute("cancel", Id(inheritedId));
+            await using var lease = await host.QuiesceAsync();
+            check(!host.SessionEndingAllowed && commands.Count(command => command.Operation == "cancel") == 1,
+                "Explicit durable cancellation did not release lifecycle recovery");
+        }
+        using (var session = await Session(root, "foreign-inherited", _ =>
+            throw new InvalidOperationException("Foreign recovery must not call the API")))
+        {
+            var commands = new List<ControlRequest>();
+            var host = new PowerBridgeHandler(session, request => {
+                commands.Add(request);
+                return Task.FromResult(new ControlResponse("power_uncertain", "fixture", BrokerInstanceId: Broker));
+            });
+            await Failure(host.Execute("schedule", Schedule(Guid.NewGuid().ToString())), "power_uncertain", check);
+            await Failure(host.QuiesceAsync(), "power_uncertain", check);
+            check(commands.All(command => command.Operation == "status") && !host.SessionEndingAllowed,
+                "Foreign inherited state dispatched an action or leaked a cancellation identity");
         }
     }
 

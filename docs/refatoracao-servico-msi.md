@@ -1,5 +1,7 @@
 # Refatoração do serviço e do MSI
 
+Atualização de 05/10/2026: a autorização específica do usuário para incluir as modificações pendentes permitiu integrar o journal à autoridade e ao startup. Inicialização lê/valida o estado sem executar energia; intenções herdadas bloqueiam novas ações/manutenção até cancelamento explícito correspondente. Contrato corrente: [instalador 0.4.11](instalador-0.4.11.md). A proposta e as rejeições abaixo são históricas; nenhuma nova rejeição ocorreu nesta integração. Homologação real continua pendente.
+
 Execução em 04/10/2026, no checkout isolado `C:/Users/arqlu/.codex/worktrees/installer-reliability/CEP-FRONT`, branch `codex/installer-reliability`, base `1911a317dda45e10cd2302af97e8bdfe9a385a61`. Demanda e matriz R01–R19: [orquestrador #14](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/14), `REFATORACAO-INSTALADOR.md` do CEP-ORQUESTRADOR. Este relatório cobre serviço, persistência privada, manutenção, supervisão e autoria/inspeção do MSI. O relatório do atualizador cobre assinatura, download e preflight do build.
 
 ## Estado da entrega
@@ -34,7 +36,7 @@ Desinstalação bem-sucedida conserva `restore-journal.json` privado, com config
 
 Não foi adicionada commit custom action FileRef para `FinishRestore`: a fase commit ocorre depois de RemoveFiles e o EXE referenciado pode já ter sido removido. Inserir uma CA que depende dele produziria outra falha de desinstalação. O journal residual é seguro e deliberado. Uma nova instalação só pode reconciliá-lo depois de confirmar configuração restored, mesmo original do journal e snapshot atual igual ao original restaurado. Aplicação rotineira pelo serviço recusa esse journal e não reaplica estado anterior inadvertidamente. Limpeza definitiva por uma CA independente dos arquivos removidos continua uma melhoria pendente, com teste real de rollback/commit obrigatório.
 
-## Proposta de journal de energia aguardando autorização
+## Proposta histórica de journal de energia — autorizada e integrada em 05/10
 
 Arquivos preparados: `PowerRequestStore.cs` (`IPowerRequestStore`, memória isolada, private store, schemas) e extensão opcional de `ControlResponse`. A autoridade ainda usa seu ledger em memória; esses arquivos não habilitam cancelamento no início do serviço.
 

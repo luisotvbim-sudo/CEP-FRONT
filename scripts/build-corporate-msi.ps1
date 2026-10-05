@@ -1,6 +1,6 @@
 #Requires -Version 7.0
 param(
-    [string]$Version = '0.4.7',
+    [string]$Version = '0.4.11',
     [string]$UpdateSigningKeyPath
 )
 $ErrorActionPreference = 'Stop'
@@ -50,7 +50,7 @@ try {
     }
     $unexpected = Get-ChildItem -LiteralPath $publish -File -Recurse | Where-Object {
         $_.Extension -in @('.pfx', '.p12', '.pem', '.key', '.dat', '.notifications') -or
-        $_.Name -like '.env*' -or $_.Name -in @('policy.json', 'restore-journal.json')
+        $_.Name -like '.env*' -or $_.Name -in @('policy.json', 'restore-journal.json', 'power-journal.json', 'publisher.key')
     }
     if ($unexpected) { throw 'Payload contém configuração privada ou credenciais.' }
     $payload = Join-Path $output 'Payload.wxs'
@@ -74,10 +74,11 @@ try {
         $updateAssets = @((Join-Path $artifacts 'CEP-Horas-Windows-win-x64.manifest.json'), (Join-Path $artifacts 'CEP-Horas-Windows-win-x64.manifest.sig'))
     }
     Copy-Item -LiteralPath (Join-Path $repo 'desktop\CepHoras.CorporateInstaller\LEIA-ME-TI.txt') -Destination $artifacts
+    Copy-Item -LiteralPath (Join-Path $repo 'scripts\check-corporate-windows.ps1') -Destination (Join-Path $artifacts 'Verificar-Windows.ps1')
     Copy-Item -LiteralPath (Join-Path $publish 'control') -Destination (Join-Path $artifacts 'RecuperacaoTI') -Recurse
     $hash = (Get-FileHash -LiteralPath $msi).Hash.ToLowerInvariant()
     [IO.File]::WriteAllText((Join-Path $artifacts 'SHA256SUMS.txt'), "$hash  CEP-Horas-Windows-win-x64.msi`n")
-    $tiFiles = @($msi, (Join-Path $artifacts 'LEIA-ME-TI.txt'), (Join-Path $artifacts 'SHA256SUMS.txt'), (Join-Path $artifacts 'RecuperacaoTI')) + $updateAssets
+    $tiFiles = @($msi, (Join-Path $artifacts 'LEIA-ME-TI.txt'), (Join-Path $artifacts 'Verificar-Windows.ps1'), (Join-Path $artifacts 'SHA256SUMS.txt'), (Join-Path $artifacts 'RecuperacaoTI')) + $updateAssets
     Compress-Archive -LiteralPath $tiFiles -DestinationPath (Join-Path $artifacts "CEP-Horas-Windows-$Version-TI.zip")
     Write-Output "Pacote: $artifacts; SHA-256=$hash"
     if ($UpdateSigningKeyPath) { Write-Output 'Manifesto e assinatura gerados. Publicação e homologação Windows ainda são etapas separadas.' }

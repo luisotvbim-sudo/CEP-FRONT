@@ -32,8 +32,10 @@ internal sealed class PrivatePowerRequestStore : IPowerRequestStore
     private static readonly string PathName = Path.Combine(PolicyStore.Root, "power-journal.json");
     public PowerRequestJournal? Read()
     {
-        if (!File.Exists(PathName)) return null;
         PolicyStore.SecureDirectory();
+        // File.Exists also returns false for access failures. Only absence is empty state.
+        try { _ = File.GetAttributes(PathName); }
+        catch (FileNotFoundException) { return null; }
         var journal = PolicyStore.ReadPrivate<PowerRequestJournal>(PathName);
         PowerRequestValidation.Validate(journal);
         return journal;

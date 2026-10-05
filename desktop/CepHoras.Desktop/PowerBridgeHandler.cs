@@ -134,6 +134,8 @@ internal sealed class PowerBridgeHandler(ApiSession session, Func<ControlRequest
         // cancellation of a Windows shutdown scheduled by its predecessor.
         var broker = await send(new ControlRequest("status")).WaitAsync(ServiceBudget);
         if (!Guid.TryParse(broker.BrokerInstanceId, out _)) throw new PowerBridgeFailure("power_service_changed");
+        AdoptRecovery(broker);
+        if (broker.Code != "ready" || !broker.Active) throw new PowerBridgeFailure(broker.Code);
         lock (gate) pending.BrokerInstanceId = broker.BrokerInstanceId;
         var action = pending.Action;
         if (kind == "api-unreachable") return await session.IsApiUnreachable();
@@ -227,6 +229,26 @@ internal sealed class PowerBridgeHandler(ApiSession session, Func<ControlRequest
             response.Code == "cancelled" && response.Cancelled && response.RequestId == requestId &&
             response.OriginalBrokerInstanceId == originalBroker && Guid.TryParse(response.BrokerInstanceId, out _));
 
+    private void AdoptRecovery(ControlResponse response)
+    {
+        if (response.Code != "power_uncertain") return;
+        if (Guid.TryParse(response.RequestId, out _) && Guid.TryParse(response.OriginalBrokerInstanceId, out _) &&
+            response.Action is string action && Actions.Contains(action))
+        {
+            lock (gate)
+            {
+                current = new Pending(response.RequestId!, action, session.CurrentUserId ?? Guid.Empty)
+                {
+                    BrokerInstanceId = response.OriginalBrokerInstanceId,
+                    Dispatched = true, Recovered = true
+                };
+                ending = null;
+            }
+            throw new PowerBridgeFailure("power_recovery_required", requestId: response.RequestId);
+        }
+        throw new PowerBridgeFailure("power_uncertain");
+    }
+
     // Hold across navigation, browser disposal, host exit or updates. Failure keeps
     // scheduling suspended until another attempt confirms service cancellation.
     internal async Task<IAsyncDisposable> QuiesceAsync(CancellationToken token = default)
@@ -244,6 +266,7 @@ internal sealed class PowerBridgeHandler(ApiSession session, Func<ControlRequest
             token.ThrowIfCancellationRequested();
             var broker = await send(new ControlRequest("status")).WaitAsync(ServiceBudget, token);
             if (!Guid.TryParse(broker.BrokerInstanceId, out _)) throw new PowerBridgeFailure("power_service_changed", requestId: requestId);
+            AdoptRecovery(broker);
             lock (gate)
             {
                 if (current is { Dispatched: true } pending && pending.BrokerInstanceId != broker.BrokerInstanceId)

@@ -59,7 +59,12 @@ internal sealed class WindowsPower : ISystemPower, IDisposable
             return;
         }
         EnablePrivilege();
-        if (!AbortSystemShutdown(null)) throw new Win32Exception(Marshal.GetLastWin32Error());
+        if (!AbortSystemShutdown(null))
+        {
+            var error = Marshal.GetLastWin32Error();
+            // ERROR_NO_SHUTDOWN_IN_PROGRESS proves absence; other failures remain uncertain.
+            if (error != 1116) throw new Win32Exception(error);
+        }
     }
 
     private static void EnablePrivilege()

@@ -27,7 +27,7 @@ internal sealed class ControlService : ServiceBase
         var desktopState = new DesktopSupervisionState();
         updates = new MsiUpdateCoordinator(stop.Token);
         authority = new PowerAuthority(PolicyStore.Read, PolicyStore.MatchesExpected, system, PolicyStore.Audit,
-            maintenance: () => InMaintenance);
+            maintenance: () => InMaintenance, store: new PrivatePowerRequestStore());
         desktopSupervisor = new DesktopSupervisor(desktopState, () => InMaintenance);
         desktopLifecycle = new DesktopLifecycleController(
             desktopState,
@@ -44,6 +44,7 @@ internal sealed class ControlService : ServiceBase
 
     protected override void OnStart(string[] args)
     {
+        authority.Initialize(); // Read/validate before IPC; no automatic startup power effect.
         try { updates.Initialize(authority.CancelForMaintenance); }
         catch (Exception error) { PolicyStore.Audit("update-initialization-failed:" + error.GetType().Name, "SYSTEM"); }
         try { desktopLifecycle.ProtectAtServiceStart(); }

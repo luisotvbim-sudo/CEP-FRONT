@@ -1,5 +1,7 @@
 # Refatoração do instalador — piloto 0.4.10
 
+Registro histórico. Sucedido em 05/10/2026 pelo [instalador 0.4.11](instalador-0.4.11.md). Após autorização humana específica, o journal de energia foi integrado, a nova main foi incorporada e a chave antiga do atualizador foi localizada e validada. Os bloqueios e artefatos 0.4.10 abaixo descrevem a execução anterior e não foram reescritos como evidência da nova versão.
+
 Demanda de 04/10/2026, São Paulo: [CEP-ORQUESTRADOR #14](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/14). Branch `codex/installer-reliability`, checkout isolado gerenciado `installer-reliability/CEP-FRONT`, base conferida `1911a317dda45e10cd2302af97e8bdfe9a385a61` (`codex/contexto-instalador-atual`). Nenhuma alteração na main compartilhada, merge, instalação elevada ou ação real de energia pertence a esta entrega.
 
 ## Responsabilidades e comportamento
