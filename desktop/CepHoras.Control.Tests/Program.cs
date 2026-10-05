@@ -118,7 +118,7 @@ Assert(!supervision.AllowsLaunch(12), "authorized close suspends current session
 Assert(!supervision.Resume(12, "userB") && !supervision.AllowsLaunch(12), "another identity cannot resume suspension");
 Assert(supervision.Resume(12, "userA") && supervision.AllowsLaunch(12), "manual start resumes same identity");
 supervision.Suspend(12, "userA");
-Assert(supervision.AllowsLaunch(13) && supervision.AllowsLaunch(12), "new Windows session clears suspension");
+Assert(supervision.AllowsLaunch(13) && !supervision.AllowsLaunch(12), "another session cannot discard the existing suspension");
 
 var lifecycleOrder = new List<string>();
 var lifecycleState = new DesktopSupervisionState();
@@ -217,6 +217,7 @@ using (var client = new NamedPipeClientStream(".", fixturePipe, PipeDirection.In
 
 Console.WriteLine("PASS: fixed power actions, ten-second scheduling, idempotency, cancellation, policy fail-closed, rollback and bounded IPC. No system action executed.");
 Console.WriteLine("PASS: update owner/version/expiry, recovery, maintenance power cancellation and status projection. Privileged MSI/ACL/StopServices validation remains deferred to a SYSTEM pilot.");
+await ServiceReliabilityChecks.Run();
 
 static void Assert(bool value, string message)
 {

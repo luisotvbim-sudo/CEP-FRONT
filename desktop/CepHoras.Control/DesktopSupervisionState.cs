@@ -3,15 +3,13 @@ namespace CepHoras.Control;
 internal sealed class DesktopSupervisionState
 {
     private readonly object gate = new();
-    private uint? suspendedSession;
-    private string? suspendedSid;
+    private readonly Dictionary<uint, string> suspended = [];
 
     internal void Suspend(uint sessionId, string sid)
     {
         lock (gate)
         {
-            suspendedSession = sessionId;
-            suspendedSid = sid;
+            suspended[sessionId] = sid;
         }
     }
 
@@ -19,11 +17,9 @@ internal sealed class DesktopSupervisionState
     {
         lock (gate)
         {
-            if (suspendedSession != sessionId || !string.Equals(suspendedSid, sid, StringComparison.Ordinal))
+            if (!suspended.TryGetValue(sessionId, out var owner) || !string.Equals(owner, sid, StringComparison.Ordinal))
                 return false;
-            suspendedSession = null;
-            suspendedSid = null;
-            return true;
+            return suspended.Remove(sessionId);
         }
     }
 
@@ -31,10 +27,7 @@ internal sealed class DesktopSupervisionState
     {
         lock (gate)
         {
-            if (suspendedSession != sessionId) return false;
-            suspendedSession = null;
-            suspendedSid = null;
-            return true;
+            return suspended.Remove(sessionId);
         }
     }
 
@@ -42,11 +35,7 @@ internal sealed class DesktopSupervisionState
     {
         lock (gate)
         {
-            if (suspendedSession is null) return true;
-            if (suspendedSession == activeSessionId) return false;
-            suspendedSession = null;
-            suspendedSid = null;
-            return true;
+            return !suspended.ContainsKey(activeSessionId);
         }
     }
 }

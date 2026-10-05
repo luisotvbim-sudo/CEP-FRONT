@@ -37,6 +37,10 @@ internal static class MsiUpdateTrust
     {
         if (manifest.Length is < 1 or > MaximumManifestBytes || signature.Length is < 1 or > MaximumSignatureBytes)
             throw new InvalidDataException("Metadados de atualização fora do limite.");
+        // Callers can retain and mutate byte arrays. Verify and parse the same private
+        // snapshot so concurrent mutation cannot change JSON after authentication.
+        manifest = manifest.ToArray();
+        signature = signature.ToArray();
         using var rsa = RSA.Create();
         rsa.ImportFromPem(publicKeyPem);
         if (rsa.KeySize < 2048 || !rsa.VerifyData(manifest, signature, HashAlgorithmName.SHA256, RSASignaturePadding.Pss))
@@ -58,7 +62,7 @@ internal static class MsiUpdateTrust
                 !root.GetProperty("size").TryGetInt64(out var size) || size <= 0 || size > MaximumPackageBytes ||
                 root.GetProperty("sha256").GetString() is not { } hash || !HashPattern.IsMatch(hash))
                 throw new InvalidDataException("Identidade, versão ou integridade do manifesto inválida.");
-            return new(version, AssetUri(version, PackageAsset), size, hash.ToUpperInvariant(), manifest.ToArray(), signature.ToArray());
+            return new(version, AssetUri(version, PackageAsset), size, hash.ToUpperInvariant(), manifest, signature);
         }
         catch (Exception error) when (error is JsonException or InvalidOperationException or KeyNotFoundException)
         {

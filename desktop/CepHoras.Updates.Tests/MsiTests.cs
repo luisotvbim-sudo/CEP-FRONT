@@ -1,4 +1,5 @@
 using CepHoras.Updates;
+using System.Diagnostics;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
@@ -20,6 +21,13 @@ internal static class MsiTests
         var signature = Sign(key, manifest);
         var release = MsiUpdateTrust.Validate(manifest, signature, version, publicKey);
         Assert(release.Version == version && release.Size == payload.Length, "Lê manifesto assinado");
+        var callerManifest = manifest.ToArray();
+        var callerSignature = signature.ToArray();
+        var captured = MsiUpdateTrust.Validate(callerManifest, callerSignature, version, publicKey);
+        callerManifest[^2] ^= 1;
+        callerSignature[0] ^= 1;
+        MsiUpdateTrust.ValidateRelease(captured, publicKey);
+        Assert(captured.Sha256 == release.Sha256, "Metadados autenticados continuam verificáveis após mutação dos buffers do chamador");
         Throws(() => MsiUpdateTrust.Validate(manifest, Sign(otherKey, manifest), version, publicKey), "Rejeita chave diferente");
         Throws(() => MsiUpdateTrust.Validate(manifest, signature[..^1], version, publicKey), "Rejeita assinatura truncada");
         var altered = manifest.ToArray(); altered[^2] ^= 1;
@@ -126,6 +134,15 @@ internal static class MsiTests
             using var truncatedHttp = new HttpClient(new DelegateHandler(_ => new(HttpStatusCode.OK) { Content = new ByteArrayContent(payload[..^1]) }));
             await ThrowsAsync(() => new GitHubMsiUpdates(truncatedHttp, publicKey, (_, _) => { }).DownloadAsync(release, directory), "Rejeita download truncado");
 
+            using (var cancelled = new CancellationTokenSource())
+            {
+                var before = Directory.GetFiles(directory).Length;
+                var cancellingUpdater = new GitHubMsiUpdates(http, publicKey, (_, _) => cancelled.Cancel());
+                await ThrowsCancelled(() => cancellingUpdater.DownloadAsync(release, directory, cancelled.Token),
+                    "Cancelamento durante inspeção MSI não publica pacote final");
+                Assert(Directory.GetFiles(directory).Length == before, "Remove pacote cancelado depois de validar identidade");
+            }
+
             foreach (var target in new[] { "https://evil.test/update", "http://github.com/update", "https://user:password@github.com/update", "https://github.com:444/update" })
             {
                 var requests = 0;
@@ -141,6 +158,8 @@ internal static class MsiTests
                 var redirected = await new GitHubMsiUpdates(redirectHttp, publicKey, (_, _) => { }).DownloadAsync(release, directory);
                 Assert(File.Exists(redirected), "Aceita CDN GitHub HTTPS autorizada");
             }
+
+            await TestLinkedAncestor(directory, release, publicKey, manifest, signature, payload);
         }
         finally { Directory.Delete(directory, true); }
 
@@ -157,6 +176,7 @@ internal static class MsiTests
             Throws(() => MsiPackageIdentity.Validate(properties, template, version), "Rejeita arquitetura MSI incompatível");
         foreach (var allUsers in new[] { "", "0", "2" })
             Throws(() => MsiPackageIdentity.Validate(new Dictionary<string, string>(properties) { ["ALLUSERS"] = allUsers }, "x64;1046", version), "Rejeita escopo por usuário ou variável");
+        checks += await BuildPreflightTests.Run();
         Console.WriteLine($"{checks} verificações do atualizador MSI passaram.");
     }
 
@@ -174,6 +194,43 @@ internal static class MsiTests
     private static void Assert(bool condition, string message) { if (!condition) throw new Exception(message); checks++; }
     private static void Throws(Action action, string message) { try { action(); } catch (InvalidDataException) { checks++; return; } throw new Exception(message); }
     private static async Task ThrowsAsync(Func<Task> action, string message) { try { await action(); } catch (InvalidDataException) { checks++; return; } throw new Exception(message); }
+    private static async Task ThrowsCancelled(Func<Task> action, string message) { try { await action(); } catch (OperationCanceledException) { checks++; return; } throw new Exception(message); }
+
+    private static async Task TestLinkedAncestor(string directory, MsiRelease release, string publicKey,
+        byte[] manifest, byte[] signature, byte[] payload)
+    {
+        var target = Path.Combine(directory, "link-target");
+        Directory.CreateDirectory(Path.Combine(target, "leaf"));
+        var link = Path.Combine(directory, "link-parent");
+        if (OperatingSystem.IsWindows())
+        {
+            // Junctions require no elevated installation or developer mode.
+            var info = new ProcessStartInfo("cmd.exe") { UseShellExecute = false, CreateNoWindow = true,
+                RedirectStandardOutput = true, RedirectStandardError = true };
+            foreach (var argument in new[] { "/c", "mklink", "/J", link, target }) info.ArgumentList.Add(argument);
+            using var process = Process.Start(info) ?? throw new Exception("Não criou fixture de junction.");
+            await process.WaitForExitAsync();
+            Assert(process.ExitCode == 0, "Cria fixture de junction sem elevação");
+        }
+        else Directory.CreateSymbolicLink(link, target);
+        try
+        {
+            var requests = 0;
+            using var http = new HttpClient(new DelegateHandler(request => {
+                requests++;
+                return ResponseFor(request, manifest, signature, payload);
+            }));
+            var updater = new GitHubMsiUpdates(http, publicKey, (_, _) => { });
+            await ThrowsAsync(() => updater.DownloadAsync(release, Path.Combine(link, "leaf")),
+                "Rejeita diretório normal abaixo de ancestral junction");
+            Assert(requests == 0, "Recusa ancestral link antes de rede/escrita");
+            var package = Path.Combine(target, "leaf", "approved.msi");
+            await File.WriteAllBytesAsync(package, payload);
+            Throws(() => updater.VerifyDownloadedPackage(Path.Combine(link, "leaf", "approved.msi"), release),
+                "Revalidação pré-instalação também recusa ancestral link");
+        }
+        finally { Directory.Delete(link); }
+    }
     private sealed class DelegateHandler(Func<HttpRequestMessage, HttpResponseMessage> respond) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)

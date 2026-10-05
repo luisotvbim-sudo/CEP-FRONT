@@ -5,6 +5,20 @@
     <MajorUpgrade Schedule="afterInstallInitialize" DowngradeErrorMessage="Já existe uma versão mais recente do CEP Horas." />
     <MediaTemplate EmbedCab="yes" CompressionLevel="medium" />
     <Launch Condition="Installed OR VersionNT64" Message="Requer Windows x64." />
+    <Property Id="CEP_WINDOWS_BUILD" Secure="yes">
+      <RegistrySearch Id="WindowsBuild" Root="HKLM" Key="SOFTWARE\Microsoft\Windows NT\CurrentVersion" Name="CurrentBuildNumber" Type="raw" Bitness="always64" />
+    </Property>
+    <Property Id="CEP_WINDOWS_TYPE" Secure="yes">
+      <RegistrySearch Id="WindowsType" Root="HKLM" Key="SOFTWARE\Microsoft\Windows NT\CurrentVersion" Name="InstallationType" Type="raw" Bitness="always64" />
+    </Property>
+    <Property Id="CEP_WINDOWS_EDITION" Secure="yes">
+      <RegistrySearch Id="WindowsEdition" Root="HKLM" Key="SOFTWARE\Microsoft\Windows NT\CurrentVersion" Name="EditionID" Type="raw" Bitness="always64" />
+    </Property>
+    <Property Id="CEP_WEBVIEW2_MACHINE" Secure="yes">
+      <RegistrySearch Id="MachineWebView2" Root="HKLM" Key="SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}" Name="pv" Type="raw" Bitness="always32" />
+    </Property>
+    <Launch Condition="Installed OR (CEP_WINDOWS_BUILD &gt;= 26100 AND CEP_WINDOWS_TYPE = &quot;Client&quot; AND (CEP_WINDOWS_EDITION &lt;&lt; &quot;Professional&quot; OR CEP_WINDOWS_EDITION &lt;&lt; &quot;Enterprise&quot; OR CEP_WINDOWS_EDITION &lt;&lt; &quot;Education&quot;))" Message="Requer Windows 11 x64 Pro, Enterprise ou Education 24H2 ou superior. Windows 10, Home e Server ainda não são suportados pelo controle corporativo." />
+    <Launch Condition="Installed OR (CEP_WEBVIEW2_MACHINE AND CEP_WEBVIEW2_MACHINE &lt;&gt; &quot;0.0.0.0&quot;)" Message="Instale o Microsoft Edge WebView2 Evergreen Runtime por máquina antes de instalar o CEP Horas. O Runtime somente no perfil do administrador não atende os outros usuários." />
     <Property Id="ARPCOMMENTS" Value="Instalação corporativa do CEP Horas. As ações de energia são autorizadas pela CEP API e executadas pelo serviço local." />
 
     <CustomAction Id="RollbackApplyPolicy" FileRef="ControlExe" ExeCommand="--rollback-apply" Execute="rollback" Impersonate="no" Return="check" />
@@ -15,7 +29,7 @@
       <Custom Action="RollbackApplyPolicy" Before="ApplyPolicy" Condition="NOT Installed AND NOT WIX_UPGRADE_DETECTED" />
       <Custom Action="ApplyPolicy" After="InstallFiles" Condition="NOT Installed AND NOT WIX_UPGRADE_DETECTED" />
       <Custom Action="RollbackPolicyRestore" Before="RestorePolicy" Condition="REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE" />
-      <Custom Action="RestorePolicy" Before="StopServices" Condition="REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE" />
+      <Custom Action="RestorePolicy" After="StopServices" Condition="REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE" />
     </InstallExecuteSequence>
 
     <StandardDirectory Id="ProgramFiles64Folder">

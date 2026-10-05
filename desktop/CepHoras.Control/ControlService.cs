@@ -19,20 +19,23 @@ internal sealed class ControlService : ServiceBase
     private readonly PowerAuthority authority;
     private Task? listener;
     private Task? supervisor;
+    private int stopping;
+    private bool InMaintenance => Volatile.Read(ref stopping) != 0 || updates.InMaintenance;
 
     internal ControlService()
     {
         var desktopState = new DesktopSupervisionState();
         updates = new MsiUpdateCoordinator(stop.Token);
         authority = new PowerAuthority(PolicyStore.Read, PolicyStore.MatchesExpected, system, PolicyStore.Audit,
-            maintenance: () => updates.InMaintenance);
-        desktopSupervisor = new DesktopSupervisor(desktopState, () => updates.InMaintenance);
+            maintenance: () => InMaintenance);
+        desktopSupervisor = new DesktopSupervisor(desktopState, () => InMaintenance);
         desktopLifecycle = new DesktopLifecycleController(
             desktopState,
             () => PolicyStore.Restore(),
             PolicyStore.Apply,
             PolicyStore.Audit,
-            () => updates.InMaintenance);
+            () => InMaintenance,
+            () => new WindowsDesktopSessions().ActiveSessions());
         ServiceName = ControlWire.ServiceName;
         CanStop = true;
         CanHandleSessionChangeEvent = true;
@@ -55,20 +58,31 @@ internal sealed class ControlService : ServiceBase
     protected override void OnSessionChange(SessionChangeDescription changeDescription)
     {
         base.OnSessionChange(changeDescription);
-        if (changeDescription.Reason is not (
+        var arrival = changeDescription.Reason is
+            SessionChangeReason.SessionLogon or SessionChangeReason.SessionUnlock or
+            SessionChangeReason.ConsoleConnect or SessionChangeReason.RemoteConnect;
+        if (!arrival && changeDescription.Reason is not (
                 SessionChangeReason.SessionLogoff or
                 SessionChangeReason.SessionLock or
                 SessionChangeReason.ConsoleDisconnect or
                 SessionChangeReason.RemoteDisconnect)) return;
-        try { desktopLifecycle.ProtectAfterSessionEnd(checked((uint)changeDescription.SessionId)); }
+        try
+        {
+            if (arrival) desktopLifecycle.ProtectAfterSessionArrival(checked((uint)changeDescription.SessionId));
+            else desktopLifecycle.ProtectAfterSessionEnd(checked((uint)changeDescription.SessionId));
+        }
         catch (Exception error)
         {
-            PolicyStore.Audit("desktop-policy-logoff-failed:" + error.GetType().Name, "session:" + changeDescription.SessionId);
+            PolicyStore.Audit("desktop-policy-session-change-failed:" + error.GetType().Name, "session:" + changeDescription.SessionId);
         }
     }
 
     protected override void OnStop()
     {
+        // StopServices must confirm cancellation before MSI can restore policy or
+        // replace files. A failed cancellation leaves the action/state uncertain.
+        Volatile.Write(ref stopping, 1);
+        authority.CancelForMaintenance();
         stop.Cancel();
         Task.WaitAll([listener ?? Task.CompletedTask, supervisor ?? Task.CompletedTask], TimeSpan.FromSeconds(10));
         updates.Dispose();

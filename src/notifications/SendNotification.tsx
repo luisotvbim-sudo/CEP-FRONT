@@ -158,10 +158,11 @@ export function SendNotification({
           </button>
         </div>
         <QueryError error={dispatches.error} retry={dispatches.reload} />
-        {dispatches.pending ? (
+        {dispatches.refreshing && <Loading text="Atualizando histórico de envios…" />}
+        {dispatches.initialLoading ? (
           <Loading />
         ) : (
-          <div className="notification-list">
+          <div className="notification-list" aria-busy={dispatches.refreshing}>
             {dispatches.data?.items?.map((row) => (
               <article key={row.id}>
                 <div>
@@ -178,7 +179,7 @@ export function SendNotification({
             ))}
           </div>
         )}
-        {!dispatches.pending && dispatches.data?.total === 0 && (
+        {!dispatches.initialLoading && dispatches.data?.total === 0 && (
           <Empty title="Nenhum envio">
             <p>As solicitações e seus resultados aparecerão aqui.</p>
           </Empty>

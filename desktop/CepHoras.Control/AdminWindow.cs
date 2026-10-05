@@ -1,11 +1,11 @@
 using System.Windows;
 using System.Windows.Controls;
-using CepHoras.Control.Protocol;
 
 namespace CepHoras.Control;
 
 internal sealed class AdminWindow : Window
 {
+    private bool operationRunning;
     private readonly TextBlock status = new()
     {
         TextWrapping = TextWrapping.Wrap,
@@ -40,12 +40,15 @@ internal sealed class AdminWindow : Window
         };
         verify.Click += async (_, _) =>
         {
+            if (operationRunning) return;
+            operationRunning = true;
             try
             {
-                var service = await ControlClient.Send(new ControlRequest("status"));
-                status.Text = service.Message;
+                verify.IsEnabled = false;
+                status.Text = await Task.Run(AdministrativeRecovery.Status);
             }
             catch (Exception error) { status.Text = "Falha na verificação: " + error.Message; }
+            finally { verify.IsEnabled = true; operationRunning = false; }
         };
         panel.Children.Add(verify);
         var restore = new Button
@@ -54,22 +57,27 @@ internal sealed class AdminWindow : Window
             Padding = new Thickness(12, 9, 12, 9),
             Margin = new Thickness(0, 10, 0, 0)
         };
-        restore.Click += (_, _) =>
+        restore.Click += async (_, _) =>
         {
+            if (operationRunning) return;
             if (MessageBox.Show(
-                    "Restaurar as permissões e configurações de energia salvas antes da instalação?",
+                    "Parar o serviço CEP Horas e restaurar as permissões e configurações salvas antes da instalação? A supervisão permanecerá parada até a TI retomá-la.",
                     Title,
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+            operationRunning = true;
             try
             {
-                PolicyStore.Restore();
-                status.Text = "Configurações restauradas. Faça novo logon dos usuários.";
+                restore.IsEnabled = false;
+                verify.IsEnabled = false;
+                await Task.Run(() => AdministrativeRecovery.Installed().Restore());
+                status.Text = "Serviço parado e configurações restauradas. Faça novo logon dos usuários. A TI pode retomar o serviço quando concluir a recuperação.";
             }
             catch (Exception error)
             {
                 status.Text = "A restauração não concluiu. Preserve a instalação e o backup: " + error.Message;
             }
+            finally { restore.IsEnabled = true; verify.IsEnabled = true; operationRunning = false; }
         };
         panel.Children.Add(restore);
         panel.Children.Add(status);

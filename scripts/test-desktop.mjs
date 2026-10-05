@@ -11,8 +11,15 @@ const working = path.resolve('.local/desktop-test', `run-${Date.now()}`)
 const sessionDirectory = path.join(working, 'sessions')
 await mkdir(sessionDirectory, { recursive: true })
 const emptyFixtureName = `native-empty-${Date.now()}.html`
-const emptyFixturePath = path.resolve('desktop/CepHoras.Desktop/bin/Debug/net10.0-windows/wwwroot', emptyFixtureName)
-await writeFile(emptyFixturePath, '<!doctype html><html><body><div id="root"></div></body></html>', { flag: 'wx' })
+const emptyFixturePath = path.resolve(
+  'desktop/CepHoras.Desktop/bin/Debug/net10.0-windows/wwwroot',
+  emptyFixtureName,
+)
+await writeFile(
+  emptyFixturePath,
+  '<!doctype html><html><body><div id="root"></div></body></html>',
+  { flag: 'wx' },
+)
 const user = {
   id: '20000000-0000-0000-0000-000000000001',
   email: 'fixture@example.invalid',
@@ -29,7 +36,10 @@ let loginBody,
   userPatches = 0,
   adminInvites = 0,
   protectedCalls = 0
-const notificationIds = Array.from({ length: 101 }, (_, i) => `a0000000-0000-0000-0000-${String(i + 1).padStart(12, '0')}`)
+const notificationIds = Array.from(
+  { length: 101 },
+  (_, i) => `a0000000-0000-0000-0000-${String(i + 1).padStart(12, '0')}`,
+)
 const deliveredNotifications = new Set()
 const pendingPages = []
 const tokens = (number, lifetime = 900_000) => ({
@@ -66,7 +76,16 @@ const server = createServer(async (req, res) => {
     const page = Number(url.searchParams.get('page') ?? 1)
     const pageSize = Number(url.searchParams.get('pageSize') ?? 100)
     pendingPages.push(page)
-    res.end(JSON.stringify({ items: pending.slice((page - 1) * pageSize, page * pageSize).map((id) => ({ id, readAt: null })), total: pending.length, page, pageSize }))
+    res.end(
+      JSON.stringify({
+        items: pending
+          .slice((page - 1) * pageSize, page * pageSize)
+          .map((id) => ({ id, readAt: null })),
+        total: pending.length,
+        page,
+        pageSize,
+      }),
+    )
   } else if (url.pathname === '/api/v1/me/notifications/received') {
     assert.equal(req.method, 'POST')
     assert.equal(req.headers.authorization, `Bearer fixture-access-${refreshes}`)
@@ -90,7 +109,15 @@ const server = createServer(async (req, res) => {
   } else if (url.pathname === '/api/v1/organization/invitations' && req.method === 'POST') {
     assert.equal(req.headers.authorization, `Bearer fixture-access-${refreshes}`)
     adminInvites++
-    res.writeHead(201).end(JSON.stringify({ id: '90000000-0000-0000-0000-000000000002', email: body.email, role: body.role }))
+    res
+      .writeHead(201)
+      .end(
+        JSON.stringify({
+          id: '90000000-0000-0000-0000-000000000002',
+          email: body.email,
+          role: body.role,
+        }),
+      )
   } else if (url.pathname === '/api/v1/organization/invitations') {
     assert.equal(req.headers.authorization, `Bearer fixture-access-${refreshes}`)
     protectedCalls++
@@ -151,23 +178,38 @@ async function close() {
   }
 }
 async function bridgeApi(page, payload) {
-  return page.evaluate((request) => new Promise((resolve) => {
-    const id = crypto.randomUUID()
-    const listener = (event) => {
-      if (event.data.id === id) {
-        window.chrome.webview.removeEventListener('message', listener)
-        resolve(event.data)
-      }
-    }
-    window.chrome.webview.addEventListener('message', listener)
-    window.chrome.webview.postMessage({ type: 'cep-auth', id, operation: 'api', payload: request })
-  }), payload)
+  return page.evaluate(
+    (request) =>
+      new Promise((resolve) => {
+        const id = crypto.randomUUID()
+        const listener = (event) => {
+          if (event.data.id === id) {
+            window.chrome.webview.removeEventListener('message', listener)
+            resolve(event.data)
+          }
+        }
+        window.chrome.webview.addEventListener('message', listener)
+        window.chrome.webview.postMessage({
+          type: 'cep-auth',
+          documentId: window.__CEP_DOCUMENT_ID__,
+          id,
+          operation: 'api',
+          payload: request,
+        })
+      }),
+    payload,
+  )
 }
 async function nativeAction(page, action) {
-  await page.evaluate((value) => window.chrome.webview.postMessage({ type: 'cep-desktop-test', action: value }), action)
+  await page.evaluate(
+    (value) => window.chrome.webview.postMessage({ type: 'cep-desktop-test', action: value }),
+    action,
+  )
 }
 async function nativeEvents() {
-  return (await readFile(path.join(sessionDirectory, 'native-ui.events'), 'utf8').catch(() => '')).split(/\r?\n/)
+  return (
+    await readFile(path.join(sessionDirectory, 'native-ui.events'), 'utf8').catch(() => '')
+  ).split(/\r?\n/)
 }
 async function waitNativeEvent(value, timeout = 5000) {
   for (const deadline = Date.now() + timeout; Date.now() < deadline;) {
@@ -177,48 +219,146 @@ async function waitNativeEvent(value, timeout = 5000) {
   assert.fail(`Missing native event: ${value}`)
 }
 async function nativeUiState(page) {
-  return page.evaluate(() => new Promise((resolve) => {
-    const id = crypto.randomUUID()
-    const listener = (event) => {
-      if (event.data.id !== id) return
-      window.chrome.webview.removeEventListener('message', listener)
-      resolve(event.data.result)
-    }
-    window.chrome.webview.addEventListener('message', listener)
-    window.chrome.webview.postMessage({ type: 'cep-desktop-test', action: 'ui-state', id })
-  }))
+  return page.evaluate(
+    () =>
+      new Promise((resolve) => {
+        const id = crypto.randomUUID()
+        const listener = (event) => {
+          if (event.data.id !== id) return
+          window.chrome.webview.removeEventListener('message', listener)
+          resolve(event.data.result)
+        }
+        window.chrome.webview.addEventListener('message', listener)
+        window.chrome.webview.postMessage({ type: 'cep-desktop-test', action: 'ui-state', id })
+      }),
+  )
 }
 try {
   let page = await open()
   await page.getByRole('heading', { name: 'Bom ter você aqui.' }).waitFor()
   await waitNativeEvent('webview-loading')
   await waitNativeEvent('webview-ready')
-  assert.deepEqual(await nativeUiState(page), { loading: false, recovery: false, browser: true, reloadEnabled: true })
+  assert.deepEqual(await nativeUiState(page), {
+    loading: false,
+    recovery: false,
+    browser: true,
+    reloadEnabled: true,
+  })
   // HTML navigation can succeed while React is empty. Verify native recovery
   // after removing the rendered interface, without touching the installed app.
   await page.evaluate(() => document.getElementById('root').replaceChildren())
   await waitNativeEvent('webview-rendered-root-empty')
-  assert.deepEqual(await nativeUiState(page), { loading: false, recovery: true, browser: false, reloadEnabled: true })
+  assert.deepEqual(await nativeUiState(page), {
+    loading: false,
+    recovery: true,
+    browser: false,
+    reloadEnabled: true,
+  })
   const recovered = page.waitForEvent('domcontentloaded')
   await nativeAction(page, 'reload-ui')
   await recovered
   await page.getByRole('heading', { name: 'Bom ter você aqui.' }).waitFor()
   assert.ok((await nativeEvents()).filter((event) => event === 'webview-loading').length >= 2)
-  for (let attempt = 0; attempt < 50 && (await nativeEvents()).filter((event) => event === 'webview-ready').length < 2; attempt++)
+  for (
+    let attempt = 0;
+    attempt < 50 && (await nativeEvents()).filter((event) => event === 'webview-ready').length < 2;
+    attempt++
+  )
     await new Promise((resolve) => setTimeout(resolve, 100))
-  assert.ok((await nativeEvents()).filter((event) => event === 'webview-ready').length >= 2, 'the native host waits for the restored React interface')
+  assert.ok(
+    (await nativeEvents()).filter((event) => event === 'webview-ready').length >= 2,
+    'the native host waits for the restored React interface',
+  )
   // Successful HTML navigation with no React must retain the native loading UI,
   // then time out to a usable recovery button rather than show a blank browser.
   const emptyUrl = `https://app.cephoras.local/${emptyFixtureName}`
   await page.goto(emptyUrl)
-  assert.deepEqual(await nativeUiState(page), { loading: true, recovery: true, browser: false, reloadEnabled: true })
+  assert.deepEqual(await nativeUiState(page), {
+    loading: true,
+    recovery: true,
+    browser: false,
+    reloadEnabled: true,
+  })
   await waitNativeEvent('webview-loading-timeout', 35000)
-  assert.deepEqual(await nativeUiState(page), { loading: false, recovery: true, browser: false, reloadEnabled: true })
+  assert.deepEqual(await nativeUiState(page), {
+    loading: false,
+    recovery: true,
+    browser: false,
+    reloadEnabled: true,
+  })
   const afterTimeout = page.waitForEvent('domcontentloaded')
   await nativeAction(page, 'reload-ui')
   await afterTimeout
   await page.getByRole('heading', { name: 'Bom ter você aqui.' }).waitFor()
   console.log('PASS: WPF loading, blank React detection and reload recovery in isolated WebView2.')
+  // A blocked renderer cannot reply over the bridge. The native timer must
+  // detect it while remaining responsive and reload after the finite deadline.
+  for (let attempt = 0; attempt < 80 && !(await nativeUiState(page)).browser; attempt++)
+    await new Promise((resolve) => setTimeout(resolve, 100))
+  assert.equal((await nativeUiState(page)).browser, true, 'the fault starts after native readiness')
+  await nativeAction(page, 'reset-recovery-budget')
+  await page.evaluate(() => {
+    setTimeout(() => {
+      const until = performance.now() + 9_000
+      while (performance.now() < until) {
+        /* isolated renderer fault fixture */
+      }
+    }, 0)
+  })
+  await waitNativeEvent('webview-renderer-unresponsive', 15000)
+  await page.getByRole('heading', { name: 'Bom ter você aqui.' }).waitFor()
+  await page.waitForFunction(() => !!window.chrome?.webview)
+  for (let attempt = 0; attempt < 80 && (await nativeUiState(page)).loading; attempt++)
+    await new Promise((resolve) => setTimeout(resolve, 100))
+  assert.equal((await nativeUiState(page)).browser, true)
+  // A renderer fault during a download defers recovery, then resumes once
+  // failure releases maintenance. No MSI, service or privileged action runs.
+  const emptyFailures = (await nativeEvents()).filter((event) => event === 'webview-rendered-root-empty').length
+  await nativeAction(page, 'reset-recovery-budget')
+  await nativeAction(page, 'update-downloading')
+  await page.evaluate(() => document.getElementById('root').replaceChildren())
+  for (let attempt = 0; attempt < 80; attempt++) {
+    if ((await nativeEvents()).filter((event) => event === 'webview-rendered-root-empty').length > emptyFailures) break
+    await new Promise((resolve) => setTimeout(resolve, 100))
+  }
+  assert.equal((await nativeUiState(page)).browser, false)
+  assert.equal((await nativeUiState(page)).reloadEnabled, false)
+  await new Promise((resolve) => setTimeout(resolve, 1_500))
+  await nativeAction(page, 'update-failed')
+  await waitNativeEvent('webview-update-recovery-resumed')
+  await page.getByRole('heading', { name: 'Bom ter você aqui.' }).waitFor()
+  for (let attempt = 0; attempt < 80 && !(await nativeUiState(page)).browser; attempt++)
+    await new Promise((resolve) => setTimeout(resolve, 100))
+  assert.equal((await nativeUiState(page)).browser, true)
+  assert.equal((await nativeUiState(page)).reloadEnabled, true)
+  console.log('PASS: renderer recovery resumes after a failed disposable update download.')
+  // Native messages remain active while hidden; renderer timer throttling must
+  // not be confused with network/API health or suspended machine elapsed time.
+  await nativeAction(page, 'hide')
+  await nativeAction(page, 'resume-ui')
+  await new Promise((resolve) => setTimeout(resolve, 7000))
+  assert.equal(
+    (await nativeUiState(page)).browser,
+    true,
+    'a healthy tray renderer must remain healthy',
+  )
+  await nativeAction(page, 'open-inbox')
+  // Recreate the control with the same owned UDF, then attach to the replacement
+  // CDP target. This path must never replace or delete the DPAPI session folder.
+  const previousProfile = path.join(working, 'profile')
+  await nativeAction(page, 'recreate-ui')
+  await waitNativeEvent('webview-recovery-recreate', 15000)
+  await new Promise((resolve) => setTimeout(resolve, 1200))
+  browser = await chromium.connectOverCDP(`http://127.0.0.1:${cdpPort}`)
+  page = browser.contexts()[0].pages()[0] || (await browser.contexts()[0].waitForEvent('page'))
+  await page.getByRole('heading', { name: 'Bom ter você aqui.' }).waitFor()
+  assert.ok(
+    (await readdir(previousProfile)).includes('.cep-profile-owner'),
+    'recreation preserves the same owned profile',
+  )
+  console.log(
+    'PASS: blocked JS detection, tray/resume grace and browser recreation preserve the owned UDF.',
+  )
   assert.equal(await page.evaluate(() => window.__CEP_DESKTOP__), true)
   await page.screenshot({ path: '.local/login-webview2.png', fullPage: true })
   await page.evaluate(() => {
@@ -238,6 +378,8 @@ try {
       'PASS: actual WebView2 → native HTTP → local CEP API rejected a nonexistent test account.',
     )
   } else {
+    await page.getByRole('heading', { name: 'Minhas notificações', exact: true }).waitFor()
+    await page.getByRole('button', { name: 'Pessoas', exact: true }).click()
     await page.getByRole('heading', { name: 'Pessoas', exact: true }).waitFor()
     await page.getByRole('heading', { name: 'Sua lista de pessoas começa aqui' }).waitFor()
     assert.equal(loginBody.client.type, 'cep-horas-desktop')
@@ -262,10 +404,16 @@ try {
       await new Promise((resolve) => setTimeout(resolve, 100))
     assert.equal(deliveredNotifications.size, 101, 'the native host recovers every pending page')
     assert.deepEqual(pendingPages.slice(0, 2), [1, 2])
-    const ledgers = (await readdir(sessionDirectory)).filter((file) => file.endsWith('.notifications'))
+    const ledgers = (await readdir(sessionDirectory)).filter((file) =>
+      file.endsWith('.notifications'),
+    )
     assert.equal(ledgers.length, 1)
     const ledger = await readFile(path.join(sessionDirectory, ledgers[0]))
-    assert.equal(ledger.includes(Buffer.from(notificationIds[0])), false, 'receipt ledger is DPAPI protected')
+    assert.equal(
+      ledger.includes(Buffer.from(notificationIds[0])),
+      false,
+      'receipt ledger is DPAPI protected',
+    )
     await waitNativeEvent('notification-summary-requested')
     await nativeAction(page, 'hide')
     await waitNativeEvent('hidden-to-tray')
@@ -289,6 +437,7 @@ try {
           window.chrome.webview.addEventListener('message', listener)
           window.chrome.webview.postMessage({
             type: 'cep-auth',
+            documentId: window.__CEP_DOCUMENT_ID__,
             id,
             operation: 'api',
             payload: { method: 'GET', path: '/system/organizations' },
@@ -296,10 +445,40 @@ try {
         }),
     )
     assert.equal(denied.error.code, 'unsupported_route')
-    assert.equal((await bridgeApi(page, { method: 'GET', path: '/organization/audit?pageSize=50' })).ok, true)
-    assert.equal((await bridgeApi(page, { method: 'PATCH', path: `/organization/users/${user.id}`, body: { displayName: user.displayName, role: user.role, status: user.status, products: [] } })).ok, true)
-    assert.equal((await bridgeApi(page, { method: 'POST', path: '/organization/invitations', body: { email: 'new@example.invalid', role: 'organizationAdmin', products: [] } })).ok, true)
-    assert.equal((await bridgeApi(page, { method: 'PATCH', path: '/organization/users/not-a-guid', body: {} })).error.code, 'unsupported_route')
+    assert.equal(
+      (await bridgeApi(page, { method: 'GET', path: '/organization/audit?pageSize=50' })).ok,
+      true,
+    )
+    assert.equal(
+      (
+        await bridgeApi(page, {
+          method: 'PATCH',
+          path: `/organization/users/${user.id}`,
+          body: {
+            displayName: user.displayName,
+            role: user.role,
+            status: user.status,
+            products: [],
+          },
+        })
+      ).ok,
+      true,
+    )
+    assert.equal(
+      (
+        await bridgeApi(page, {
+          method: 'POST',
+          path: '/organization/invitations',
+          body: { email: 'new@example.invalid', role: 'organizationAdmin', products: [] },
+        })
+      ).ok,
+      true,
+    )
+    assert.equal(
+      (await bridgeApi(page, { method: 'PATCH', path: '/organization/users/not-a-guid', body: {} }))
+        .error.code,
+      'unsupported_route',
+    )
     assert.equal(audits, 1)
     assert.equal(userPatches, 1)
     assert.equal(adminInvites, 1)
@@ -316,6 +495,7 @@ try {
           window.chrome.webview.addEventListener('message', listener)
           window.chrome.webview.postMessage({
             type: 'cep-auth',
+            documentId: window.__CEP_DOCUMENT_ID__,
             id,
             operation: 'api',
             payload: {
@@ -337,14 +517,19 @@ try {
     await page.getByRole('heading', { name: 'Bom ter você aqui.' }).waitFor()
     assert.equal(logoutBody.refreshToken, 'fixture-refresh-2')
     assert.equal((await readdir(sessionDirectory)).filter((f) => f.endsWith('.dat')).length, 0)
-    console.log((await nativeEvents()).includes('popup-shown-by-windows')
-      ? 'PASS: Windows reported that the native popup was shown.'
-      : 'NOTE: native popup requested; Windows did not report display (notification policy may suppress it).')
+    console.log(
+      (await nativeEvents()).includes('popup-shown-by-windows')
+        ? 'PASS: Windows reported that the native popup was shown.'
+        : 'NOTE: native popup requested; Windows did not report display (notification policy may suppress it).',
+    )
     await nativeAction(page, 'exit')
-    if (child.exitCode === null) await Promise.race([
-      new Promise((resolve) => child.once('exit', resolve)),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Sair did not terminate the desktop')), 5000)),
-    ])
+    if (child.exitCode === null)
+      await Promise.race([
+        new Promise((resolve) => child.once('exit', resolve)),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Sair did not terminate the desktop')), 5000),
+        ),
+      ])
     console.log(
       'PASS: real WPF/WebView2 admin, protected API, single refresh, DPAPI restart/restore, route allowlist, token isolation and logout against disposable fixture.',
     )

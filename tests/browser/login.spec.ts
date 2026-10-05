@@ -131,6 +131,7 @@ test('network failure stays recoverable and does not expose internal errors', as
 test('same interface uses native bridge inside WebView2', async ({ page }) => {
   await page.addInitScript(() => {
     window.__CEP_DESKTOP__ = true
+    window.__CEP_DOCUMENT_ID__ = crypto.randomUUID()
     const listeners = new Set<(event: { data: object }) => void>()
     Object.defineProperty(window, 'chrome', {
       configurable: true,
@@ -140,7 +141,9 @@ test('same interface uses native bridge inside WebView2', async ({ page }) => {
             listeners.add(fn),
           removeEventListener: (_type: string, fn: (event: { data: object }) => void) =>
             listeners.delete(fn),
-          postMessage: (message: { id: string; operation: string }) => {
+          postMessage: (message: { id: string; operation: string; documentId?: string }) => {
+            if (message.documentId !== window.__CEP_DOCUMENT_ID__)
+              throw new Error('Fixture rejected stale document')
             queueMicrotask(() =>
               listeners.forEach((listener) =>
                 listener({
@@ -151,7 +154,8 @@ test('same interface uses native bridge inside WebView2', async ({ page }) => {
                       message.operation === 'login'
                         ? {
                             user: {
-                              id: 'native-test',
+                              id: '20000000-0000-0000-0000-000000000001',
+                              role: 'user',
                               displayName: 'Usuário desktop',
                               email: 'desktop@example.invalid',
                             },

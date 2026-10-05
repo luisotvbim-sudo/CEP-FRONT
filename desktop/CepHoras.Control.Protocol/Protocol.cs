@@ -12,7 +12,8 @@ public sealed record ControlRequest(
     string? RequestId = null,
     string? Action = null,
     int DelaySeconds = 0,
-    string? ApprovedVersion = null);
+    string? ApprovedVersion = null,
+    string? BrokerInstanceId = null);
 
 public sealed record ControlResponse(
     string Code,
@@ -24,7 +25,9 @@ public sealed record ControlResponse(
     bool Cancelled = false,
     string? UpdateVersion = null,
     string? UpdatePhase = null,
-    string? InstalledVersion = null);
+    string? InstalledVersion = null,
+    string? BrokerInstanceId = null,
+    string? OriginalBrokerInstanceId = null);
 
 public static class ControlWire
 {

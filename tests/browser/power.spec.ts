@@ -68,12 +68,19 @@ async function apiFixture(page: Page, decision = 'allowed', status = 200, invali
   return calls
 }
 // Fake only the new power protocol, after HTTP login. No test executes OS commands.
-async function nativeFixture(page: Page, unreachable = true, cancelFails = false) {
+async function nativeFixture(
+  page: Page,
+  unreachable = true,
+  cancelFails = false,
+  scheduleDelay = 0,
+) {
   await page.evaluate(
-    ({ unreachable, cancelFails }) => {
+    ({ unreachable, cancelFails, scheduleDelay }) => {
       const messages: any[] = []
       ;(window as any).powerMessages = messages
+      ;(window as any).powerTerminal = false
       window.__CEP_DESKTOP__ = true
+      window.__CEP_DOCUMENT_ID__ = crypto.randomUUID()
       window.__CEP_POWER_VERSION__ = 1
       const listeners = new Set<(event: any) => void>()
       window.chrome = {
@@ -85,6 +92,8 @@ async function nativeFixture(page: Page, unreachable = true, cancelFails = false
             listeners.delete(listener)
           },
           postMessage: (message: any) => {
+            if (message.documentId !== window.__CEP_DOCUMENT_ID__)
+              throw new Error('Fixture rejected stale document')
             messages.push(message)
             const result =
               message.operation === 'schedule'
@@ -95,17 +104,26 @@ async function nativeFixture(page: Page, unreachable = true, cancelFails = false
                   }
                 : message.operation === 'cancel'
                   ? { cancelled: !cancelFails }
-                  : { unreachable }
-            queueMicrotask(() =>
+                  : message.operation === 'reconcile'
+                    ? {
+                        requestId: message.payload.requestId,
+                        state: (window as any).powerTerminal ? 'terminal' : 'pending',
+                      }
+                    : { unreachable }
+            const reply = () => {
+              if (message.operation === 'schedule')
+                result.executeAt = new Date(Date.now() + 10_000).toISOString()
               listeners.forEach((listener) =>
                 listener({ data: { id: message.id, ok: true, result } }),
-              ),
-            )
+              )
+            }
+            if (message.operation === 'schedule' && scheduleDelay) setTimeout(reply, scheduleDelay)
+            else queueMicrotask(reply)
           },
         },
       }
     },
-    { unreachable, cancelFails },
+    { unreachable, cancelFails, scheduleDelay },
   )
 }
 const menu = (page: Page) => page.getByRole('region', { name: 'Energia do computador' })
@@ -244,6 +262,51 @@ test('deadline does not send a second execute command', async ({ page }) => {
   await expect(menu(page)).toContainText('em 10 segundos')
   await page.clock.runFor(10_000)
   await expect(menu(page)).toContainText('Prazo do agendamento atingido')
+  expect(await operations(page)).toEqual(['schedule', 'reconcile'])
+  await expect(menu(page).getByRole('button', { name: 'Desligar', exact: true })).toBeDisabled()
+})
+
+test('hibernate resume reconciles terminal service state and enables a new action', async ({
+  page,
+}) => {
+  await fixture(page)
+  await nativeFixture(page)
+  await apiFixture(page)
+  await page.clock.install()
+  await openMenu(page)
+  await menu(page).getByRole('button', { name: 'Hibernar', exact: true }).click()
+  await expect(menu(page)).toContainText('Hibernar em 10 segundos')
+  await page.clock.runFor(10_000)
+  await expect(menu(page).getByRole('button', { name: 'Hibernar', exact: true })).toBeDisabled()
+  await page.evaluate(() => {
+    ;(window as any).powerTerminal = true
+    window.dispatchEvent(new Event('focus'))
+  })
+  await expect(menu(page)).toContainText('confirmou que a ação não está mais pendente')
+  await expect(menu(page).getByRole('button', { name: 'Hibernar', exact: true })).toBeEnabled()
+  await menu(page).getByRole('button', { name: 'Reiniciar', exact: true }).click()
+  await expect(menu(page)).toContainText('Reiniciar em 10 segundos')
+  expect(
+    (await operations(page)).filter((operation: string) => operation === 'schedule'),
+  ).toHaveLength(2)
+})
+
+test('native revalidation exceeding five seconds is not prematurely cancelled', async ({
+  page,
+}) => {
+  await fixture(page)
+  await nativeFixture(page, true, false, 6_000)
+  await apiFixture(page)
+  await page.clock.install()
+  await openMenu(page)
+  await menu(page).getByRole('button', { name: 'Desligar', exact: true }).click()
+  await expect(menu(page)).toContainText('Consultando')
+  await expect.poll(() => operations(page)).toEqual(['schedule'])
+  await page.clock.runFor(5_500)
+  expect(await operations(page)).toEqual(['schedule'])
+  await expect(menu(page)).toContainText('Consultando')
+  await page.clock.runFor(500)
+  await expect(menu(page)).toContainText('Desligar em 10 segundos')
   expect(await operations(page)).toEqual(['schedule'])
 })
 for (const unreachable of [true, false]) {

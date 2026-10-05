@@ -43,6 +43,8 @@ Abra `http://127.0.0.1:5173`. Vite encaminha `/api` para `http://127.0.0.1:8080`
 
 ## Desenvolvimento Windows
 
+Esta branch inclui a [refatoração do instalador e piloto 0.4.10](docs/refatoracao-instalador.md), vinculada à Issue central #14. Loading exige React montado e bridge funcional; recuperação automática é limitada e coordena cancelamento de energia, perfil e processos próprios. Serviço/MSI/atualizador e regressões estão documentados no relatório. Build de piloto e código em revisão não comprovam instalação, assinatura ou distribuição homologada.
+
 Requisitos adicionais: .NET SDK 10 e Microsoft Edge WebView2 Runtime.
 
 ```powershell

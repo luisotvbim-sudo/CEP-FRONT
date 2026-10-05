@@ -84,6 +84,7 @@ public partial class MainWindow
         if (response.Code == "update_restart_required")
         {
             installingUpdate = false;
+            ResumeWebViewAfterMaintenance();
             UpdateMessage.Text = "A atualização precisa de um reinício do Windows para terminar. Salve seu trabalho e reinicie quando puder.";
             UpdateNowButton.IsEnabled = false;
             UpdateLaterButton.IsEnabled = true;
@@ -99,6 +100,7 @@ public partial class MainWindow
                 if (!Version.TryParse(response.UpdateVersion, out var version) || version == dismissedUpdate) return;
                 availableMsiVersion = response.UpdateVersion;
                 installingUpdate = false;
+                ResumeWebViewAfterMaintenance();
                 UpdateMessage.Text = $"CEP Horas {response.UpdateVersion} disponível. Ao atualizar, o aplicativo será fechado e reaberto automaticamente.";
                 UpdateNowButton.IsEnabled = true;
                 UpdateLaterButton.IsEnabled = true;
@@ -124,6 +126,7 @@ public partial class MainWindow
                 break;
             case "failed":
                 installingUpdate = false;
+                ResumeWebViewAfterMaintenance();
                 UpdateMessage.Text = "A atualização não foi concluída. Você pode continuar trabalhando e tentar novamente mais tarde.";
                 UpdateBanner.Visibility = Visibility.Visible;
                 UpdateNowButton.IsEnabled = availableMsiVersion is not null;
@@ -131,6 +134,7 @@ public partial class MainWindow
                 break;
             case "success":
                 installingUpdate = false;
+                ResumeWebViewAfterMaintenance();
                 UpdateBanner.Visibility = Visibility.Collapsed;
                 break;
         }
@@ -138,7 +142,7 @@ public partial class MainWindow
 
     private async Task StartMsiUpdate()
     {
-        if (closed || availableMsiVersion is null || installingUpdate || startingMsiUpdate) return;
+        if (closed || availableMsiVersion is null || installingUpdate || startingMsiUpdate || restartingInterface || closingWithPassword) return;
         var approvedVersion = availableMsiVersion;
         startingMsiUpdate = true;
         var acquired = false;
@@ -162,6 +166,7 @@ public partial class MainWindow
         catch
         {
             installingUpdate = false;
+            ResumeWebViewAfterMaintenance();
             if (closed) return;
             UpdateMessage.Text = "Não foi possível iniciar a atualização. Tente novamente mais tarde.";
             UpdateNowButton.IsEnabled = true;
@@ -180,13 +185,13 @@ public partial class MainWindow
         closingForUpdate = true;
         try
         {
-            if (power is not null) await power.CancelCurrent();
+            await using var powerLease = power is null ? null : await power.QuiesceAsync(lifetime.Token);
             var response = await ControlClient.Send(new ControlRequest("update-ready", ApprovedVersion: availableMsiVersion));
             if (response.Code != "update_installing" || response.UpdatePhase != "installing")
                 throw new InvalidOperationException("O serviço não autorizou a manutenção.");
             // Do not call desktop-suspend: maintenance preserves energy policy.
             notificationTimer.Stop();
-            TerminateOwnedWebViewProcesses();
+            await DisposeWebView();
             exiting = true;
             System.Windows.Application.Current.Shutdown();
         }
@@ -194,6 +199,7 @@ public partial class MainWindow
         {
             closingForUpdate = false;
             installingUpdate = false;
+            ResumeWebViewAfterMaintenance();
             UpdateMessage.Text = "Não foi possível aplicar a atualização. Tente novamente mais tarde.";
             UpdateNowButton.IsEnabled = true;
             UpdateLaterButton.IsEnabled = true;

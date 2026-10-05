@@ -18,6 +18,7 @@ Contexto reescrito em 04/10/2026 após revisão do código. Comece por [CONTEXTO
 | [Menu de energia](menu-energia.md) | Decisão API, PIN, revalidação e contingência |
 | [Contexto do instalador](CONTEXTO-INSTALADOR.md) / [instalador corporativo](instalador-corporativo.md) | Serviço, políticas Windows, empacotamento, bases e homologação |
 | [Atualizador MSI](atualizador-msi.md) | Contrato de distribuição e implementação da branch PR #9, fora da main auditada |
+| [Refatoração / piloto 0.4.10](refatoracao-instalador.md) | Lifecycle/recuperação, energia/serviço, MSI e evidências da Issue central #14; fora da main, distribuição aguardando homologação |
 | [Deploy web](../deploy/README.md) | Contêiner, proxy de borda e operação do front web |
 
 O guia de atualização MSI descreve a branch correspondente do [PR #9](https://github.com/luisotvbim-sudo/CEP-FRONT/pull/9); sua presença documental não integra esse código à main. A tabela de bases no [README](../README.md) impede confundir recursos de 0.4.7–0.4.9 com a `main` auditada, que contém MSI 0.4.3. Não há release MSI estável/homologação completa comprovada nesta revisão.

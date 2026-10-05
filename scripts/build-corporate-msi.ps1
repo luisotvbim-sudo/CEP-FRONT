@@ -1,13 +1,33 @@
+#Requires -Version 7.0
 param(
     [string]$Version = '0.4.7',
     [string]$UpdateSigningKeyPath
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
+# Reject an unsupported build host before creating an incomplete output/version.
+if (-not $IsWindows) { throw 'Build MSI exige Windows e PowerShell 7.' }
+foreach ($command in @('pnpm', 'dotnet')) {
+    if (-not (Get-Command $command -ErrorAction SilentlyContinue)) { throw "Ferramenta de build ausente: $command" }
+}
+$sdks = @(& dotnet --list-sdks)
+if ($LASTEXITCODE -ne 0 -or -not ($sdks | Where-Object { $_ -match '^10\.' })) { throw 'Build MSI exige .NET SDK 10; apenas o runtime não é suficiente.' }
 $repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $publicKey = Join-Path $repo 'desktop\CepHoras.Updates\MsiUpdatePublicKey.pem'
 if (-not (Test-Path -LiteralPath $publicKey -PathType Leaf)) { throw 'Falta a chave pública MSI embutida. Gere a identidade de publicação antes do bootstrap; não use chave de teste.' }
-if ($UpdateSigningKeyPath) { $UpdateSigningKeyPath = (Resolve-Path -LiteralPath $UpdateSigningKeyPath).Path }
+# The signer and both installed processes must use the same publishing identity.
+$trust = [Security.Cryptography.RSA]::Create()
+try {
+    $publicPem = [IO.File]::ReadAllText($publicKey)
+    # ImportFromPem also accepts private keys; embedding one would disclose it in the DLL.
+    if ($publicPem -cnotmatch '\A\s*-----BEGIN PUBLIC KEY-----\s+[A-Za-z0-9+/=\s]+-----END PUBLIC KEY-----\s*\z') { throw 'O recurso MSI deve conter somente a chave pública SPKI, nunca uma chave privada.' }
+    $trust.ImportFromPem($publicPem)
+    if ($trust.KeySize -ne 3072) { throw 'A chave pública MSI deve ser RSA 3072, conforme a identidade de publicação.' }
+} finally { $trust.Dispose() }
+if ($UpdateSigningKeyPath) {
+    $UpdateSigningKeyPath = (Resolve-Path -LiteralPath $UpdateSigningKeyPath).Path
+    if (-not (Test-Path -LiteralPath $UpdateSigningKeyPath -PathType Leaf)) { throw 'A chave de publicação deve ser um arquivo DPAPI protegido.' }
+}
 if ($Version -notmatch '^(0|[1-9]\d{0,2})\.(0|[1-9]\d{0,2})\.(0|[1-9]\d{0,4})$') { throw 'Versão MSI inválida ou não canônica.' }
 $numbers = $Version.Split('.') | ForEach-Object { [int]$_ }
 if ($numbers[0] -gt 255 -or $numbers[1] -gt 255 -or $numbers[2] -gt 65535) { throw 'Limites MSI: 255.255.65535.' }

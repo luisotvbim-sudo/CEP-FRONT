@@ -1,5 +1,14 @@
 CEP HORAS 0.4 - INSTALACAO CORPORATIVA PELA TI
 
+PILOTO 0.4.10
+Este pacote novo nao possui assinatura Authenticode nem manifesto de atualizacao
+assinado. Use somente para homologacao manual autorizada pela TI; nao pertence
+ao canal automatico e nao foi instalado nesta execucao de build.
+Se o servico falhar durante uma acao de energia, o host antigo conserva estado
+incerto e recusa confirmar cancelamento por um broker diferente. Um novo host
+ainda nao conhece a acao anterior: journal duravel e reconciliacao apos crash
+continuam pendentes. Nao declare esse cenario homologado.
+
 Este e um unico instalador: aplicativo CEP Horas, inicio automatico e servico
 Windows CepHorasControl. O usuario comum usa o menu discreto no rodape do app
 para Desligar, Reiniciar ou Hibernar.
@@ -21,9 +30,11 @@ CONTROLE LOCAL
   podem ser bloqueados.
 - O CEP Horas inicia em cada logon. Fechar a janela minimiza para a bandeja;
   o menu do icone perto do relogio oferece Fechar CEP Horas mediante a senha
-  diaria local ddMMyy#pec. Depois da validacao, o servico restaura as politicas
+  diaria local conforme o procedimento fornecido pela TI. Depois da validacao, o servico restaura as politicas
   originais e suspende o relancamento apenas nessa sessao. Abrir manualmente
   reaplica as restricoes e reativa a supervisao.
+- A liberacao global ao fechar exige somente uma sessao Windows ativa. Com
+  varias sessoes, o servico recusa liberar politicas para todas elas.
 - A senha diaria de fechamento funciona offline e nao libera nenhuma acao de energia.
   O PIN administrativo de seis digitos da API e uma credencial separada.
 - Logoff ou reinicio do servico reaplica a protecao antes da proxima sessao.
@@ -31,7 +42,9 @@ CONTROLE LOCAL
 
 HOMOLOGACAO
 1. Instale primeiro em VM ou computador piloto com trabalho salvo.
-2. Requer Windows 11 x64 Pro/Enterprise/Education 24H2 ou superior e WebView2.
+2. Requer Windows 11 x64 Pro/Enterprise/Education 24H2+ (build >=26100) e
+   WebView2 Evergreen por maquina. Instalacao inicial exige administrador;
+   .NET esta incluido no pacote self-contained.
 3. Saia e entre novamente em todas as contas apos instalar/restaurar.
 4. Valide API local/publicada, allowed, blocked, indeterminate e contingencia.
 5. Valide as tres acoes, contagem de 10 segundos e cancelamento.

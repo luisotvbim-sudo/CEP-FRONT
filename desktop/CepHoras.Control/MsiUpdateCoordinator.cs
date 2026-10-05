@@ -10,11 +10,13 @@ internal sealed class MsiUpdateCoordinator(CancellationToken stopping) : IDispos
     private readonly object gate = new();
     private readonly UpdateStore store = new();
     private readonly GitHubMsiUpdates updates = new();
+    private readonly CancellationTokenSource lifetime = CancellationTokenSource.CreateLinkedTokenSource(stopping);
     private MsiRelease? available;
     private string phase = "idle";
     private string? diagnostic;
     private bool busy;
     private bool initialized;
+    private bool disposed;
     private bool preferCachedStatus;
     private FileStream? lease;
     private Action? cancelPower;
@@ -44,6 +46,7 @@ internal sealed class MsiUpdateCoordinator(CancellationToken stopping) : IDispos
     {
         lock (gate)
         {
+            if (disposed) return new("update_maintenance", "O serviço está encerrando. Aguarde a manutenção.", UpdatePhase: "failed");
             if (!initialized) return new("update_unavailable", "O atualizador local precisa de revisão da TI; o controle de energia permanece ativo.", UpdatePhase: "failed");
             var state = RefreshState();
             if (request.Operation == "update-status") return Response(state);
@@ -124,11 +127,12 @@ internal sealed class MsiUpdateCoordinator(CancellationToken stopping) : IDispos
     {
         try
         {
-            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(stopping);
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
             timeout.CancelAfter(TimeSpan.FromMinutes(2));
             var release = await updates.CheckAsync(Version.Parse(UpdateStore.InstalledVersion()), timeout.Token);
             lock (gate)
             {
+                if (disposed) return;
                 available = release;
                 phase = release is null ? "idle" : "available";
                 diagnostic = null;
@@ -136,7 +140,7 @@ internal sealed class MsiUpdateCoordinator(CancellationToken stopping) : IDispos
         }
         catch (Exception error)
         {
-            lock (gate) { phase = "failed"; available = null; diagnostic = "update_check_failed"; }
+            lock (gate) { if (!disposed) { phase = "failed"; available = null; diagnostic = "update_check_failed"; } }
             PolicyStore.Audit("update-check-failed:" + error.GetType().Name, "SYSTEM");
         }
         finally { lock (gate) busy = false; }
@@ -147,17 +151,25 @@ internal sealed class MsiUpdateCoordinator(CancellationToken stopping) : IDispos
         UpdateState? state = null;
         try
         {
-            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(stopping);
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
             timeout.CancelAfter(TimeSpan.FromMinutes(15));
             var installed = UpdateStore.InstalledVersion();
             var fresh = await updates.CheckAsync(Version.Parse(installed), timeout.Token);
             if (fresh is null || fresh.Version.ToString(3) != approvedVersion)
                 throw new InvalidDataException("A release aprovada mudou.");
+            timeout.Token.ThrowIfCancellationRequested();
+            store.PrepareAttemptStorage(fresh.Size);
+            timeout.Token.ThrowIfCancellationRequested();
             var attempt = Guid.NewGuid();
             UpdateStore.CreatePrivateDirectory(store.AttemptDirectory(attempt));
             state = new(1, attempt, installed, approvedVersion, "downloading", client, DateTimeOffset.UtcNow.AddMinutes(15), fresh,
                 BootId: UpdateStore.CurrentBootId());
-            store.Save(state);
+            lock (gate)
+            {
+                timeout.Token.ThrowIfCancellationRequested();
+                if (disposed) throw new OperationCanceledException();
+                store.Save(state);
+            }
             var path = await updates.DownloadAsync(fresh, store.AttemptDirectory(attempt), timeout.Token);
             if (!string.Equals(Path.GetDirectoryName(Path.GetFullPath(path)), store.AttemptDirectory(attempt), StringComparison.OrdinalIgnoreCase))
                 throw new UnauthorizedAccessException("O download saiu do diretório privado.");
@@ -169,6 +181,8 @@ internal sealed class MsiUpdateCoordinator(CancellationToken stopping) : IDispos
             timeout.Token.ThrowIfCancellationRequested();
             lock (gate)
             {
+                timeout.Token.ThrowIfCancellationRequested();
+                if (disposed) throw new OperationCanceledException();
                 // Set maintenance before cancelling so no parallel request can schedule
                 // power between cancellation and the ready marker.
                 state = state with { Phase = "ready", Deadline = DateTimeOffset.UtcNow.AddMinutes(2) };
@@ -188,8 +202,9 @@ internal sealed class MsiUpdateCoordinator(CancellationToken stopping) : IDispos
                 phase = "failed";
                 diagnostic = "update_download_failed";
                 preferCachedStatus = false;
-                if (state is not null) store.Save(state with { Phase = "failed", Diagnostic = diagnostic });
-                lease?.Dispose(); lease = null;
+                UpdateLease.ReleaseAfterFailure(
+                    () => { if (!disposed && state is not null) store.Save(state with { Phase = "failed", Diagnostic = diagnostic }); },
+                    () => { lease?.Dispose(); lease = null; });
             }
             PolicyStore.Audit("update-download-failed:" + error.GetType().Name, "SYSTEM");
         }
@@ -252,6 +267,13 @@ internal sealed class MsiUpdateCoordinator(CancellationToken stopping) : IDispos
 
     public void Dispose()
     {
-        lock (gate) { lease?.Dispose(); lease = null; }
+        lock (gate)
+        {
+            disposed = true;
+            lifetime.Cancel();
+            lease?.Dispose(); lease = null;
+        }
+        // Async workers may still unwind their linked tokens. Do not dispose the
+        // source underneath them; the service process owns its remaining lifetime.
     }
 }

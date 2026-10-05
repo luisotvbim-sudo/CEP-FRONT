@@ -4,13 +4,14 @@ using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using Microsoft.Win32.SafeHandles;
 
 namespace CepHoras.Control;
 
 internal sealed class UpdateStore
 {
     private static readonly HashSet<string> TrustedOwners = ["S-1-5-18", "S-1-5-32-544"];
-    internal static readonly string InstalledRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Conceito CEP Horas");
+    internal static readonly string InstalledRoot = InstalledLayout.Root();
     internal static readonly string InstalledControl = Path.Combine(InstalledRoot, "control");
     internal static readonly string InstalledDesktop = Path.Combine(InstalledRoot, "CepHoras.exe");
     internal static readonly string Root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Conceito.CepHoras.Updates");
@@ -93,36 +94,23 @@ internal sealed class UpdateStore
         if (!File.Exists(StatePath)) return null;
         var file = new FileInfo(StatePath);
         ValidatePrivate(file);
-        if (file.Length > 65536) throw new InvalidDataException("Estado de atualização fora do limite.");
+        if (file.Length > 196608) throw new InvalidDataException("Estado de atualização fora do limite.");
         var state = JsonSerializer.Deserialize<UpdateState>(File.ReadAllText(StatePath)) ?? throw new InvalidDataException("Estado inválido.");
-        if (state.Schema != 1 || state.AttemptId == Guid.Empty || !IsVersion(state.TargetVersion) || !IsVersion(state.InstalledVersion) ||
-            state.Release.Version.ToString(3) != state.TargetVersion || state.Owner.ProcessId < 1 || state.Owner.ProcessStartedUtcTicks < 1 ||
-            state.Phase is not ("downloading" or "ready" or "installing" or "success" or "failed"))
-            throw new InvalidDataException("Estado de atualização incompatível.");
+        UpdateStateValidation.Validate(state);
         return state;
     }
 
     internal void Save(UpdateState state)
     {
         ValidatePrivate(new DirectoryInfo(Root));
+        UpdateStateValidation.Validate(state);
         if (File.Exists(StatePath)) ValidatePrivate(new FileInfo(StatePath));
-        var temporary = Path.Combine(Root, Guid.NewGuid().ToString("N") + ".tmp");
-        try
-        {
-            using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
-            {
-                ValidatePrivate(new FileInfo(temporary));
-                var bytes = JsonSerializer.SerializeToUtf8Bytes(state);
-                stream.Write(bytes);
-                stream.Flush(flushToDisk: true);
-            }
-            File.Move(temporary, StatePath, true);
-        }
-        finally { if (File.Exists(temporary)) File.Delete(temporary); }
+        DurableStateFile.Write(StatePath, state, path => ValidatePrivate(new FileInfo(path)));
     }
 
     internal static bool IsVersion(string? value) => Version.TryParse(value, out var version) &&
-        version.Build >= 0 && version.Revision == -1 && version.ToString(3) == value;
+        version.Major <= 255 && version.Minor <= 255 && version.Build is >= 0 and <= 65535 &&
+        version.Revision == -1 && version.ToString(3) == value;
 
     internal static string InstalledVersion()
     {
@@ -146,10 +134,61 @@ internal sealed class UpdateStore
             using var process = Process.GetProcessById(id);
             return !process.HasExited && process.StartTime.ToUniversalTime().Ticks == startedTicks &&
                 string.Equals(Path.GetFullPath(process.MainModule?.FileName ?? ""), Path.GetFullPath(expectedPath), StringComparison.OrdinalIgnoreCase) &&
-                (!requireSystem || process.SessionId == 0);
+                (!requireSystem || process.SessionId == 0 && IsSystemProcess(process));
         }
         catch (Exception error) when (error is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception or IOException or UnauthorizedAccessException)
         { return false; }
+    }
+
+    private static bool IsSystemProcess(Process process)
+    {
+        if (!OpenProcessToken(process.Handle, 0x8, out var token)) return false;
+        using (token)
+        using (var identity = new WindowsIdentity(token.DangerousGetHandle())) return identity.IsSystem;
+    }
+
+    [DllImport("advapi32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool OpenProcessToken(nint process, uint access, out SafeAccessTokenHandle token);
+
+    // Caller holds the update lease. Never prune the current journal's attempt,
+    // including failed/interrupted attempts that may still require recovery.
+    internal void PrepareAttemptStorage(long packageBytes)
+    {
+        var attemptsRoot = Path.Combine(Root, "attempts");
+        ValidatePrivate(new DirectoryInfo(attemptsRoot));
+        var preserve = Read()?.AttemptId;
+        var attempts = new List<StoredAttempt>();
+        foreach (var directory in new DirectoryInfo(attemptsRoot).GetDirectories())
+        {
+            if (!Guid.TryParseExact(directory.Name, "N", out var id))
+                throw new InvalidDataException("Diretório de tentativa incompatível.");
+            ValidateTree(directory);
+            attempts.Add(new(id, directory.CreationTimeUtc, TreeBytes(directory)));
+        }
+        foreach (var id in AttemptRetention.ToRemove(attempts, preserve, DateTimeOffset.UtcNow))
+        {
+            var path = Path.GetFullPath(AttemptDirectory(id));
+            if (!path.StartsWith(Path.GetFullPath(attemptsRoot) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                throw new UnauthorizedAccessException("Remoção fora do armazenamento de tentativas.");
+            ValidateTree(new DirectoryInfo(path));
+            Directory.Delete(path, recursive: true);
+        }
+        var stored = TreeBytes(new DirectoryInfo(attemptsRoot));
+        ValidateInstalled(new DirectoryInfo(InstalledControl));
+        var required = checked(packageBytes + TreeBytes(new DirectoryInfo(InstalledControl)));
+        var drive = new DriveInfo(Path.GetPathRoot(Root)!);
+        AttemptRetention.RequireSpace(stored, required, drive.AvailableFreeSpace);
+    }
+
+    private static long TreeBytes(DirectoryInfo directory) => checked(directory.GetFiles().Sum(file => file.Length) +
+        directory.GetDirectories().Sum(TreeBytes));
+
+    private static void ValidateTree(DirectoryInfo directory)
+    {
+        ValidatePrivate(directory);
+        foreach (var file in directory.GetFiles()) ValidatePrivate(file);
+        foreach (var child in directory.GetDirectories()) ValidateTree(child);
     }
 
     internal void CopyRunner(Guid attempt)

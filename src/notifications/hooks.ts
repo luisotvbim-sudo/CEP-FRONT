@@ -9,8 +9,11 @@ export function useOpenInbox(open: () => void) {
   const callback = useRef(open)
   callback.current = open
   useEffect(() => {
-    const listener = () => callback.current()
+    const listener = () => {
+      callback.current()
+    }
     window.addEventListener('cep-open-notifications', listener)
+    if (window.__CEP_INBOX_INTENT__) listener()
     return () => window.removeEventListener('cep-open-notifications', listener)
   }, [])
 }

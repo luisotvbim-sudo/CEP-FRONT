@@ -1,113 +1,149 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 
 namespace CepHoras.Desktop;
 
+internal enum ProfileRecoveryResult { None, Completed, Failed }
+
 public static class WebViewProfileRecovery
 {
     private const string RestartArgument = "--recover-after";
-    private static readonly string StateDirectory = GetStateDirectory();
-    private static readonly string RequestPath = Path.Combine(StateDirectory, "webview-recovery.request");
-    private static readonly string ProfilePath = Path.Combine(StateDirectory, "WebView2");
-
-    private static string GetStateDirectory()
+    public static string GetProfilePath()
     {
-#if DEBUG
-        if (Environment.GetEnvironmentVariable("CEP_DESKTOP_TESTING") == "1" &&
-            Environment.GetEnvironmentVariable("CEP_SESSION_DIR") is string fixture && !string.IsNullOrWhiteSpace(fixture))
-            return Path.Combine(Path.GetFullPath(fixture), "Recovery");
-#endif
-        return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Conceito", "CepHoras");
+        var configured = Environment.GetEnvironmentVariable("WEBVIEW2_USER_DATA_FOLDER");
+        return ValidateProfile(string.IsNullOrWhiteSpace(configured)
+            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Conceito", "CepHoras", "WebView2")
+            : configured);
+    }
+    private static string DefaultProfile => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Conceito", "CepHoras", "WebView2");
+    private static string ProfileIdentity(string profile) => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+        System.Text.Encoding.UTF8.GetBytes(profile.ToUpperInvariant())));
+
+    internal static string ValidateProfile(string path)
+    {
+        var full = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar);
+        if (SamePath(full, Path.GetPathRoot(full)!)) throw new IOException("A root directory cannot be a browser profile.");
+        for (var directory = new DirectoryInfo(full); directory is not null; directory = directory.Parent)
+            if (directory.Exists && (directory.Attributes & FileAttributes.ReparsePoint) != 0)
+                throw new IOException("A browser profile cannot traverse a reparse point.");
+        return full;
     }
 
-    public static void Request()
-        => Request(StateDirectory);
+    internal static bool SamePath(string left, string right) => string.Equals(
+        Path.GetFullPath(left).TrimEnd(Path.DirectorySeparatorChar),
+        Path.GetFullPath(right).TrimEnd(Path.DirectorySeparatorChar), StringComparison.OrdinalIgnoreCase);
 
-    internal static void Request(string stateDirectory)
+    internal static FileStream AcquireProfile(string profile)
     {
-        Directory.CreateDirectory(stateDirectory);
-        File.WriteAllText(Path.Combine(stateDirectory, Path.GetFileName(RequestPath)), DateTimeOffset.UtcNow.ToString("O"));
+        profile = ValidateProfile(profile);
+        Directory.CreateDirectory(Path.GetDirectoryName(profile)!);
+        var lease = new FileStream(profile + ".host.lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+        try
+        {
+            var marker = Path.Combine(profile, ".cep-profile-owner");
+            var identity = ProfileIdentity(profile);
+            if (Directory.Exists(profile) && !File.Exists(marker) && !SamePath(profile, DefaultProfile))
+                throw new IOException("An existing override directory is not a CEP-owned profile.");
+            if (File.Exists(marker) && File.ReadAllText(marker) != identity)
+                throw new IOException("The profile ownership marker does not match its path.");
+            Directory.CreateDirectory(profile);
+            if (!File.Exists(marker))
+            {
+                using var stream = new FileStream(marker, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+                stream.Write(System.Text.Encoding.UTF8.GetBytes(identity));
+                stream.Flush(true);
+            }
+            return lease;
+        }
+        catch { lease.Dispose(); throw; }
+    }
+
+    public static void Request(string profile)
+    {
+        profile = ValidateProfile(profile);
+        Directory.CreateDirectory(Path.GetDirectoryName(profile)!);
+        if (!File.Exists(Path.Combine(profile, ".cep-profile-owner")) ||
+            File.ReadAllText(Path.Combine(profile, ".cep-profile-owner")) != ProfileIdentity(profile))
+            throw new IOException("Only an owned CEP profile can be backed up during recovery.");
+        using var stream = new FileStream(profile + ".recovery.request", FileMode.Create, FileAccess.Write, FileShare.None);
+        stream.Write(System.Text.Encoding.UTF8.GetBytes(DateTimeOffset.UtcNow.ToString("O")));
+        stream.Flush(true);
     }
 
     public static ProcessStartInfo CreateRestartInfo()
     {
+        using var current = Process.GetCurrentProcess();
         var executable = Environment.ProcessPath ?? throw new InvalidOperationException("Desktop executable path is unavailable.");
-        var start = new ProcessStartInfo(executable) { UseShellExecute = true };
+        var start = new ProcessStartInfo(executable) { UseShellExecute = false, CreateNoWindow = true };
         start.ArgumentList.Add(RestartArgument);
-        start.ArgumentList.Add(Environment.ProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        start.ArgumentList.Add(Environment.ProcessId.ToString(CultureInfo.InvariantCulture));
+        start.ArgumentList.Add(current.StartTime.ToUniversalTime().Ticks.ToString(CultureInfo.InvariantCulture));
         return start;
     }
 
-    public static void WaitForPreviousProcess(string[] arguments, TimeSpan timeout)
+    public static async Task WaitForPreviousProcessAsync(string[] arguments, TimeSpan timeout)
     {
         var index = Array.IndexOf(arguments, RestartArgument);
-        if (index < 0 || index + 1 >= arguments.Length ||
-            !int.TryParse(arguments[index + 1], out var processId) || processId == Environment.ProcessId)
-            return;
+        if (index < 0) return;
+        if (index + 2 >= arguments.Length || !int.TryParse(arguments[index + 1], out var id) ||
+            !long.TryParse(arguments[index + 2], out var ticks) || id == Environment.ProcessId)
+            throw new InvalidOperationException("Invalid recovery process identity.");
         try
         {
-            using var previous = Process.GetProcessById(processId);
-            previous.WaitForExit(checked((int)timeout.TotalMilliseconds));
+            using var previous = Process.GetProcessById(id);
+            using var current = Process.GetCurrentProcess();
+            if (previous.StartTime.ToUniversalTime().Ticks != ticks || previous.SessionId != current.SessionId ||
+                !SamePath(previous.MainModule!.FileName, Environment.ProcessPath!)) return;
+            await previous.WaitForExitAsync().WaitAsync(timeout);
         }
         catch (ArgumentException) { }
         catch (InvalidOperationException) { }
     }
 
-    public static IDisposable EnterStartupGate(TimeSpan timeout)
+    internal static async Task<FileStream> EnterStartupGateAsync(string profile, TimeSpan timeout)
     {
-        var gate = new Mutex(false, @"Local\Conceito.CepHoras.Desktop.Recovery");
-        var acquired = false;
+        profile = ValidateProfile(profile);
+        Directory.CreateDirectory(Path.GetDirectoryName(profile)!);
+        var started = Environment.TickCount64;
+        while (true)
+        {
+            try { return new FileStream(profile + ".startup.lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None); }
+            catch (IOException) when (Environment.TickCount64 - started < timeout.TotalMilliseconds)
+            { await Task.Delay(100); }
+        }
+    }
+
+    internal static ProfileRecoveryResult ResetIfRequested(string profile)
+    {
+        profile = ValidateProfile(profile);
+        var request = profile + ".recovery.request";
+        if (!File.Exists(request)) return ProfileRecoveryResult.None;
         try
         {
-            try { acquired = gate.WaitOne(timeout); }
-            catch (AbandonedMutexException) { acquired = true; }
-            if (!acquired) throw new TimeoutException("Timed out waiting for desktop recovery.");
-            return new RecoveryGate(gate);
+            using var lease = AcquireProfile(profile);
+            if (Directory.Exists(profile))
+                Directory.Move(profile, profile + $".recovery-{DateTime.UtcNow:yyyyMMdd-HHmmss}-{Guid.NewGuid():N}");
+            File.Delete(request);
+            return ProfileRecoveryResult.Completed;
         }
-        catch
-        {
-            gate.Dispose();
-            throw;
-        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        { return ProfileRecoveryResult.Failed; }
     }
 
-    public static bool ResetIfRequested()
-        => ResetIfRequested(StateDirectory);
-
-    internal static bool ResetIfRequested(string stateDirectory)
+    internal static bool TryReserveAutomaticRestart(string profile)
     {
-        var requestPath = Path.Combine(stateDirectory, Path.GetFileName(RequestPath));
-        var profilePath = Path.Combine(stateDirectory, Path.GetFileName(ProfilePath));
-        if (!File.Exists(requestPath)) return false;
-        for (var attempt = 0; attempt < 30; attempt++)
+        profile = ValidateProfile(profile);
+        var path = profile + ".restart-budget";
+        // A supervisor relaunch must not start a fresh infinite restart loop.
+        if (File.Exists(path))
         {
-            try
-            {
-                if (Directory.Exists(profilePath))
-                {
-                    var backup = Path.Combine(stateDirectory,
-                        $"WebView2.recovery-{DateTime.Now:yyyyMMdd-HHmmss}-{Guid.NewGuid():N}");
-                    Directory.Move(profilePath, backup);
-                }
-                File.Delete(requestPath);
-                return true;
-            }
-            catch (Exception error) when (error is IOException or UnauthorizedAccessException)
-            {
-                if (attempt == 29) return true;
-                Thread.Sleep(100);
-            }
+            if (!DateTimeOffset.TryParse(File.ReadAllText(path), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var last)) return false;
+            if (DateTimeOffset.UtcNow - last < TimeSpan.FromMinutes(10)) return false;
         }
+        using var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None);
+        stream.Write(System.Text.Encoding.UTF8.GetBytes(DateTimeOffset.UtcNow.ToString("O")));
+        stream.Flush(true);
         return true;
-    }
-
-    private sealed class RecoveryGate(Mutex mutex) : IDisposable
-    {
-        public void Dispose()
-        {
-            try { mutex.ReleaseMutex(); }
-            catch (ApplicationException) { }
-            mutex.Dispose();
-        }
     }
 }

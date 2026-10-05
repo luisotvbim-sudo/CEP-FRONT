@@ -1,5 +1,5 @@
 import { AuthError } from '../auth/auth-client'
-import type { WebViewBridge } from '../auth/desktop-auth-client'
+import { BridgeCallFailure, callBridge, type WebViewBridge } from '../auth/bridge-transport'
 import type { PowerAction, PowerCheck } from './api'
 
 declare global {
@@ -9,10 +9,12 @@ declare global {
 }
 export type PowerAuthorization = { kind: 'api'; check: PowerCheck } | { kind: 'api-unreachable' }
 export type ScheduledPower = { requestId: string; action: PowerAction; executeAt: string }
+export type PowerState = { requestId: string; state: 'pending' | 'terminal' }
 export interface NativePower {
   verifyApiUnreachable(): Promise<boolean>
   schedule(action: PowerAction, authorization: PowerAuthorization): Promise<ScheduledPower>
   cancel(requestId: string): Promise<void>
+  reconcile(requestId: string): Promise<PowerState>
 }
 export class NativePowerUncertain extends AuthError {
   constructor(public readonly requestId: string) {
@@ -38,44 +40,49 @@ export function mayVerifyOffline(error: unknown) {
 
 export class NativePowerBridge implements NativePower {
   constructor(private readonly bridge: WebViewBridge) {}
-  private call(operation: string, payload: object = {}): Promise<unknown> {
-    return new Promise((resolve, reject) => {
-      const id = crypto.randomUUID()
-      const clean = () => {
-        clearTimeout(timer)
-        this.bridge.removeEventListener('message', listener)
-      }
-      const listener: Parameters<WebViewBridge['addEventListener']>[1] = (event) => {
-        if (event.data?.id !== id) return
-        clean()
-        if (event.data.ok) resolve(event.data.result)
-        else
-          reject(
-            new AuthError(
-              'O aplicativo não confirmou a operação de energia.',
-              event.data.error?.correlationId,
-              'native_power_failed',
-            ),
+  private async call(operation: string, payload: object = {}): Promise<unknown> {
+    // Host: authorization <= 65s (including refresh/probe), IPC <= 9s.
+    // Probe: <= 5s. Cancellation never waits for API revalidation.
+    const timeout =
+      operation === 'schedule' ? 80_000 : operation === 'verify-api-unreachable' ? 7_000 : 12_000
+    try {
+      return await callBridge(this.bridge, 'cep-power', operation, payload, timeout)
+    } catch (error) {
+      if (error instanceof BridgeCallFailure) {
+        if (error.kind === 'reply') {
+          if (
+            (error.failure.code === 'native_power_uncertain' ||
+              error.failure.code === 'power_recovery_required') &&
+            error.failure.requestId
           )
-      }
-      const timer = setTimeout(() => {
-        clean()
-        reject(
-          new AuthError(
-            'O aplicativo não confirmou a operação. Verifique o estado no Windows.',
-            undefined,
-            'native_power_timeout',
-          ),
+            throw new NativePowerUncertain(error.failure.requestId)
+          const messages: Record<string, string> = {
+            power_recovery_in_progress:
+              'O aplicativo está em recuperação. Aguarde antes de solicitar uma ação.',
+            power_request_cancelled: 'A solicitação foi interrompida pelo aplicativo.',
+            power_authorization_timeout:
+              'A verificação demorou para responder. Verifique novamente.',
+            session_expired: 'Sua sessão expirou. Entre novamente.',
+            power_service_changed:
+              'O serviço de energia precisa de atualização ou recuperação. Confira o estado no Windows.',
+          }
+          throw new AuthError(
+            messages[error.failure.code ?? ''] ??
+              'O aplicativo não confirmou a operação de energia.',
+            error.failure.correlationId,
+            error.failure.code ?? 'native_power_failed',
+          )
+        }
+        throw new AuthError(
+          error.kind === 'unavailable'
+            ? 'Não foi possível comunicar com o menu de energia do aplicativo.'
+            : 'O aplicativo não confirmou a operação. Verifique o estado no Windows.',
+          undefined,
+          error.kind === 'timeout' ? 'native_power_timeout' : 'invalid_native_response',
         )
-      }, 5_000)
-      this.bridge.addEventListener('message', listener)
-      try {
-        this.bridge.postMessage({ id, type: 'cep-power', operation, payload })
-      } catch {
-        clean()
-        reject(new AuthError('Não foi possível comunicar com o menu de energia do aplicativo.'))
       }
-    })
+      throw error
+    }
   }
   async verifyApiUnreachable() {
     const result = await this.call('verify-api-unreachable')
@@ -109,6 +116,9 @@ export class NativePowerBridge implements NativePower {
         throw new AuthError('O aplicativo retornou um agendamento inválido.')
       return result
     } catch (error) {
+      // A different ID identifies the host's existing action. It has not been
+      // dispatched by this call and requires the user's explicit Cancel action.
+      if (error instanceof NativePowerUncertain && error.requestId !== requestId) throw error
       // Uncertain scheduling must never be repeated silently.
       try {
         await this.cancel(requestId)
@@ -127,6 +137,19 @@ export class NativePowerBridge implements NativePower {
       result.cancelled !== true
     )
       throw new AuthError('O cancelamento não foi confirmado. Tente cancelar novamente.')
+  }
+  async reconcile(requestId: string): Promise<PowerState> {
+    const result = await this.call('reconcile', { requestId })
+    if (
+      !result ||
+      typeof result !== 'object' ||
+      !('requestId' in result) ||
+      result.requestId !== requestId ||
+      !('state' in result) ||
+      (result.state !== 'pending' && result.state !== 'terminal')
+    )
+      throw new NativePowerUncertain(requestId)
+    return { requestId, state: result.state }
   }
 }
 

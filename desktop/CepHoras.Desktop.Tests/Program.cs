@@ -90,6 +90,7 @@ try
     await PowerUnlockTests.Run(Check, directory);
     SingleInstanceCoordinatorTests.Run(Check);
     WebViewProfileRecoveryTests.Run(Check, directory);
+    WebViewLifecycleTests.Run(Check);
     DailyClosePasswordTests.Run(Check);
 }
 finally

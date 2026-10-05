@@ -41,8 +41,7 @@ public sealed class GitHubMsiUpdates
     {
         MsiUpdateTrust.ValidateRelease(release, publicKeyPem);
         var directory = Path.GetFullPath(privateDestination);
-        if (!Directory.Exists(directory) || (File.GetAttributes(directory) & FileAttributes.ReparsePoint) != 0)
-            throw new InvalidDataException("A pasta privada da atualização não está disponível.");
+        ValidateDownloadDirectory(directory);
         var destination = Path.Combine(directory, $"CEP-Horas-{release.Version.ToString(3)}-{Guid.NewGuid():N}.msi");
         var temporary = destination + ".partial";
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -69,10 +68,17 @@ public sealed class GitHubMsiUpdates
                     await output.WriteAsync(buffer.AsMemory(0, read), timeout.Token);
                 }
                 await output.FlushAsync(timeout.Token);
+                // A ready journal must never refer to bytes still only in the OS cache.
+                output.Flush(flushToDisk: true);
             }
             if (total != release.Size || !string.Equals(Convert.ToHexString(hash.GetHashAndReset()), release.Sha256, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException("A verificação SHA-256 do MSI falhou.");
+            timeout.Token.ThrowIfCancellationRequested();
             verifyIdentity(temporary, release.Version);
+            // Native identity inspection is synchronous. Cancellation during it must
+            // still remove the partial package instead of publishing success.
+            timeout.Token.ThrowIfCancellationRequested();
+            ValidateDownloadDirectory(directory);
             File.Move(temporary, destination);
             return destination;
         }
@@ -87,6 +93,7 @@ public sealed class GitHubMsiUpdates
     public void VerifyDownloadedPackage(string packagePath, MsiRelease release)
     {
         MsiUpdateTrust.ValidateRelease(release, publicKeyPem);
+        ValidateDownloadDirectory(Path.GetDirectoryName(Path.GetFullPath(packagePath))!);
         if ((File.GetAttributes(packagePath) & FileAttributes.ReparsePoint) != 0)
             throw new InvalidDataException("O pacote não pode ser um link.");
         using (var stream = new FileStream(packagePath, FileMode.Open, FileAccess.Read, FileShare.Read))
@@ -95,6 +102,16 @@ public sealed class GitHubMsiUpdates
                 throw new InvalidDataException("O pacote validado foi alterado.");
             verifyIdentity(packagePath, release.Version);
         }
+    }
+
+    private static void ValidateDownloadDirectory(string path)
+    {
+        var directory = new DirectoryInfo(path);
+        if (!directory.Exists) throw new InvalidDataException("A pasta privada da atualização não está disponível.");
+        // A normal leaf below a junction still redirects privileged writes elsewhere.
+        for (DirectoryInfo? current = directory; current is not null; current = current.Parent)
+            if (!current.Exists || (current.Attributes & FileAttributes.ReparsePoint) != 0)
+                throw new InvalidDataException("A pasta da atualização não pode conter links.");
     }
 
     private async Task<byte[]?> ReadLatestAsset(string asset, int maximum, CancellationToken token)

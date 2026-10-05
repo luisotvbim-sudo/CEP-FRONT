@@ -81,7 +81,7 @@ O ZIP de teste instalado por `install-desktop.ps1`, a execução portátil e o M
 
 O upgrade mantém políticas e troca payload/serviço. Na base do atualizador, ações de aplicação/rollback de políticas pertencem à instalação inicial; restauração na remoção exige `NOT UPGRADINGPRODUCTCODE`. Não liberar controles de energia como efeito colateral de `MajorUpgrade`.
 
-Na desinstalação comum, a restauração das políticas é agendada antes de parar/remover o serviço, com journal de rollback. Não apagar o snapshot manualmente: ele conserva o estado anterior necessário à recuperação. Os artefatos da TI incluem instruções/ferramenta administrativa do pacote; usar somente o mecanismo da base instalada e conservar evidência de retorno. Administradores/SYSTEM continuam disponíveis para recuperação.
+Neste piloto, a desinstalação comum aguarda `StopServices`, prepara o journal de rollback e restaura/verifica as políticas antes de `RemoveFiles` e da remoção do serviço. O journal residual validado é conservado para recuperação/reinstalação; não depende de executar o EXE após a remoção. Não apagar o snapshot manualmente: ele conserva o estado anterior necessário à recuperação. Os artefatos da TI incluem instruções/ferramenta administrativa do pacote; usar somente o mecanismo da base instalada e conservar evidência de retorno. Administradores/SYSTEM continuam disponíveis para recuperação. Veja os limites no [relatório do piloto 0.4.10](refatoracao-servico-msi.md).
 
 Antes de implantar o front/PIN, o backend correspondente precisa ter migration versionada, backup validado e PIN provisionado interativamente. Instruções operacionais do servidor pertencem ao CEP-API/CEP-VM; a documentação do instalador não comprova que essas operações estão atuais em produção.
 
