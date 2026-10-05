@@ -1,64 +1,43 @@
-# Compatibilidade entre CEP-FRONT e CEP-API
+# Compatibilidade CEP-FRONT × CEP-API
 
-> Menu de energia: [interface, contrato e integração WPF](menu-energia.md). Em 01/10/2026, snapshots e tipos foram alinhados à API `main` `b36c6e1`, com POST de liberação por PIN, POST de verificação e GET de status. Backend, migração e PIN dedicado foram implantados em produção; o valor não pertence ao repositório. O CEP-FRONT `a4a0a4d` também foi publicado. O PIN libera apenas a conta autenticada por cinco minutos de servidor, sem dispensar a revalidação nativa. Execução, cancelamento e contingência estão implementados no bridge e no serviço do MSI corporativo; navegador, Debug e builds portáteis continuam sem ações locais.
+Revisão documental de 04/10/2026. Front auditado: `main` `eb63dbdc7f7bf83d0a4b51ee5567ed5aa80c138c`. API de referência: `main` `b36c6e149b42253b44860d98c6ffe44f98c53dd6`. Código publicado, CI aprovada e SHA implantado não são o mesmo estado.
 
-> Histórico diário de 29/09/2026: [contrato, telas e limites](historico-diario.md). O backend adiciona `days` por pessoa; os snapshots e tipos estão alinhados. Implantar o backend correspondente antes do frontend.
+## Contrato disponível e consumido
 
-> Entrega de 29/09/2026: [análises e notificações implementadas](notificacoes-implementacao.md), com contrato real nos dois snapshots OpenAPI e tipos regenerados. Configurações/agendas são globais; envios e análises respeitam o escopo da API. Tolerância inicial: 30 minutos nos dois sentidos. Implantar primeiro o backend correspondente. O retrato de 23/09 abaixo é histórico e não descreve as novas capacidades.
+[OpenAPI real](openapi-backend-current.json) e [OpenAPI consumido](openapi.json) possuem **52 paths e 72 schemas**, com operações/componentes alinhados à API de referência. Os dois arquivos Front são idênticos na base; a diferença de ordem de tags em relação ao arquivo da API não muda operações/schemas. Tipos: `src/auth/api-schema.d.ts`.
 
-Atualizado em 23/09/2026.
+| Recurso | Estado implementado |
+|---|---|
+| Sessão web | Login/refresh/logout em `/auth/web/...`, cookie protegido de mesma origem |
+| Sessão desktop | Tokens no host DPAPI; bridge/allowlist com operações explícitas |
+| Ativação de convite | `/auth/invitations/activate`, 204 sem sessão; formulário público web/nativo |
+| Pessoas/associação/convites | IDs Monday/VR, fila de e-mail, reenvio administrativo; enfileirar não prova entrega |
+| Times/usuários/auditoria | Telas administrativas; Líder/Membro recebem consultas autorizadas |
+| Sincronização/histórico | Normal 7 dias, full administrativo até 90; registros e resumos diários calculados na API |
+| Análises/notificações | Configurações/agendas globais, prévia/envio, caixa pessoal, leitura/recebimento, histórico e snapshots de análise |
+| Energia | Decisão pessoal, verificação/status e liberação PIN temporária; execução local requer MSI corporativo compatível |
 
-Referências desta revisão:
+GET de análises consulta resultados persistidos, sem nova importação. Histórico armazenado não certifica completude/atualidade das fontes. O cliente apresenta `null`, qualidade, períodos e cortes retornados; não recalcula saldo, tolerância, destinatários ou autorização.
 
-- frontend: `CEP-FRONT/main`, incluindo as alterações locais de documentação e terminologia;
-- backend: `CEP-API/codex/integracao-monday-vrmais`, incluindo login web e permissionamento local validados por testes;
-- contrato real do backend: [`openapi-backend-current.json`](openapi-backend-current.json);
-- contrato usado para gerar os tipos do front: [`openapi.json`](openapi.json).
+## Escopo e dependências pendentes
 
-## Estado atual
+Coordenador opera sua organização. Líder recebe a união dos times ativos com vínculo vigente hoje; Membro recebe sua pessoa se elegível. Usuário sem vínculo ativo pode receber vazio. `SystemAdmin` seleciona `organizationId` para rotas organizacionais; configurações globais e central pessoal não herdam essa seleção. Não atribuir registros históricos automaticamente a um time antigo.
 
-O snapshot real foi sincronizado com o Swagger local em 23/09/2026; `/health/ready` respondeu `200`. Os contratos estão alinhados em rotas e schemas: ambos possuem 39 caminhos, incluindo `/api/v1/auth/web/login`, `/refresh` e `/logout`, e 48 schemas. O status documentado de `/auth/web/logout` no contrato do cliente foi corrigido para `200`. O backend também expõe `organizationId` nas 22 operações esperadas pelo cliente. Isso não equivale a homologação autenticada com dados reais.
+Workflow de casos, justificativas/aprovações, calendário/jornada/exceções, ranking completo e exportações de planilha/PDF não estão no contrato atual. Conservar os requisitos planejados na [especificação](produto/especificacao-funcional.md), sem inventar DTOs/rotas ou números de produção.
 
-As seguintes dependências anteriores foram fechadas:
+Há evidência histórica de implantação anterior, mas o SHA atual da API/front, migrations, fontes/SMTP e automação ativa na VM não foram confirmados nesta revisão. Health/Swagger comprovam somente seu próprio resultado. Fontes reais, entrega de e-mail, perfis autorizados e MSI exigem homologação própria.
 
-1. sessão web com refresh token protegido em cookie `HttpOnly`, `Secure`, `SameSite=Strict` e prefixo `__Host-`;
-2. atuação de `SystemAdmin` em uma organização escolhida explicitamente;
-3. consulta de Líder limitada aos times com vínculo `Manager` vigente;
-4. consulta de Membro limitada à própria associação e aos próprios registros.
+## Atualização segura
 
-O `SystemAdmin` continua sendo administração técnica. `organizationId` é obrigatório quando ele usa rotas de uma organização. Para Coordenador, Líder e Membro, a organização do token continua soberana e uma tentativa de substituí-la é rejeitada.
+1. Identificar branch/SHA da API efetivamente executada; não substituir o contrato de referência por Swagger de processo antigo.
+2. Em Development, atualizar snapshot real:
 
-## Limite entre backend e interface
+   ```powershell
+   ./scripts/sync-openapi.ps1 -OutputPath ./docs/openapi-backend-current.json
+   ```
 
-- Em 29/09 foi criada uma [prévia isolada das sete telas de análises e notificações](previa-analises-notificacoes.md), somente em desenvolvimento. Ela não chama endpoints nem comprova homologação. Durante esta etapa, outro trabalho atualizou contratos e integração no mesmo checkout; a validação dessa integração é distinta da revisão visual.
+3. Comparar paths/métodos, parâmetros, respostas, enums e schemas. Adaptar o contrato consumido e executar `pnpm types:api` junto com cliente, allowlist e testes correspondentes.
+4. Registrar dependência que o backend ainda não entrega. Não ampliar permissão no renderer nem abrir prefixo genérico no host.
+5. Implantar API/migration compatíveis antes de cliente que dependa delas; preservar sessão, proxy e chaves Data Protection.
 
-- A área administrativa de Coordenador e `SystemAdmin` possui interface no front, incluindo usuários e auditoria.
-- O transporte web agora possui contrato correspondente no backend, mas a publicação em produção ainda exige proxy HTTPS de mesma origem e persistência das chaves Data Protection.
-- O backend já aplica o escopo de Líder e Membro nas consultas atuais de times, pessoas e histórico.
-- As telas operacionais de Líder e Membro agora oferecem histórico bruto, times geridos e atualização normal. A navegação administrativa não é apresentada a esses perfis. Os fluxos novos foram testados com mocks; acesso real com contas de cada papel ainda não foi homologado.
-- O aceite de convite no navegador permanece bloqueado: `/auth/invitations/accept` devolve refresh token no corpo, enquanto a sessão web exige cookie `HttpOnly`. É necessário contrato web seguro no backend antes de criar essa tela.
-- Conciliação, divergências, justificativas, alertas, notificações e relatórios formatados continuam fora do contrato atual.
-
-## Regras para novas alterações
-
-1. Usar `openapi-backend-current.json` como evidência do contrato realmente exposto.
-2. Manter `openapi.json` e os tipos gerados sincronizados quando rotas ou schemas mudarem.
-3. Não substituir o isolamento do servidor por filtros no React.
-4. A nomenclatura de produto é Coordenador, Líder, Membro, Organização e Time. Os nomes técnicos permanecem `OrganizationAdmin`, `Manager`, `Member`, `UserRole` e `TeamAssignmentRole` no contrato.
-5. Novas telas de Líder/Membro devem consumir somente as respostas já filtradas pelo backend e testar tentativas de acesso fora do escopo.
-
-## Atualização do snapshot
-
-Com a API local em execução no modo `Development`:
-
-```powershell
-.\scripts\sync-openapi.ps1 -OutputPath .\docs\openapi-backend-current.json
-```
-
-Depois da atualização, comparar rotas, parâmetros e schemas antes de regenerar o cliente.
-
-## Ativação de convite — 29/09/2026
-Implementada na branch codex/invitation-activation. Veja [o contrato](contrato-ativacao-convite.md). Os snapshots foram obtidos do Swagger real e os tipos regenerados. Implantar o backend antes do frontend; esta implementação local ainda não foi publicada.
-
-## Reenvio na tela Pessoas
-A ação agora atende convites pendentes válidos ou expirados. Veja [contrato de reenvio](contrato-reenvio-convite.md). Usa a rota existente; sem alteração no OpenAPI.
+Referências: [contexto atual](CONTEXTO-ATUAL.md), [análises/notificações](contrato-analises-notificacoes.md), [histórico](historico-diario.md), [ativação](contrato-ativacao-convite.md), [reenvio](contrato-reenvio-convite.md), [energia](menu-energia.md) e [deploy](../deploy/README.md).
