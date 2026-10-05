@@ -17,7 +17,7 @@ O journal pertence ao diretório restrito de ProgramData, nunca ao payload ou ao
 
 ## Identidade e distribuição
 
-A chave de publicação DPAPI antiga foi encontrada e validada contra a chave pública embutida, sem expor valores. Não houve geração ou rotação de identidade. O manifesto RSA-PSS/SHA256 será produzido pela mesma identidade durante o build; esse mecanismo é distinto de Authenticode.
+A chave de publicação DPAPI antiga foi encontrada e validada contra a chave pública embutida, sem expor valores. Não houve geração ou rotação de identidade. O manifesto RSA-PSS/SHA256 do build foi assinado e validado; a assinatura do manifesto antigo 0.4.9 também foi verificada com essa identidade. Esse mecanismo é distinto de Authenticode; o MSI novo permanece `NotSigned`.
 
 O serviço antigo presente nesta estação é 0.4.7 e não tem Authenticode; MSI antigo 0.4.9 também `NotSigned`. Nenhum certificado de assinatura de código válido com chave privada foi encontrado nos stores pessoais/de máquina. Backup portátil protegido da chave é suportado pelo script existente, mas sua exportação/recuperação ainda precisa ser conferida pela TI.
 
@@ -32,4 +32,13 @@ O kit resultante inclui MSI, guia TI, verificador Windows, hashes, recuperação
 
 Lint/build e 100 testes web passaram; 212 testes de navegador passaram. Testes nativos passaram: duas suites legadas e 108 verificações de confiabilidade, 41 de recuperação durável, 296 de sessão/storage/bridge e 16 + 4 + 80 do atualizador/preflight. Todos os executores de energia usados nesses testes são falsos.
 
-Build estrutural do MSI e driver WPF serão registrados após sua conclusão. Nenhuma instalação elevada, mudança de política ou ação real de energia foi feita nesta entrega. Piloto autorizado ainda precisa conferir instalação/upgrade da versão presente para 0.4.11, conta comum, crash/cancelamento, repair/uninstall/rollback, multiusuário/GPO e recuperação do publicador. Só depois ativar a distribuição estável da frota. CI e manifesto assinado não substituem esse aceite.
+Driver WPF/WebView2 real passou com servidor/perfil descartáveis: loading, root vazio, JavaScript bloqueado, recarga, bandeja, falha de download, DPAPI, allowlist, refresh/logout e isolamento dos tokens. O driver de falha na inicialização também passou. MSI Release/self-contained e inspeção de tabelas/preflight/ações/ACL passaram com zero erros e avisos; nenhuma instalação foi executada.
+
+Origem funcional do pacote: `b2c59c6de898140964aba162c0d1302e813fb51b`. Desktop e serviço publicados declaram `0.4.11+b2c59c6de898140964aba162c0d1302e813fb51b`. Saída imutável `.local/corporate-msi/0.4.11/artifacts/`; cópia central verificada `.local/entregas/cep-horas-0.4.11/` no orquestrador:
+
+| Artefato | Bytes | SHA-256 |
+|---|---|---|
+| `CEP-Horas-Windows-win-x64.msi` | 99.315.116 | `baf515af02e0ccaf2918971eb496003f125adff8b2032566a4b859411fafeedf` |
+| `CEP-Horas-Windows-0.4.11-TI.zip` | 163.615.780 | `060de908c4bba95739780a52ec405382e34e1dfe7fd08a5bbcb80d8a9a4acc29` |
+
+`BUILD-EVIDENCE.json` registra propriedades, hashes, assinatura, origem e checks junto aos artefatos. A cópia central preserva esses hashes. Nenhuma instalação elevada, mudança de política ou ação real de energia foi feita nesta entrega. Piloto autorizado ainda precisa conferir instalação/upgrade da versão presente para 0.4.11, conta comum, crash/cancelamento, repair/uninstall/rollback, multiusuário/GPO e recuperação do publicador. Só depois ativar a distribuição estável da frota. CI e manifesto assinado não substituem esse aceite.
