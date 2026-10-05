@@ -1,39 +1,51 @@
-# Solicitação ao frontend — análises e notificações
+# Contrato funcional — análises e notificações
 
-Atualizado em 29/09/2026. Requisitos aprovados e integrados ao contrato real desta entrega. Consulte [implementação e limites de homologação](notificacoes-implementacao.md). A publicação de backend, frontend e executável é independente do código local.
+Regras aprovadas em 29/09/2026, consolidadas em 04/10/2026. A [especificação funcional](produto/especificacao-funcional.md) preserva RN/RF/CA/D e a visão futura; [integração Front e Windows](notificacoes-implementacao.md) descreve os contratos existentes. Este arquivo conserva decisões funcionais sem transformar o texto de proposta antigo em estado atual.
 
-Fonte canônica: `CEP-API/docs/conciliacao-horas/contrato-analises-notificacoes.md`, no repositório irmão. Esse aditivo prevalece sobre a especificação anterior nestes assuntos. Consultar a versão correspondente na mesma entrega; não presumir que o arquivo local já esteja publicado no GitHub.
+## Períodos e configuração
 
-## Regras para as telas
+- API é responsável pelo cálculo, período, tolerância e destinatários; React/WPF/jobs não mantêm fórmulas próprias.
+- Dia civil e corte em `America/Sao_Paulo`. Semana começa segunda e sprint inicia dia 1 ou 15 até o corte atual. Não há jornada após meia-noite no contrato aprovado.
+- Instantes persistidos em UTC, intervalos início inclusivo/fim exclusivo e um corte único para as duas fontes e todo o lote.
+- Diferença = Monday − VR; divergência absoluta do período soma magnitudes diárias. Sinais opostos não apagam diferenças entre dias.
+- Tolerância diária global inicial de 30 minutos, simétrica, comparada em segundos antes de arredondamento. Limite exato é permitido; diferença continua visível.
+- Configurações/agendas globais versionadas e auditadas. Pessoas, relatórios, envios e notificações mantêm organização e escopo; “todos” é resolvido pelo servidor dentro da organização autorizada.
+- Duração desconhecida fica nula; fonte falha ou incompleta não é zero nem resultado coerente. Dados atuais/provisórios e importados devem ser identificados.
 
-- Configurações são globais, alteráveis por todo administrador autorizado à tela, não exclusivas do SystemAdmin. Dados e destinatários continuam limitados pelo backend ao escopo organizacional autorizado.
-- Tolerância diária em minutos; agendas com horário e mensagem, criação, edição, ativação/desativação e exclusão auditada.
-- Horário de negócio: São Paulo. Avisos iniciais: 10h para pendências de ontem, 11h50 e 17h para conferência parcial do expediente e lembretes correspondentes. Virada do dia gera relatório de batidas ímpares e cronômetros ainda abertos; diferenças são avaliadas quando calculáveis.
-- O aviso das 10h considera somente o dia civil anterior, nunca pendências antigas ou o último dia útil (segunda-feira considera domingo). Não há jornadas após meia-noite. Avisos automáticos não são enviados aos sábados e domingos nem acumulados para segunda-feira; processamento diário e recuperação de notificações já pendentes continuam. Feriados e eventual bloqueio de envio manual no fim de semana ainda precisam de confirmação.
-- Envio instantâneo para um usuário ou todos do escopo, com mensagem e análise individual: Diário, Semanal ou Sprint.
-- Diário = hoje até o envio; Semanal = segunda-feira até o envio; Sprint = dias 1–14 ou 15–último dia do mês até o envio. Dia 22 começa no dia 15. Fevereiro usa seu último dia real. Período/corte vêm da API.
-- Um único motor no backend fornece todas as análises. React/WPF não calculam saldos, tolerâncias, períodos oficiais ou destinatários. Exibir valores/qualidade retornados; desconhecido não vira zero, dia atual não vira fechamento definitivo.
+## Processamentos iniciais
 
-## Telas a entregar
+| Momento em São Paulo | Regra aprovada |
+|---|---|
+| Processamento diário | Relatório do dia civil anterior, inclusive fim de semana, sem popup; identificar batidas VR ímpares, timer Monday atravessando fechamento e diferenças calculáveis acima do limite |
+| 10h | Reavaliar somente ontem civil e avisar quem ainda tiver problema confirmado; segunda considera domingo, não sexta e não pendências antigas |
+| 11h50 | Comparar hoje até o corte, orientar ajuste se acima do limite ou informar coerência parcial e lembrar pausa próxima ao almoço |
+| 17h | Mesma comparação parcial, com mensagem de fim de expediente |
+| Envio instantâneo | Administrador seleciona uma pessoa ou todos do escopo, mensagem e período diário/semanal/sprint; prévia e confirmação sem duplicar pedido |
 
-1. **Configurações globais:** tolerância, fuso, alcance global, autoria e conflito de edição.
-2. **Agendamentos:** lista, horário, mensagem, finalidade da regra, ativar/desativar, criar/editar/excluir; salvar não significa notificar.
-3. **Enviar agora:** usuário/todos do escopo, mensagem, Diário/Semanal/Sprint, período/corte, prévia e quantidade antes de confirmar; progresso, sucesso parcial e erros.
-4. **Central de notificações:** próprias, não lidas/histórico, mensagem, análise anexada e abertura do detalhe; ler não resolve pendência.
-5. **Minha análise:** totais VR/Monday, diferença, tolerância, corte, atualização/qualidade das fontes, detalhe por dia e evidências; parcial claramente identificado.
-6. **Relatórios de erros:** filtros por dia/pessoa/tipo, batidas ímpares, cronômetros abertos no fechamento e diferenças confirmadas, reanálises e escopo de gestão.
-7. **Histórico de envios:** autor, período, destinatários e estados reais de processamento, entrega e leitura.
+Avisos automáticos não são enviados aos sábados/domingo nem acumulados para segunda. Essa restrição não suspende relatórios diários nem recuperação das notificações já geradas. Feriados, escalas, ausências e eventual restrição ao envio manual seguem pendentes.
 
-Seguir os critérios detalhados do documento canônico. Manter design existente, acessibilidade, estados vazios, carregamento, falha de fonte, falta de associação, sessão expirada, sem permissão e concorrência. Preservar funcionalidades existentes.
+Durante expediente, somar intervalos VR fechados válidos e entrada aberta até corte; Monday aberto vai até o mesmo corte. Entrada aberta esperada durante expediente não é batida ímpar de dia encerrado. Não inferir direção de batida inválida. Timer que atravessa fechamento não equivale a timer normal aberto hoje.
 
-## Dependências e desktop
+## Responsabilidades e persistência
 
-Os snapshots OpenAPI foram atualizados da API real desta entrega; os tipos gerados e o cliente consomem configurações globais, agendas, prévia e fila de envios, central pessoal e análises persistidas. Backend deve ser publicado antes deste frontend. A antiga proposta de agendas por organização foi substituída pelo alcance global. Justificativas/aprovações e exportações continuam fora desta entrega.
+O motor puro de domínio recebe registros normalizados/qualidade/corte/tolerância; serviço autoriza e obtém fontes/configuração; persistência conserva relatório e versão; agendador executa o mesmo caminho e entrega resultado individual. Adaptadores não definem tolerância ou mensagens. Unknown permanece nulo e não pode ser certificado pela interface.
 
-No Windows: iniciar com o sistema, bandeja, avisos nativos autenticados e abertura da mesma notificação da central; nenhuma regra de cálculo ou distribuição local. Ajustar allowlist apenas com as rotas reais e preservar tokens no host/DPAPI. Por decisão de produto de 30/09/2026, o instalador corporativo bloqueia para o usuário comum as rotas normais de desligamento, reinício, suspensão, hibernação e encerramento da sessão. O menu autenticado consulta a CEP API; somente `allowed` agenda a ação no serviço local. Se a API realmente não responder no transporte, o host confirma a indisponibilidade e permite a contingência. `blocked`, `indeterminate` e qualquer resposta HTTP não são contingência offline.
+Relatórios são snapshots. Nova execução pode produzir nova análise; consultar snapshot não altera fontes ou resultado antigo. A implementação atual exige todos os valores diários de um total para agregar esse total, sem subtotal certificado dos dias calculáveis. A política de sessões Monday distintas simultâneas segue explicitada na RN-03; o motor as soma após deduplicar mesma chave externa.
 
-PC desligado/offline — decisão aprovada: ao iniciar a sessão do Windows, abrir automaticamente o aplicativo, restaurar a autenticação e buscar todas as notificações pendentes do usuário, percorrendo todas as páginas. Se necessário, pedir login; sem rede, retomar ao reconectar. Não descartar avisos antigos, inclusive lembretes. Exibir horário original e análise do período original, identificando atraso, sem apresentá-los como conferência atual. Sincronizar não marca leitura. Deduplicar pelo identificador persistente para evitar avisos repetidos a cada reinício; manter não lidas na central e confirmar recebimento apenas após registro local bem-sucedido. Testar múltiplas páginas, reinício, sessão expirada e queda de conexão durante a recuperação.
+Pedidos/execuções/entrega são idempotentes; resultado e notificação por pessoa são persistidos atomicamente. “Enfileirada”, “recebida pelo cliente” e “lida” são estados distintos. Leitura não resolve ocorrência nem altera as horas originais. Alterações de regra não mudam silenciosamente avisos emitidos.
 
-Tolerância inicial aprovada: 30 minutos diários nos dois sentidos, editável globalmente. Automação inicia desativada e exige ativação explícita nas configurações. Não há envio automático em fins de semana; feriados/férias/escalas especiais não possuem calendário configurado nesta entrega. As agendas têm finalidade explícita. Fonte incompleta não gera afirmação de horas corretas.
+## Recuperação do cliente
 
-Proteção contra excesso: um aviso consolidado por usuário/execução; chave de idempotência no envio manual; deduplicação persistida no backend e no Windows; recuperação de todo o lote antes da confirmação; um resumo nativo por lote com intervalo mínimo de cinco minutos entre popups. A central preserva cada mensagem, sem marcar leitura automaticamente. A homologação operacional deve validar fontes reais e políticas de notificação de cada estação.
+Ao iniciar Windows/reconectar, o aplicativo restaura autenticação e busca **todas as páginas de notificações pendentes**, inclusive as geradas enquanto PC estava desligado. Sem sessão válida, solicita login e busca depois. Não descartar avisos apenas pela idade.
+
+Preservar data/período/análise originais, identificar atraso e agrupar popups; não apresentar atraso como conferência atual. Deduplicar por ID persistido por conta e API. Confirmar recebimento após gravação local bem-sucedida. Receber/sincronizar não marca lida; não lidas continuam na central. Tokens permanecem no host nativo com DPAPI e não chegam ao React.
+
+O agendador do servidor recupera slots do mesmo dia com corte original; dias passados nunca enfileirados não são reconstruídos. Notificações já geradas continuam recuperáveis independentemente do dia. Habilitar/alterar configuração não recria slots anteriores à mudança.
+
+## Integração e aceite
+
+Utilizar rotas/DTOs publicados em [OpenAPI](openapi-backend-current.json), não nomes imaginados por este texto. Configuração, versões, autorização e isolamento são revalidados no servidor. Fixtures só em prévia/testes identificados. HTTP 202 confirma pedido persistido, não recebimento; salvar agenda não comprova disparo.
+
+Verificar fronteiras de semana/sprint/mês/ano, corte único, sinais, limite exato, lacunas, batidas abertas/fechadas, timer atravessando dia, soma de sessões, idempotência/concorrência, mudança/exclusão de agenda, acesso revogado, reconexão e todas as páginas pendentes. Homologação real de fontes e recepção Windows exige prova própria, além de CI.
+
+Calendário completo, workflow de justificativas/casos, prazo máximo de atualidade, recuperação de execução em dia anterior, escalonamento e mensagem livre sem análise seguem em [decisões e pendências](produto/especificacao-funcional.md#9-decisões-d-01-a-d-13). Não ampliar escopo ou habilitar agendas por supor essas regras.
