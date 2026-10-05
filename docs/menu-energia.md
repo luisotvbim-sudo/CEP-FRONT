@@ -1,74 +1,81 @@
-# Menu de energia — interface e dependência nativa
+# Menu de energia: contrato e execução
 
-Implementação iniciada na branch `codex/power-action-menu` e integrada ao MSI na branch `codex/installer-integrado`. Contrato importado integralmente de `CEP-API/codex/power-action-check`, commit `cf15a5c1365f1a240b40829a3edd2e83307939da`, arquivo `docs/openapi-current.json`. Os dois snapshots e os tipos gerados estão alinhados. A API e o PostgreSQL locais foram executados em Docker; o WPF confirmou o transporte até a API com uma conta inexistente, sem utilizar conta ou fontes reais.
+Reconciliado em 04/10/2026. O contrato pessoal foi conferido na CEP API `main` `b36c6e149b42253b44860d98c6ffe44f98c53dd6`; interface e bridge estão presentes no CEP-FRONT `main` `eb63dbdc7f7bf83d0a4b51ee5567ed5aa80c138c`. As branches integrada e do atualizador preservam esse fluxo. A [matriz do instalador](CONTEXTO-INSTALADOR.md) separa funcionalidades por base.
 
-> Aditivo do MSI 0.4.3: o host mantém uma única instância por sessão e oferece **Reiniciar CEP Horas** quando o WebView2 falha. A recuperação encerra somente os processos do CEP Horas e os subprocessos WebView2 pertencentes à instância, preserva o perfil anterior e reabre com perfil limpo. O serviço de controle permanece ativo e nenhuma ação de energia é executada.
+## Interface e decisão
 
-> Aditivo do MSI 0.4.4: **Fechar CEP Horas**, no menu da bandeja, usa uma senha diária local `ddMMyy#pec`. Esse código offline é independente do PIN administrativo da API: ele somente autoriza encerrar o host na sessão Windows atual e não libera ações de energia.
+As áreas autenticadas têm um rodapé recolhível com **Desligar**, **Reiniciar**, **Hibernar** e **Verificar status**, inclusive páginas globais de SystemAdmin. Login, download público e prévia de desenvolvimento não mostram esse menu. Há foco visível, rótulos, teclado de `details/summary`, região de avisos e adaptação a janelas pequenas.
 
-> Correção do MSI 0.4.5: o fechamento protegido restaura o snapshot original das políticas antes de encerrar o host, liberando os controles nativos; a abertura manual reaplica e verifica o bloqueio. Se a restauração falhar, o aplicativo não fecha.
+| Operação | Endpoint e parâmetros | Efeito |
+|---|---|---|
+| Verificar uma ação | `POST /api/v1/me/time-control/power-action-check`, corpo com `action` | Decisão para `shutdown`, `restart` ou `hibernate`. |
+| Consultar estado | `GET /api/v1/me/time-control/power-action-status?action=shutdown` | Consulta informativa, sem execução. |
+| Liberação administrativa pessoal | `POST /api/v1/me/time-control/power-action-unlock`, corpo com `pin` | Override temporário da conta autenticada. |
 
-> Produção em 01/10/2026: CEP API `b36c6e1`, migração `PowerActionOverrides`, PIN dedicado e CEP-FRONT `a4a0a4d` implantados. O segredo foi provisionado interativamente sem eco e não foi incluído em código, documentação ou pacote.
+Não enviar `organizationId`, pessoa ou período nessas rotas. A conta e a organização são determinadas pelo servidor. Não ampliar autorização pelo papel apresentado no React ou pela seleção de organização do SystemAdmin.
 
-## Comportamento
+O cliente valida o DTO e usa `decision`. `blocked`, `indeterminate`, corpo inválido e erros HTTP impedem o agendamento. `allowed` no navegador informa que a execução exige aplicativo Windows corporativo. O front não calcula horas/tolerância nem converte dados incompletos em permissão. Verificar status não substitui o POST no momento da ação.
 
-Aditivo de 01/10/2026: os snapshots e tipos atuais seguem a CEP API `main` `b36c6e1` (mudança funcional `c0b398f`), confirmada pela sincronização de `http://127.0.0.1:8080/swagger` após a API local ficar disponível. A implementação anterior acima é histórica. A validação usa fixtures isoladas, sem acesso ao PIN provisionado localmente e sem deploy de backend em produção.
+## PIN de cinco minutos
 
-Todas as áreas autenticadas têm um menu recolhível no final da página, fora do conteúdo e sem posição flutuante: Desligar, Reiniciar, Hibernar e Verificar status. Inclui SystemAdmin sem organização selecionada e nas páginas globais. Login, prévia de desenvolvimento e download público não recebem o menu. Usa teclado nativo de `details/summary`, foco visível, botões com rótulos, região de avisos e quebra de linha em janelas pequenas.
+O campo aceita exatamente seis dígitos ASCII, preserva zeros iniciais, usa entrada protegida/teclado numérico e desativa autocomplete. O PIN é dedicado à energia e distinto da senha de login. Não há seleção de outra conta nem provisionamento do PIN na interface.
 
-As ações consultam `POST /api/v1/me/time-control/power-action-check` com a ação escolhida. Status consulta somente `GET /api/v1/me/time-control/power-action-status?action=shutdown`. Nenhuma rota leva `organizationId`, pessoa ou período; a consulta sempre corresponde ao usuário autenticado. A autorização continua no servidor. As allowlists HTTP e WPF incluem apenas os métodos reais.
+O valor é transitório: o campo é limpo antes de qualquer tentativa, inclusive inválida, no logout e na desmontagem. Não persistir em estado React, URL, armazenamento web, sessão DPAPI, logs, capturas, MSI ou serviço Windows. Apenas a API recebe `{ pin }` pelo endpoint exato; a allowlist nativa admite POST sem query string nesse caminho.
 
-O front valida a resposta e usa `decision`, sem calcular diferença ou tolerância. `blocked` e `indeterminate` mostram a mensagem e impedem agendamento. Status mostra decisão, mensagem e tolerância quando a análise existe, sem iniciar ação. Erros HTTP e respostas inválidas também impedem agendamento. No navegador, uma decisão `allowed` informa que a execução depende do aplicativo Windows.
+A resposta deve conter `override: true`, `serverTime` e `unlockedUntil` com diferença exata de cinco minutos. A contagem utiliza o relógio do servidor e `performance.now()`, descontando conservadoramente o tempo da requisição. Alterar o relógio local não estende a liberação. A contagem é informativa: cada ação consulta a API e o WPF refaz a consulta.
 
-## Liberação temporária por PIN
+Durante o override, a decisão tem `allowed`, `administrative_override`, `override: true`, prazo e `analysis: null`. Resposta normal tem `override: false` e `unlockedUntil: null`. Uma consulta de status sem o `serverTime` original mostra o prazo informado, sem inventar nova janela. Expiração remove a indicação local; logout não reinicia a janela que a API mantém. Tentativa inválida não estende a janela; rotação do PIN e mudanças de segurança/acesso invalidam o override no backend.
 
-O menu oferece um campo de senha com teclado numérico, autocomplete desativado, exatamente seis dígitos ASCII e botão **Liberar por 5 minutos**. Zeros iniciais são preservados. O PIN é administrativo e dedicado, diferente da senha de login; a liberação vale apenas para a conta autenticada. Não há provisionamento ou seleção de outra pessoa nesta interface.
+| HTTP/código | Tratamento |
+|---|---|
+| 403 `invalid_admin_pin` | Mostrar erro; limpar campo; não alterar prazo anterior. |
+| 429 `power_unlock_rate_limited` | Informar limite de tentativas; limpar campo. |
+| 503 `power_pin_not_configured` | Informar configuração ausente; limpar campo. |
 
-O cliente envia somente `{ pin }` no corpo de `POST /api/v1/me/time-control/power-action-unlock`. O campo é limpo antes de qualquer tentativa, inclusive formato inválido, e na desmontagem/logout. O PIN não fica em estado React, URL, armazenamento do navegador, arquivo de sessão DPAPI, logs, pacote MSI ou serviço Windows.
+Esses retornos nunca autorizam contingência. Migration e provisionamento seguro pertencem ao backend: [contrato do PIN](https://github.com/luisotvbim-sudo/CEP-API/blob/b36c6e149b42253b44860d98c6ffe44f98c53dd6/docs/power-admin-unlock.md). Não copiar valor, hash ou configuração secreta para este repositório.
 
-A resposta deve conter `override: true`, `serverTime` e `unlockedUntil` com diferença exata de cinco minutos. O prazo visível usa esses horários e `performance.now()`, descontando conservadoramente o tempo da requisição; ajustes no relógio local não prorrogam a janela. A contagem é informativa: Desligar, Reiniciar e Hibernar sempre consultam o POST de verificação, e o WPF refaz a consulta antes de agendar no serviço. Durante a liberação, a API retorna `allowed`, `administrative_override`, `override: true`, prazo válido e `analysis: null`. Respostas normais exigem `override: false` e `unlockedUntil: null`.
+## React, WPF e serviço
 
-Verificar status continua sendo apenas GET. Uma resposta normal encerra a indicação de liberação. Sem o `serverTime` da tentativa original, uma liberação encontrada em status mostra o horário informado pelo servidor, sem inventar outra janela de cinco minutos. Ao expirar, a contagem e a indicação local são removidas; uma ação posterior precisa de nova decisão da API. Logout remove a indicação local; novo login não reinicia o prazo mantido pelo backend.
+Somente a instalação corporativa anuncia `window.__CEP_POWER_VERSION__ = 1`, junto do bridge desktop. Navegador, Debug e pacote portátil não anunciam execução local. Sessão e tokens ficam no host nativo; a persistência usa DPAPI `CurrentUser` separada pela origem da API. React recebe resultados/metadados permitidos.
 
-403 (`invalid_admin_pin`), 429 (`power_unlock_rate_limited`) e 503 (`power_pin_not_configured`) mostram erro objetivo, limpam o campo e nunca entram em contingência. Uma tentativa inválida não altera o prazo anterior. Não há bypass local por PIN, nem PIN no named pipe; o serviço recebe somente os pedidos fixos de ação/cancelamento. A allowlist WPF aceita somente POST no caminho exato de liberação, sem query string.
+O WebView envia operações `cep-power` correlacionadas por `id`. A interface não envia comando do Windows nem executa a ação ao chegar a zero.
 
-Ativação em produção depende de deploy autorizado do backend, migração `PowerActionOverrides` e provisionamento seguro do PIN dedicado. Esta entrega não executa essas operações nem publica segredos. O MSI 0.4.1 foi construído e inspecionado sem instalação; testes usam credenciais fictícias e não desligam, reiniciam ou hibernam a máquina.
+| Operação do bridge | Payload | Regra do host |
+|---|---|---|
+| `schedule` | `requestId` UUID, `action`, `delaySeconds: 10`, `authorization` | Validar origem/sessão e refazer a verificação autenticada; só então pedir ação fixa ao serviço. A decisão anexada pelo JavaScript não é credencial. |
+| `cancel` | `requestId` UUID | Confirmar aborto ou ausência de agendamento correspondente; preservar tratamento de incerteza. |
+| `verify-api-unreachable` | Vazio | Fazer verificação de transporte independente. Não confiar num indicador do renderer. |
 
-## Contrato implementado no instalador/bridge WPF
+O sucesso do agendamento devolve `requestId`, `action` e `executeAt` UTC. A contagem de dez segundos deriva desse horário e pode ser cancelada. Cancelamento falho/incerto mantém o identificador e permite repetir; novas ações permanecem bloqueadas enquanto a interface não confirmou o aborto. Timeout do protocolo não significa sucesso nem prova API offline. Em agendamento sem confirmação, o adaptador tenta cancelar pelo mesmo ID.
 
-Na instalação corporativa, o host anuncia `window.__CEP_POWER_VERSION__ = 1`, revalida a decisão no backend e conversa por named pipe com o serviço `CepHorasControl`. React não recebe senha, token ou comando do sistema. Builds portáteis, Debug e navegador comum não anunciam suporte e nunca executam uma ação local.
+O host só aceita uma resposta normal válida com `within_tolerance`, `override: false`, prazo nulo e análise, ou override válido com `administrative_override`, `override: true`, prazo e análise nula. Não aceita permissão inventada pelo JavaScript. A API continua soberana sobre a regra e o período; o WPF verifica a estrutura necessária para executar.
 
-O host anuncia `window.__CEP_POWER_VERSION__ = 1` somente na instalação corporativa, onde todos os métodos abaixo estão implementados, preservando `window.__CEP_DESKTOP__` e `window.chrome.webview`. O adaptador envia:
+O serviço autentica o cliente interativo e o caminho do executável instalado, verifica controle ativo/políticas, aceita apenas `shutdown`, `restart`, `hibernate` e dez segundos. Cancelamento pertence à mesma identidade Windows. Há idempotência e intenção de cancelamento no estado em memória do serviço; não prometer histórico durável de pedidos após reinício. Desligamento/reinício usam o agendamento do Windows; hibernação tem temporizador cancelável.
 
-```json
-{
-  "id": "UUID de correlação",
-  "type": "cep-power",
-  "operation": "schedule",
-  "payload": {
-    "requestId": "UUID idempotente do agendamento",
-    "action": "shutdown",
-    "delaySeconds": 10,
-    "authorization": { "kind": "api", "check": "PowerActionCheckResponse completo" }
-  }
-}
-```
+Ao sair da conta, interface/host solicitam cancelamento. Se o processo ou serviço falhar, não inferir execução ou aborto pelo estado visual: tratar como operação incerta e obter confirmação do serviço. PIN e token não atravessam o named pipe.
 
-`authorization.check` no exemplo representa um objeto, não uma string. Resposta no canal WebView: `{ id, ok: true, result: { requestId, action, executeAt } }`, com `executeAt` ISO UTC real, dez segundos após o agendamento no host. A interface mostra a diferença entre esse horário e o relógio atual, inclusive após perda de foco; não envia um comando de execução ao chegar a zero. O host é o dono do agendamento.
+## Contingência de transporte
 
-- **`schedule`:** validar origem virtual, sessão/conta, ação e prazo; usar serviço/bridge do instalador. A resposta da API enviada pelo renderer não é uma credencial: vincular a decisão recente ao usuário no host ou refazer a verificação autenticada no host. Não aceitar uma decisão inventada pelo JavaScript. `requestId` é idempotente e não deve agendar duas vezes.
-- **`cancel`:** payload `{ requestId }`; responder `{ cancelled: true }` somente após abortar de fato. Cancelamento idempotente deve também registrar uma intenção de aborto para impedir um agendamento tardio com o mesmo ID. Se o cancelamento falhar, a interface mantém o botão para repetir e bloqueia novas ações.
-- **`verify-api-unreachable`:** payload vazio; responder `{ unreachable: true }` exclusivamente quando a CEP API realmente não responder no transporte. Qualquer resposta HTTP, inclusive 400/401/403/429/500/503, significa que a API respondeu. Falha de fonte externa, resposta inválida, timeout do bridge, autenticação e indisponibilidade do serviço Windows não são API offline. Ao receber `{ kind: "api-unreachable" }` em `schedule`, o host precisa revalidar essa condição por conta própria.
-- **Erros:** `{ id, ok: false, error: { code, correlationId? } }`. Nenhum token, senha ou comando do sistema atravessa o renderer. O timeout do protocolo é cinco segundos. Em agendamento inválido, falho ou sem confirmação, o adaptador tenta abortar pelo `requestId`; se o aborto também for incerto, preserva o ID e oferece nova tentativa de cancelamento.
+O candidato inicial só existe após falha de conexão sem resposta HTTP: `connection_failed` sem status/status 0, ou erro sintético nativo explicitamente marcado `transportFailure: true`. O marcador é produzido pelo host; não vem do corpo da API.
 
-A interface só solicita a verificação de contingência após `AuthError` com `connection_failed` e sem status HTTP, status 0, ou o 503 sintético de transporte explicitamente marcado pelo host com `transportFailure: true`. O marcador não vem do corpo da API. Respostas HTTP 503 e falhas no corpo após receber headers não são transporte offline. **Esse candidato não libera nada:** o host consulta `/health/ready` com prazo curto e considera a API alcançável diante de qualquer resposta HTTP, inclusive 503. Somente falha de transporte confirmada libera a contingência, que é revalidada novamente no agendamento.
+1. WPF consulta `/health/ready` com prazo curto.
+2. Qualquer resposta HTTP, inclusive 400/401/403/429/500/503, significa API alcançável.
+3. Somente falha de transporte nessa consulta permite contingência candidata.
+4. Ao agendar, o host confirma novamente a indisponibilidade.
+5. A ação mantém dez segundos e cancelamento pelo serviço.
 
-Ao sair da conta, a interface e o host solicitam cancelamento. O serviço mantém idempotência por `requestId`, restringe ações à lista fixa e aceita pedidos somente do `CepHoras.exe` instalado. Desligamento/reinício usam o agendamento do Windows; hibernação usa temporizador cancelável no serviço. A execução/cancelamento reais das três ações ainda exigem homologação da TI. Nenhuma ação Windows real foi executada nos testes automatizados.
+Falha Monday/VR, banco indisponível com resposta HTTP, autenticação, PIN, corpo inválido, corpo interrompido depois dos headers, bridge ou serviço Windows não são API offline. Não criar bypass com base em mensagem de erro ou decisão `indeterminate`.
 
-## Validação
+## Energia e manutenção do aplicativo
 
-Validação do aditivo de PIN em 01/10/2026: 83 testes unitários, 174 Playwright (desktop/mobile), 189 checks .NET, 16 checks do atualizador, testes puros do serviço, lint, TypeScript, builds Vite e WPF Debug/Release. A regressão com WPF/WebView2 real passou contra API descartável, cobrindo sessão, refresh, DPAPI, allowlist, isolamento de tokens e logout. O MSI 0.4.1 passou na inspeção estrutural, sem instalação. Casos novos cobrem PIN correto/com zero inicial, formato inválido, 403/429/503, expiração exata de cinco minutos, relógio local incorreto, tentativa inválida sem extensão, logout, não persistência, revalidação das três ações no host e resposta HTTP cujo corpo falha. Os resultados abaixo são da entrega anterior.
+Fechar a janela normalmente envia o host para a bandeja. Desde a branch integrada 0.4.6, **Fechar CEP Horas** usa uma verificação diária local independente do PIN. O serviço restaura políticas antes de suspender relançamento para aquela sessão; abrir manualmente reaplica proteção. Essa restauração muda configurações da máquina, por isso múltiplas sessões precisam ser avaliadas no piloto. A main 0.4.3 não contém essa função.
 
-Testes unitários cobrem rotas, resposta inválida, decisões, limite de tolerância sem recálculo, contingência, protocolo, cancelamento e agendamento incerto. Playwright usa API e bridge simulados: perfis autenticados, páginas públicas, status, bloqueio/inconclusivo, falha técnica, navegador, teclado/acessibilidade, janela pequena, contagem de dez segundos, cancelamento, recuperação de falha no aborto e confirmação nativa de contingência. Testes .NET verificam as novas rotas e métodos na allowlist. As funcionalidades existentes são verificadas pela suíte de regressão.
+Na branch do atualizador, manutenção MSI cancela energia pendente, bloqueia novos agendamentos e preserva políticas. Não usa `desktop-suspend`. Recuperar/recarregar o WebView2 não agenda ação de energia nem encerra o serviço.
 
-Resultados desta entrega: 69 testes unitários (19 novos), 158 testes Playwright (34 novos, desktop e mobile), 158 checks .NET de segurança/armazenamento, 16 checks do atualizador, testes puros do serviço, lint completo, TypeScript, build Vite e WPF/WebView2 real sem erros. O MSI passou por inspeção estrutural sem instalação: escopo por máquina, serviço LocalSystem, ações elevadas e adiadas, rollback/restauração, ACL e payload. Nenhuma política ou ação Windows real foi executada. Capturas com dados fictícios foram revisadas em `.local/power-menu-desktop.png` e `.local/power-menu-mobile.png`.
+## Fontes e validação
+
+Consultar [PowerBridgeHandler](../desktop/CepHoras.Desktop/PowerBridgeHandler.cs), [ApiSession](../desktop/CepHoras.Desktop/ApiSession.cs), [ApiRoutePolicy](../desktop/CepHoras.Desktop/ApiRoutePolicy.cs), [PowerAuthority](../desktop/CepHoras.Control/PowerAuthority.cs) e [protocolo do serviço](../desktop/CepHoras.Control.Protocol/Protocol.cs). O [contrato da API](https://github.com/luisotvbim-sudo/CEP-API/blob/b36c6e149b42253b44860d98c6ffe44f98c53dd6/docs/power-action-check.md) e os snapshots [atual](openapi-backend-current.json)/[cliente](openapi.json) descrevem os DTOs.
+
+Para uma mudança funcional, verificar testes de cliente/allowlist/bridge, casos PIN e tempo de servidor, HTTP versus transporte, idempotência/cancelamento e executores falsos. Esses testes não executam as três ações reais. Homologação Windows é acompanhada na [Issue #7](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/7): conta comum, instalação/políticas, PIN/expiração, decisão normal, três ações, cancelamento e contingência real. Não testar desligamento numa máquina de trabalho sem preparar esse piloto.
+
+Esta revisão conferiu documentação com o código; não executou novos builds, testes de energia, provisionamento ou implantação.
