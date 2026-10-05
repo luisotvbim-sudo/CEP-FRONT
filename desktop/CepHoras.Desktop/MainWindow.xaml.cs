@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Security.Principal;
 using System.Windows;
 using System.Windows.Threading;
+using CepHoras.Control.Protocol;
 using CepHoras.Updates;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Win32;
@@ -30,11 +31,14 @@ public partial class MainWindow : Window
     private bool checkingForUpdates;
 
     private bool installingUpdate;
+    private bool closingWithPassword;
 
     private bool closed;
     private bool exiting;
     private bool initialized;
+    private bool hostSetupReady;
     private bool testPopup;
+    private bool updatePopup;
     private System.Windows.Forms.NotifyIcon? tray;
     private readonly DispatcherTimer notificationTimer = new() { Interval = TimeSpan.FromSeconds(60) };
     private NotificationDelivery? notifications;
@@ -43,12 +47,14 @@ public partial class MainWindow : Window
     private readonly bool windowsAdministrator = new WindowsPrincipal(WindowsIdentity.GetCurrent())
         .IsInRole(WindowsBuiltInRole.Administrator);
     private readonly bool forceVisibleAfterRecovery;
+    private string? inboxIntent;
 
     public MainWindow(bool forceVisibleAfterRecovery = false)
     {
         this.forceVisibleAfterRecovery = forceVisibleAfterRecovery;
         InitializeComponent();
         Loaded += Initialize;
+        SystemEvents.PowerModeChanged += OnPowerModeChanged;
         System.Windows.Application.Current.SessionEnding += OnSessionEnding;
         Closing += (_, args) =>
         {
@@ -64,11 +70,15 @@ public partial class MainWindow : Window
         {
             closed = true;
             lifetime.Cancel();
+            SystemEvents.PowerModeChanged -= OnPowerModeChanged;
             System.Windows.Application.Current.SessionEnding -= OnSessionEnding;
             notificationTimer.Stop();
             updateTimer.Stop();
+            msiStatusTimer.Stop();
+            webViewHealthTimer.Stop();
             tray?.Dispose();
             Browser.Dispose();
+            profileLease?.Dispose();
             session?.Dispose();
         };
     }
@@ -84,10 +94,18 @@ public partial class MainWindow : Window
         exiting = true;
     }
 
+    private void OnPowerModeChanged(object sender, PowerModeChangedEventArgs args)
+    {
+        if (args.Mode == PowerModes.Resume)
+            Dispatcher.BeginInvoke(() => { if (!closed) webViewLifecycle.Resume(Environment.TickCount64); });
+    }
+
     private async void Initialize(object sender, RoutedEventArgs e)
     {
         if (initialized) return;
         initialized = true;
+        webViewHealthTimer.Tick += async (_, _) => await CheckWebViewContent();
+        BeginWebViewLoading();
         try
         {
 #if DEBUG
@@ -99,50 +117,15 @@ public partial class MainWindow : Window
             if (api.Scheme != "https" && !(api.Scheme == "http" && api.IsLoopback))
                 throw new InvalidOperationException("HTTPS is required outside loopback.");
             session = new ApiSession(api);
-            power = new PowerBridgeHandler(session);
+            power = managedInstallation ? new PowerBridgeHandler(session) : null;
             notifications = new NotificationDelivery(session);
             ConfigureTray();
+            if (managedInstallation) _ = ResumeDesktopSupervision();
+            if (managedInstallation) StartMsiUpdates();
             notificationTimer.Tick += async (_, _) => await notifications.Poll(ShowNotificationSummary);
             notificationTimer.Start();
-            var webViewDataFolder = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Conceito", "CepHoras", "WebView2");
-#if DEBUG
-            var isolatedTestProfile = Environment.GetEnvironmentVariable("WEBVIEW2_USER_DATA_FOLDER");
-            if (!string.IsNullOrWhiteSpace(isolatedTestProfile)) webViewDataFolder = isolatedTestProfile;
-#endif
-            var environment = await CoreWebView2Environment.CreateAsync(userDataFolder: webViewDataFolder);
-            await Browser.EnsureCoreWebView2Async(environment);
-            var core = Browser.CoreWebView2;
-            core.Settings.IsPasswordAutosaveEnabled = false;
-            core.Settings.IsGeneralAutofillEnabled = false;
-#if !DEBUG
-            core.Settings.AreDevToolsEnabled = false;
-            core.Settings.AreDefaultContextMenusEnabled = false;
-            core.Settings.AreBrowserAcceleratorKeysEnabled = false;
-#endif
-            core.SetVirtualHostNameToFolderMapping("app.cephoras.local", Path.Combine(AppContext.BaseDirectory, "wwwroot"), CoreWebView2HostResourceAccessKind.DenyCors);
-            await core.AddScriptToExecuteOnDocumentCreatedAsync(managedInstallation
-                ? "window.__CEP_DESKTOP__ = true; window.__CEP_POWER_VERSION__ = 1;"
-                : "window.__CEP_DESKTOP__ = true;");
-            core.NavigationStarting += (_, args) => { if (!IsAppOrigin(args.Uri)) args.Cancel = true; };
-            core.NewWindowRequested += (_, args) =>
-            {
-                args.Handled = true;
-                if (args.IsUserInitiated && Uri.TryCreate(args.Uri, UriKind.Absolute, out var link) && link.Scheme == "https")
-                {
-                    try { Process.Start(new ProcessStartInfo(link.AbsoluteUri) { UseShellExecute = true }); }
-                    catch { /* Opening a link must not close the application. */ }
-                }
-            };
-            core.PermissionRequested += (_, args) => args.State = CoreWebView2PermissionState.Deny;
-            core.WebMessageReceived += HandleMessage;
-            core.NavigationCompleted += (_, args) =>
-            {
-                Browser.Visibility = args.IsSuccess ? Visibility.Visible : Visibility.Hidden;
-                StartupStatus.Text = args.IsSuccess ? "" : "Não foi possível carregar a interface. Reabra o CEP Horas.";
-                ForceRestartButton.Visibility = args.IsSuccess ? Visibility.Collapsed : Visibility.Visible;
-            };
-            core.Navigate($"{AppOrigin}/index.html");
+            hostSetupReady = true;
+            await CreateWebView();
             if (Environment.GetCommandLineArgs().Contains("--background") && !forceVisibleAfterRecovery) Hide();
             if (Environment.GetCommandLineArgs().Contains("--test-notification")) ShowTestNotification();
 #if !DEBUG
@@ -156,13 +139,17 @@ public partial class MainWindow : Window
         }
         catch (WebView2RuntimeNotFoundException)
         {
-            StartupStatus.Text = "Instale o Microsoft Edge WebView2 Runtime e abra o CEP Horas novamente.";
-            ForceRestartButton.Visibility = Visibility.Visible;
+            FailWebView("Instale o Microsoft Edge WebView2 Runtime e abra o CEP Horas novamente.", "runtime-missing", false);
         }
-        catch
+        catch (Exception error)
         {
-            StartupStatus.Text = "Não foi possível iniciar o CEP Horas. Confira a instalação e a configuração da API.";
-            ForceRestartButton.Visibility = Visibility.Visible;
+            WriteWebViewDiagnostic("initialization-failed", error.GetType().Name);
+            FailWebView(browserCreationUnconfirmed
+                ? "O navegador não confirmou a inicialização. Abra o aplicativo novamente ou solicite suporte à TI."
+                : hostSetupReady
+                ? "Não foi possível iniciar a interface do CEP Horas."
+                : "Não foi possível preparar o CEP Horas. Confira a instalação e a configuração da API e abra o aplicativo novamente.",
+                hostSetupReady ? "initialization-failed" : "host-initialization-failed", hostSetupReady && !browserCreationUnconfirmed);
         }
     }
 
@@ -170,12 +157,27 @@ public partial class MainWindow : Window
 
     private async void HandleMessage(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
     {
-        if (!IsAppOrigin(e.Source) || e.WebMessageAsJson.Length > 16_384) return;
+        if (!ReferenceEquals(sender, Browser.CoreWebView2) || !IsAppOrigin(e.Source) || e.WebMessageAsJson.Length > 16_384) return;
+        var messageGeneration = webViewLifecycle.Generation;
+        var messageCore = Browser.CoreWebView2;
+        void Respond(object response)
+        {
+            if (messageGeneration == webViewLifecycle.Generation && ReferenceEquals(messageCore, Browser.CoreWebView2)) Reply(response);
+        }
         string? id = null;
         try
         {
             using var message = JsonDocument.Parse(e.WebMessageAsJson);
             var root = message.RootElement;
+            if (root.GetProperty("type").GetString() == "cep-lifecycle") { HandleLifecycle(root); return; }
+            if (root.GetProperty("type").GetString() == "cep-inbox-consumed")
+            {
+                if (webViewLifecycle.Ready && root.TryGetProperty("documentId", out var document) &&
+                    document.ValueKind == JsonValueKind.String && document.GetString() == renderedDocumentId &&
+                    root.TryGetProperty("token", out var consumed) && consumed.ValueKind == JsonValueKind.String && consumed.GetString() == inboxIntent)
+                    inboxIntent = null;
+                return;
+            }
 #if DEBUG
             // Only the disposable desktop fixture can drive native UI in Debug builds.
             if (root.GetProperty("type").GetString() == "cep-desktop-test" &&
@@ -187,11 +189,34 @@ public partial class MainWindow : Window
                     case "hide": Close(); break;
                     case "open-inbox": OpenWindow(true); break;
                     case "exit": exiting = true; Close(); break;
+                    case "reload-ui": await ReloadWebView(); break;
+                    case "recreate-ui": await RecoverWebView(WebViewRecoveryStage.Recreate, false); break;
+                    case "resume-ui": webViewLifecycle.Resume(Environment.TickCount64); break;
+                    case "reset-recovery-budget": webViewRecovery.Reset(); break;
+                    case "update-downloading": installingUpdate = true; break;
+                    case "update-failed": ShowMsiUpdate(new("update_status", "Fixture", UpdatePhase: "failed")); break;
+                    case "ui-state":
+                        Respond(new { id = root.GetProperty("id").GetString(), ok = true, result = new {
+                            loading = WebViewLoadingIndicator.Visibility == Visibility.Visible,
+                            recovery = StartupPanel.Visibility == Visibility.Visible,
+                            browser = Browser.Visibility == Visibility.Visible,
+                            reloadEnabled = ForceRestartButton.IsEnabled
+                        }});
+                        break;
                 }
                 return;
             }
 #endif
             var type = root.GetProperty("type").GetString();
+            if (type is "cep-auth" or "cep-power")
+            {
+                if (!root.TryGetProperty("documentId", out var documentId) || documentId.ValueKind != JsonValueKind.String ||
+                    !Guid.TryParse(documentId.GetString(), out _)) return;
+                var currentDocument = await messageCore!.ExecuteScriptAsync("window.__CEP_DOCUMENT_ID__")
+                    .WaitAsync(TimeSpan.FromSeconds(3), lifetime.Token);
+                if (messageGeneration != webViewLifecycle.Generation || !ReferenceEquals(messageCore, Browser.CoreWebView2) ||
+                    JsonSerializer.Deserialize<string>(currentDocument) != documentId.GetString()) return;
+            }
             id = root.GetProperty("id").GetString();
             if (!Guid.TryParse(id, out _)) return;
             var operation = root.GetProperty("operation").GetString();
@@ -200,19 +225,19 @@ public partial class MainWindow : Window
             {
                 if (!managedInstallation || power is null) throw new PowerBridgeFailure("native_power_unavailable");
                 var powerResult = await power.Execute(operation, payload);
-                Reply(new { id, ok = true, result = powerResult });
+                Respond(new { id, ok = true, result = powerResult });
                 return;
             }
             if (type != "cep-auth") return;
-            if (operation == "logout" && power is not null) await power.CancelCurrent();
+            await using var sessionPowerLease = operation == "logout" && power is not null ? await power.QuiesceAsync(lifetime.Token) : null;
             var result = await session!.Execute(operation, payload);
-            Reply(new { id, ok = true, result });
+            Respond(new { id, ok = true, result });
             if (operation is "login" or "restore" && notifications is not null)
                 await notifications.Poll(ShowNotificationSummary);
         }
-        catch (PowerBridgeFailure failure) { Reply(new { id, ok = false, error = new { code = failure.Code, correlationId = failure.CorrelationId } }); }
-        catch (ApiFailure failure) { Reply(new { id, ok = false, error = new { status = failure.Status, code = failure.Code, correlationId = failure.CorrelationId, transportFailure = failure.TransportFailure, retryAfterSeconds = failure.RetryAfterSeconds } }); }
-        catch { if (id is not null) Reply(new { id, ok = false, error = new { code = "desktop_request_failed" } }); }
+        catch (PowerBridgeFailure failure) { Respond(new { id, ok = false, error = new { code = failure.Code, correlationId = failure.CorrelationId, requestId = failure.RequestId } }); }
+        catch (ApiFailure failure) { Respond(new { id, ok = false, error = new { status = failure.Status, code = failure.Code, correlationId = failure.CorrelationId, transportFailure = failure.TransportFailure, retryAfterSeconds = failure.RetryAfterSeconds } }); }
+        catch { if (id is not null) Respond(new { id, ok = false, error = new { code = "desktop_request_failed" } }); }
     }
 
     private void ConfigureTray()
@@ -225,17 +250,19 @@ public partial class MainWindow : Window
             ContextMenuStrip = new System.Windows.Forms.ContextMenuStrip()
         };
         tray.ContextMenuStrip.Items.Add("Abrir CEP Horas", null, (_, _) => OpenWindow(false));
+        tray.ContextMenuStrip.Items.Add("Recarregar interface", null, async (_, _) => { OpenWindow(false); await ReloadWebView(); });
         tray.ContextMenuStrip.Items.Add("Minhas notificações", null, (_, _) => OpenWindow(true));
         tray.ContextMenuStrip.Items.Add("Testar notificação", null, (_, _) => ShowTestNotification());
-        if (!managedInstallation || windowsAdministrator)
-            tray.ContextMenuStrip.Items.Add("Sair do aplicativo", null, async (_, _) =>
+        if (managedInstallation)
+            tray.ContextMenuStrip.Items.Add("Verificar atualizações", null, async (_, _) =>
             {
-                if (power is not null) await power.CancelCurrent();
-                exiting = true;
-                Close();
+                OpenWindow(false);
+                await CheckMsiUpdates();
             });
+        tray.ContextMenuStrip.Items.Add(new System.Windows.Forms.ToolStripSeparator());
+        tray.ContextMenuStrip.Items.Add("Fechar CEP Horas", null, async (_, _) => await RequestProtectedExit());
         tray.DoubleClick += (_, _) => OpenWindow(false);
-        tray.BalloonTipClicked += (_, _) => OpenWindow(!testPopup);
+        tray.BalloonTipClicked += (_, _) => OpenWindow(!testPopup && !updatePopup);
         tray.BalloonTipShown += (_, _) => RecordNativeEvent("popup-shown-by-windows");
 #if !DEBUG
         // Only the stable per-user installation registers Run. Portable previews must
@@ -263,10 +290,11 @@ public partial class MainWindow : Window
         Show();
         WindowState = WindowState.Normal;
         Activate();
+        if (inbox) inboxIntent = Guid.NewGuid().ToString("N");
         try
         {
-            if (inbox && Browser.CoreWebView2 is not null && IsAppOrigin(Browser.Source?.ToString() ?? ""))
-                await Browser.CoreWebView2.ExecuteScriptAsync("window.dispatchEvent(new Event('cep-open-notifications'));");
+            if (inbox && webViewLifecycle.Ready) SendInboxIntent();
+            await Task.CompletedTask;
             RecordNativeEvent(inbox ? "opened-inbox" : "opened-window");
         }
         catch (Exception exception) when (exception is InvalidOperationException or System.Runtime.InteropServices.COMException)
@@ -276,66 +304,70 @@ public partial class MainWindow : Window
     }
 
     internal void OpenFromExternalInstance() => OpenWindow(false);
-
-    private void ForceRestart_Click(object sender, RoutedEventArgs e)
+    private void SendInboxIntent()
     {
-        ForceRestartButton.IsEnabled = false;
-        StartupStatus.Text = "Fechando os componentes do CEP Horas e recriando o navegador local…";
+        if (inboxIntent is not null && !closed && webViewLifecycle.Ready && Browser.CoreWebView2 is not null)
+            Browser.CoreWebView2.PostWebMessageAsJson(JsonSerializer.Serialize(new { type = "cep-inbox-open", token = inboxIntent }, Json));
+    }
+
+    private async Task ResumeDesktopSupervision()
+    {
         try
         {
-            WebViewProfileRecovery.Request();
-            TerminateOwnedWebViewProcesses();
-            TerminatePeerDesktopProcesses();
-            Process.Start(WebViewProfileRecovery.CreateRestartInfo());
+            var response = await ControlClient.Send(new ControlRequest("desktop-resume"));
+            if (response.Code != "desktop_resumed") ShowProtectionWarning();
+            else WindowsPolicyNotification.NotifyShell();
+        }
+        catch { ShowProtectionWarning(); }
+    }
+
+    private void ShowProtectionWarning()
+    {
+        if (closed || tray is null) return;
+        Dispatcher.Invoke(() => tray.ShowBalloonTip(
+            15_000,
+            "CEP Horas — atenção da TI",
+            "A proteção de energia do Windows não pôde ser reativada. Mantenha o CEP Horas aberto e solicite suporte à TI.",
+            System.Windows.Forms.ToolTipIcon.Warning));
+    }
+
+    private async Task RequestProtectedExit()
+    {
+        if (closingWithPassword || closed || installingUpdate || restartingInterface) return;
+        var dialog = new ClosePasswordDialog();
+        if (IsVisible) dialog.Owner = this;
+        if (dialog.ShowDialog() != true) return;
+
+        closingWithPassword = true;
+        try
+        {
+            await using var powerLease = power is null ? null : await power.QuiesceAsync(lifetime.Token);
+            if (managedInstallation)
+            {
+                var response = await ControlClient.Send(new ControlRequest("desktop-suspend"));
+                if (response.Code != "desktop_suspended")
+                    throw new InvalidOperationException("O serviço não autorizou o fechamento.");
+                WindowsPolicyNotification.NotifyShell();
+            }
             exiting = true;
             Close();
         }
         catch
         {
-            StartupStatus.Text = "Não foi possível reiniciar automaticamente. Feche o CEP Horas e abra novamente.";
-            ForceRestartButton.IsEnabled = true;
+            if (IsVisible)
+                System.Windows.MessageBox.Show(this, "Não foi possível autorizar o fechamento. Tente novamente ou solicite suporte à TI.",
+                    "CEP Horas", MessageBoxButton.OK, MessageBoxImage.Error);
+            else
+                System.Windows.MessageBox.Show("Não foi possível autorizar o fechamento. Tente novamente ou solicite suporte à TI.",
+                    "CEP Horas", MessageBoxButton.OK, MessageBoxImage.Error);
         }
-    }
-
-    private void TerminateOwnedWebViewProcesses()
-    {
-        var ids = Browser.CoreWebView2?.Environment.GetProcessInfos().Select(item => item.ProcessId).ToArray() ?? [];
-        foreach (var id in ids)
-        {
-            try
-            {
-                using var process = Process.GetProcessById(id);
-                process.Kill(entireProcessTree: true);
-                process.WaitForExit(2_000);
-            }
-            catch (Exception error) when (error is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception) { }
-        }
-    }
-
-    private static void TerminatePeerDesktopProcesses()
-    {
-        using var current = Process.GetCurrentProcess();
-        var expected = Path.GetFullPath(Environment.ProcessPath ?? "");
-        foreach (var process in Process.GetProcessesByName("CepHoras"))
-        {
-            using (process)
-            {
-                if (process.Id == current.Id || process.SessionId != current.SessionId) continue;
-                try
-                {
-                    var actual = Path.GetFullPath(process.MainModule?.FileName ?? "");
-                    if (!string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase)) continue;
-                    process.Kill(entireProcessTree: true);
-                    process.WaitForExit(2_000);
-                }
-                catch (Exception error) when (error is InvalidOperationException or System.ComponentModel.Win32Exception or IOException) { }
-            }
-        }
+        finally { closingWithPassword = false; }
     }
 
     private void ShowNotificationSummary(int count)
     {
         if (closed || tray is null) return;
+        updatePopup = false;
         testPopup = false;
         tray?.ShowBalloonTip(10_000, "CEP Horas", $"Você tem {count} nova(s) notificação(ões). Abra a central para conferir as mensagens e seus horários originais.", System.Windows.Forms.ToolTipIcon.Info);
         RecordNativeEvent("notification-summary-requested");
@@ -344,6 +376,7 @@ public partial class MainWindow : Window
     private void ShowTestNotification()
     {
         if (closed || tray is null) return;
+        updatePopup = false;
         testPopup = true;
         tray.ShowBalloonTip(10_000, "CEP Horas · teste de notificação",
             "Este é um teste local do aviso do Windows. Nenhuma mensagem foi enviada a outras pessoas. Clique para abrir o CEP Horas.",
@@ -369,6 +402,11 @@ public partial class MainWindow : Window
 
     private async Task CheckForUpdates()
     {
+        if (managedInstallation)
+        {
+            await CheckMsiUpdates();
+            return;
+        }
         if (closed || checkingForUpdates || installingUpdate) return;
         checkingForUpdates = true;
         try
@@ -388,6 +426,11 @@ public partial class MainWindow : Window
 
     private async void UpdateNow_Click(object sender, RoutedEventArgs e)
     {
+        if (managedInstallation)
+        {
+            await StartMsiUpdate();
+            return;
+        }
         if (availableUpdate is null || installingUpdate) return;
         installingUpdate = true;
         UpdateNowButton.IsEnabled = false;
@@ -409,6 +452,7 @@ public partial class MainWindow : Window
         finally
         {
             installingUpdate = false;
+            ResumeWebViewAfterMaintenance();
             if (!closed)
             {
                 UpdateNowButton.IsEnabled = true;
@@ -419,7 +463,9 @@ public partial class MainWindow : Window
 
     private void UpdateLater_Click(object sender, RoutedEventArgs e)
     {
-        dismissedUpdate = availableUpdate?.Version;
+        if (installingUpdate) return;
+        dismissedUpdate = managedInstallation && Version.TryParse(availableMsiVersion, out var version)
+            ? version : availableUpdate?.Version;
         UpdateBanner.Visibility = Visibility.Collapsed;
     }
 

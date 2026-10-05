@@ -14,6 +14,7 @@ test('preview screens are accessible and do not call any backend or store demo d
     if (new URL(request.url()).pathname.startsWith('/api/')) requests.push(request.url())
   })
   await page.reload()
+  const navigation = page.getByRole('navigation')
   for (const title of [
     'Minha análise',
     'Notificações',
@@ -23,8 +24,16 @@ test('preview screens are accessible and do not call any backend or store demo d
     'Agendamentos',
     'Configurações globais',
   ]) {
-    await page.getByRole('navigation').getByRole('button', { name: title, exact: true }).click()
+    await navigation.getByRole('button', { name: title, exact: true }).click()
     await expect(page.getByRole('heading', { name: title, exact: true, level: 1 })).toBeVisible()
+    // Audit the destination state after the previous button's background transition ends.
+    await navigation.evaluate(async (element) => {
+      await Promise.all(
+        element
+          .getAnimations({ subtree: true })
+          .map((animation) => animation.finished.catch(() => {})),
+      )
+    })
     expect(
       (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze())
         .violations,

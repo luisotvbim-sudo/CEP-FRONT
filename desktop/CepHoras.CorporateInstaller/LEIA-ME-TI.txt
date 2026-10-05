@@ -1,5 +1,15 @@
 CEP HORAS 0.4 - INSTALACAO CORPORATIVA PELA TI
 
+PACOTE 0.4.11
+Inclui Minha jornada, recuperacao da interface e atualizador MSI.
+O servico grava a intencao de energia antes de agendar no Windows. Apos crash,
+nao repete nem cancela automaticamente a acao anterior: o aplicativo identifica
+a solicitacao do titular e exige cancelamento explicito antes de continuar.
+Falha de disco ou estado invalido impede novas acoes ate revisao/recuperacao.
+Testes automatizados nao substituem a homologacao do pacote instalado.
+Manifesto/assinatura do atualizador sao separados da assinatura Authenticode
+do editor Windows. Confira as evidencias entregues com este build.
+
 Este e um unico instalador: aplicativo CEP Horas, inicio automatico e servico
 Windows CepHorasControl. O usuario comum usa o menu discreto no rodape do app
 para Desligar, Reiniciar ou Hibernar.
@@ -20,13 +30,24 @@ CONTROLE LOCAL
   a politica Nao fazer nada. Pressao fisica prolongada e corte de energia nao
   podem ser bloqueados.
 - O CEP Horas inicia em cada logon. Fechar a janela minimiza para a bandeja;
-  usuario comum nao recebe Sair. O servico relanca o aplicativo se ele for
-  finalizado na sessao local ativa.
+  o menu do icone perto do relogio oferece Fechar CEP Horas mediante a senha
+  diaria local conforme o procedimento fornecido pela TI. Depois da validacao, o servico restaura as politicas
+  originais e suspende o relancamento apenas nessa sessao. Abrir manualmente
+  reaplica as restricoes e reativa a supervisao.
+- A liberacao global ao fechar exige somente uma sessao Windows ativa. Com
+  varias sessoes, o servico recusa liberar politicas para todas elas.
+- A senha diaria de fechamento funciona offline e nao libera nenhuma acao de energia.
+  O PIN administrativo de seis digitos da API e uma credencial separada.
+- Logoff ou reinicio do servico reaplica a protecao antes da proxima sessao.
 - Administradores e SYSTEM permanecem como caminho de recuperacao.
 
 HOMOLOGACAO
 1. Instale primeiro em VM ou computador piloto com trabalho salvo.
-2. Requer Windows 11 x64 Pro/Enterprise/Education 24H2 ou superior e WebView2.
+   Antes, execute Verificar-Windows.ps1: informa edicao, versao, build e WebView2,
+   sem administrador, sem mudar configuracoes e sem coletar dados pessoais.
+2. Requer Windows 11 x64 Pro/Enterprise/Education 24H2+ (build >=26100) e
+   WebView2 Evergreen por maquina. Instalacao inicial exige administrador;
+   .NET esta incluido no pacote self-contained.
 3. Saia e entre novamente em todas as contas apos instalar/restaurar.
 4. Valide API local/publicada, allowed, blocked, indeterminate e contingencia.
 5. Valide as tres acoes, contagem de 10 segundos e cancelamento.
@@ -34,6 +55,9 @@ HOMOLOGACAO
    botoes fisicos, tampa, encerramento do app e relancamento pelo servico.
 7. Se houver dominio, execute gpupdate e confira se a GPO nao sobrescreveu
    as politicas locais.
+8. Em piloto descartavel, valide reinicio/crash do servico durante a contagem:
+   nenhuma repeticao automatica; cancelamento explicito pelo titular; conta
+   diferente nao recebe o identificador; falhas de disco permanecem incertas.
 
 RECUPERACAO
 - Menu Iniciar > CEP Horas - Recuperacao TI.
@@ -46,3 +70,16 @@ LIMITES
 Nao impede administrador/SYSTEM, corte de energia, pressao prolongada do botao,
 firmware, reinicio critico do Windows ou GPO de dominio. A instalacao, aplicacao
 real de politica, acoes reais e desinstalacao precisam de homologacao da TI.
+
+ATUALIZACAO MSI
+- A versao 0.4.7 e o bootstrap e exige instalacao manual administrativa uma vez.
+- Versoes seguintes usam manifesto RSA-PSS/SHA256 assinado pela TI, validado
+  novamente pelo servico local com chave publica embutida. Nenhum token do
+  GitHub, chave privada ou senha administrativa e instalado nos clientes.
+- Atualizar agora inicia somente um MSI aprovado do canal fixo; Depois adia.
+  A manutencao do update preserva as politicas e nao usa o fechamento diario.
+- Homologar a versao instalada para 0.4.11 com conta comum em VM/PC piloto
+  antes de publicar no canal estavel para a equipe.
+- Build sem manifesto e assinatura validos nao pertence ao canal automatico.
+- Publicacao, backup portatil da chave e recuperacao sao responsabilidades da TI.
+  O procedimento completo fica em docs/atualizador-msi.md do projeto CEP-FRONT.

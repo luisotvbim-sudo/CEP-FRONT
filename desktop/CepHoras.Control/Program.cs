@@ -11,6 +11,8 @@ internal static class Program
     {
         try
         {
+            if (args.SequenceEqual(["--run-update"]))
+                return MsiUpdateRunner.RunAsync().GetAwaiter().GetResult();
             if (args.SequenceEqual(["--service"]))
             {
                 ServiceBase.Run(new ControlService());
@@ -33,8 +35,8 @@ internal static class Program
             PolicyStore.RequireAdmin();
             switch (args.SingleOrDefault())
             {
-                case "--apply-policy": PolicyStore.Apply(); break;
-                case "--restore-policy": PolicyStore.Restore(); break;
+                case "--apply-policy": PolicyStore.ApplyForInstallation(); break;
+                case "--restore-policy": AdministrativeRecovery.Installed().Restore(); break;
                 case "--uninstall-restore": PolicyStore.Restore(true); break;
                 case "--rollback-restore": PolicyStore.RollbackRestore(); break;
                 case "--finish-restore": PolicyStore.FinishRestore(); break;

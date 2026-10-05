@@ -11,6 +11,11 @@ internal static class PowerUnlockTests
 {
     // Fixture only: never use the production PIN or a real Windows power operation.
     private const string FixturePin = "012345";
+    private const string Broker = "dddddddd-bbbb-cccc-dddd-eeeeeeeeeeee";
+    private static PowerBridgeHandler Host(ApiSession session, Func<ControlRequest, Task<ControlResponse>> sender) =>
+        new(session, async request => request.Operation == "status"
+            ? new ControlResponse("ready", "fixture", Active: true, BrokerInstanceId: Broker)
+            : (await sender(request)) with { BrokerInstanceId = Broker });
     private static readonly Uri Api = new("https://power-fixture.invalid");
     private static readonly object User = new { id = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"), role = "user" };
     private static readonly JsonElement Login = JsonSerializer.SerializeToElement(new { email = "fixture@example.invalid", password = "fixture-only" });
@@ -68,10 +73,10 @@ internal static class PowerUnlockTests
             await session.Execute("login", Login);
             var result = (JsonElement)(await session.Execute("api", Unlock(FixturePin)))!;
             check(result.GetProperty("unlockedUntil").GetDateTimeOffset() - result.GetProperty("serverTime").GetDateTimeOffset() == TimeSpan.FromMinutes(5), "Server duration changed");
-            var host = new PowerBridgeHandler(session, request => {
+            var host = Host(session, request => {
                 commands.Add(request);
                 return Task.FromResult(request.Operation == "cancel"
-                    ? new ControlResponse("cancelled", "fixture", Cancelled: true)
+                    ? new ControlResponse("cancelled", "fixture", RequestId: request.RequestId, Cancelled: true)
                     : new ControlResponse("scheduled", "fixture", RequestId: request.RequestId, Action: request.Action, ExecuteAt: DateTimeOffset.UtcNow.AddSeconds(10)));
             });
             foreach (var action in new[] { "shutdown", "restart", "hibernate" }) {
@@ -103,7 +108,7 @@ internal static class PowerUnlockTests
             var failure = await Failure(session.Execute("api", Unlock("654321")));
             check(failure.Status == status && failure.Code == code && !failure.TransportFailure, "HTTP PIN error became transport failure");
             check(!await session.IsApiUnreachable(), "HTTP reply became offline");
-            var host = new PowerBridgeHandler(session, _ => { serviceCalls++; throw new InvalidOperationException("Service must not be called"); });
+            var host = Host(session, _ => { serviceCalls++; throw new InvalidOperationException("Service must not be called"); });
             await Rejected(host.Execute("schedule", Schedule("hibernate")));
             check(serviceCalls == 0, "HTTP rejection bypassed fresh host check");
         }
@@ -129,13 +134,14 @@ internal static class PowerUnlockTests
             var failure = await Failure(session.Execute("api", Unlock(FixturePin)));
             check(failure.TransportFailure && await session.IsApiUnreachable(), "Real transport failure not identified");
             var serviceCalls = 0;
-            var host = new PowerBridgeHandler(session, request => {
+            var host = Host(session, request => {
                 serviceCalls++;
                 return Task.FromResult(new ControlResponse("scheduled", "fixture", RequestId: request.RequestId, Action: request.Action, ExecuteAt: DateTimeOffset.UtcNow.AddSeconds(10)));
             });
             await host.Execute("schedule", Schedule("shutdown"));
             check(serviceCalls == 1, "Existing transport-only contingency was lost");
         }
+        await PowerBridgeTests.Run(check, root);
     }
     private sealed class BrokenBody : HttpContent {
         protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context) => throw new HttpRequestException("Fixture body interrupted");

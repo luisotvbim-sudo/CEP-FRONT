@@ -16,8 +16,9 @@ public sealed class SingleInstanceCoordinator : IDisposable
 
         var safeName = applicationName.Trim();
         activationEventName = $@"Local\{safeName}.Activate";
-        mutex = new Mutex(initiallyOwned: true, $@"Local\{safeName}.Mutex", out var createdNew);
-        IsPrimary = createdNew;
+        mutex = new Mutex(initiallyOwned: false, $@"Local\{safeName}.Mutex");
+        try { IsPrimary = mutex.WaitOne(TimeSpan.Zero); }
+        catch (AbandonedMutexException) { IsPrimary = true; }
         if (IsPrimary)
             activationEvent = new EventWaitHandle(false, EventResetMode.AutoReset, activationEventName);
     }

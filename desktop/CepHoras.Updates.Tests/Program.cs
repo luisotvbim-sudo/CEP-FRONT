@@ -52,6 +52,19 @@ try
 finally { Directory.Delete(testDirectory, recursive: true); }
 
 Console.WriteLine("16 verificações de atualização passaram.");
+await MsiTests.Run();
+if (args.Length > 0)
+{
+    if (args.Length != 4) throw new ArgumentException("Use: <MSI> <versão> <manifest.json> <manifest.sig>.");
+    var version = Version.Parse(args[1]);
+    var manifest = File.ReadAllBytes(args[2]);
+    using var parsed = System.Text.Json.JsonDocument.Parse(manifest);
+    var release = new MsiRelease(version, MsiUpdateTrust.AssetUri(version, MsiUpdateTrust.PackageAsset),
+        parsed.RootElement.GetProperty("size").GetInt64(), parsed.RootElement.GetProperty("sha256").GetString()!,
+        manifest, File.ReadAllBytes(args[3]));
+    new GitHubMsiUpdates().VerifyDownloadedPackage(args[0], release);
+    Console.WriteLine("Pacote real: chave pública embutida, assinatura, hash, tamanho e identidade MSI verificados.");
+}
 
 static void Assert(bool condition, string message)
 {

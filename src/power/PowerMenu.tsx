@@ -68,6 +68,59 @@ export function PowerMenu({ client }: { client: AuthClient }) {
     return () => clearInterval(timer)
   }, [scheduled])
   useEffect(() => {
+    if (!scheduled && !uncertain) return
+    let stopped = false
+    let reconciling = false
+    const reconcile = async () => {
+      const current = active.current
+      if (
+        stopped ||
+        reconciling ||
+        busy.current ||
+        !current ||
+        (scheduled && Date.parse(scheduled.executeAt) > Date.now())
+      )
+        return
+      reconciling = true
+      try {
+        const result = await current.host.reconcile(current.requestId)
+        if (
+          !stopped &&
+          mounted.current &&
+          active.current === current &&
+          result.state === 'terminal'
+        ) {
+          active.current = null
+          setScheduled(null)
+          setUncertain(false)
+          setNotice('O aplicativo confirmou que a ação não está mais pendente.')
+        }
+      } catch {
+        if (!stopped && mounted.current && active.current === current) {
+          setUncertain(true)
+          setNotice(
+            'O estado da ação ainda não foi confirmado. Tente cancelar e confira o Windows.',
+          )
+        }
+      } finally {
+        reconciling = false
+      }
+    }
+    // A suspended renderer resumes its timer here. The clock only triggers a
+    // query; only the host/service response can release the active request.
+    const timer = setInterval(() => void reconcile(), 2_000)
+    const resumed = () => void reconcile()
+    window.addEventListener('focus', resumed)
+    document.addEventListener('visibilitychange', resumed)
+    void reconcile()
+    return () => {
+      stopped = true
+      clearInterval(timer)
+      window.removeEventListener('focus', resumed)
+      document.removeEventListener('visibilitychange', resumed)
+    }
+  }, [scheduled, uncertain])
+  useEffect(() => {
     if (!unlock) return
     const update = () => {
       const seconds = unlockRemaining(unlock, performance.now())
@@ -182,14 +235,16 @@ export function PowerMenu({ client }: { client: AuthClient }) {
     try {
       await active.current.host.cancel(active.current.requestId)
       active.current = null
-      setScheduled(null)
-      setUncertain(false)
-      setNotice('Ação cancelada pelo aplicativo.')
+      if (mounted.current) {
+        setScheduled(null)
+        setUncertain(false)
+        setNotice('Ação cancelada pelo aplicativo.')
+      }
     } catch (error) {
-      setNotice(errorMessage(error).message)
+      if (mounted.current) setNotice(errorMessage(error).message)
     } finally {
       busy.current = false
-      setPending(false)
+      if (mounted.current) setPending(false)
     }
   }
   return (

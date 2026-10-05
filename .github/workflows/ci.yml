@@ -58,3 +58,16 @@ jobs:
       - run: dotnet build desktop/CepHoras.Desktop -c Release
       - run: dotnet run --project desktop/CepHoras.Updates.Tests -c Release
       - run: dotnet run --project desktop/CepHoras.Desktop.Tests -c Release
+      - run: dotnet build desktop/CepHoras.Control -c Release
+      - run: dotnet run --project desktop/CepHoras.Control.Tests -c Release
+      - name: Validate independent corporate MSI artifacts
+        shell: pwsh
+        run: |
+          ./scripts/build-corporate-msi.ps1 -Version 0.4.7
+          $bootstrap = '.local/corporate-msi/0.4.7/artifacts/CEP-Horas-Windows-win-x64.msi'
+          $originalHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $bootstrap).Hash
+          ./scripts/build-corporate-msi.ps1 -Version 0.4.8
+          if ((Get-FileHash -Algorithm SHA256 -LiteralPath $bootstrap).Hash -ne $originalHash) {
+            throw 'Building 0.4.8 changed the previous 0.4.7 release artifact.'
+          }
+          ./scripts/test-corporate-msi.ps1 -PackagePath $bootstrap

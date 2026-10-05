@@ -5,4 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="MsiUpdatePublicKey.pem" LogicalName="CepHoras.Updates.MsiUpdatePublicKey.pem" />
+  </ItemGroup>
 </Project>

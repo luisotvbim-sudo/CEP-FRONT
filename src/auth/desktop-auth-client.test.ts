@@ -92,10 +92,22 @@ describe('desktop bridge lifecycle', () => {
     const f = bridgeFixture()
     const pending = f.client.requestPasswordReset('fixture@example.invalid')
     const check = expect(pending).rejects.toThrow('demorou')
-    await vi.advanceTimersByTimeAsync(25_000)
+    await vi.advanceTimersByTimeAsync(65_000)
     await check
     f.reply({ id: f.sent[0].id, ok: true })
     expect(f.sent).toHaveLength(1)
+    expect(f.listeners.size).toBe(0)
+    expect(vi.getTimerCount()).toBe(0)
+  })
+  it('does not time out logout while the host is still within its cancellation/API budget', async () => {
+    vi.useFakeTimers()
+    const f = bridgeFixture()
+    const pending = f.client.logout()
+    await vi.advanceTimersByTimeAsync(35_000)
+    expect(f.sent).toHaveLength(1)
+    expect(f.listeners.size).toBe(1)
+    f.reply({ id: f.sent[0].id, ok: true })
+    await pending
     expect(f.listeners.size).toBe(0)
     expect(vi.getTimerCount()).toBe(0)
   })
@@ -125,5 +137,46 @@ describe('desktop bridge lifecycle', () => {
     })
     f.reply({ id: f.sent[0].id, ok: true })
     await pending
+  })
+  it.each([
+    { ok: 'true', result: {} },
+    { ok: true, error: { code: 'conflicting' } },
+    { ok: false, error: { status: '503' } },
+    { ok: false, error: { transportFailure: 'true' } },
+  ])('rejects malformed envelopes without expiring the session %#', async (data) => {
+    const f = bridgeFixture()
+    const expired = vi.fn()
+    f.client.onExpired(expired)
+    const pending = f.client.request('GET', '/me')
+    const assertion = expect(pending).rejects.toMatchObject({ code: 'invalid_native_response' })
+    f.reply({ id: f.sent[0].id, ...data } as Parameters<
+      Parameters<WebViewBridge['addEventListener']>[1]
+    >[0]['data'])
+    await assertion
+    expect(expired).not.toHaveBeenCalled()
+    expect(f.listeners.size).toBe(0)
+  })
+  it('validates native session metadata before exposing it to the UI', async () => {
+    const user = { id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', role: 'user' }
+    const valid = { user, expiresAt: new Date(Date.now() + 60_000).toISOString() }
+    for (const result of [
+      undefined,
+      {},
+      { ...valid, user: { ...user, id: 'invalid' } },
+      { ...valid, user: { ...user, role: 'superuser' } },
+      { ...valid, expiresAt: '2000-01-01T00:00:00Z' },
+      { ...valid, accessToken: 'fixture-only' },
+    ]) {
+      const f = bridgeFixture()
+      const pending = f.client.restore()
+      const assertion = expect(pending).rejects.toMatchObject({ code: 'invalid_session_response' })
+      f.reply({ id: f.sent[0].id, ok: true, result })
+      await assertion
+      expect(f.listeners.size).toBe(0)
+    }
+    const f = bridgeFixture()
+    const pending = f.client.login({ email: 'fixture@example.invalid', password: 'fixture-only' })
+    f.reply({ id: f.sent[0].id, ok: true, result: valid })
+    expect(await pending).toEqual(valid)
   })
 })

@@ -1,5 +1,7 @@
 # Contexto atual do instalador e aplicativo corporativo
 
+Atualização de 05/10/2026: a branch `codex/instalador-pronto` integra Front/main `53d8e5be438e18b2c67e7bcff82f8806330ada8e` e a evolução do piloto 0.4.10. O contrato corrente e o aceite do novo pacote estão em [instalador 0.4.11](instalador-0.4.11.md). As bases e limites da matriz abaixo descrevem a auditoria anterior, não os recursos deste novo build. A frota foi esclarecida pelo usuário como Windows 11; edição/build das demais máquinas ainda serão conferidos pelo verificador somente leitura.
+
 Reconciliado em 04/10/2026 por leitura dos commits abaixo. Este é o ponto de entrada para energia, serviço Windows, MSI, recuperação e atualização do CEP Horas. O instalador pertence ao CEP-FRONT; o repositório `01-CEP-INSTALADOR` contém um protótipo CEP Hub e não é a implementação deste pacote.
 
 ## Bases e disponibilidade

@@ -1,6 +1,7 @@
 using System.IO;
 using System.Security.AccessControl;
 using System.Security.Principal;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using Microsoft.Win32;
 
@@ -11,7 +12,7 @@ internal sealed record SavedRegistry(bool Exists, int Value);
 internal sealed record PolicySnapshot(Dictionary<string, string[]> Rights, SavedRegistry[] Registry);
 internal sealed record ControlConfiguration(int Version, bool Active, string Phase, PolicySnapshot Original);
 internal sealed record LegacyControlConfiguration(int Version, bool Active, string Phase, byte[] Salt, byte[] Hash, PolicySnapshot Original);
-internal sealed record UninstallJournal(ControlConfiguration Configuration, PolicySnapshot BeforeRestore);
+internal sealed record UninstallJournal(ControlConfiguration Configuration, PolicySnapshot BeforeRestore, int Schema = 1);
 
 internal static class PolicyStore
 {
@@ -20,6 +21,7 @@ internal static class PolicyStore
         "Conceito.CepHoras.Control");
     private static readonly string FilePath = Path.Combine(Root, "policy.json");
     private static readonly string RestoreJournal = Path.Combine(Root, "restore-journal.json");
+    private static readonly object AuditGate = new();
     internal static readonly RegistrySetting[] Settings =
     [
         new(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer", "HidePowerOptions", 1),
@@ -46,6 +48,7 @@ internal static class PolicyStore
     internal static void SecureDirectory()
     {
         RequireAdmin();
+        UpdateStore.RejectReparseAncestors(Path.GetDirectoryName(Root)!);
         var directory = new DirectoryInfo(Root);
         if (directory.Exists)
         {
@@ -80,37 +83,54 @@ internal static class PolicyStore
     internal static ControlConfiguration? Read()
     {
         if (!File.Exists(FilePath)) return null;
-        if ((File.GetAttributes(FilePath) & FileAttributes.ReparsePoint) != 0)
-            throw new IOException("Configuração não pode ser um link.");
-        var acl = new FileInfo(FilePath).GetAccessControl();
+        var config = ReadPrivate<ControlConfiguration>(FilePath);
+        PolicyValidation.Configuration(config);
+        return config;
+    }
+
+    private static void ValidateFile(string path)
+    {
+        UpdateStore.RejectReparseAncestors(Path.GetDirectoryName(path)!);
+        var file = new FileInfo(path);
+        if (!file.Exists || (file.Attributes & FileAttributes.ReparsePoint) != 0)
+            throw new IOException("Estado de política inexistente ou link.");
+        var acl = file.GetAccessControl();
         if (acl.GetOwner(typeof(SecurityIdentifier)) is not SecurityIdentifier owner ||
             !NativePolicy.Allowed.Contains(owner.Value) ||
             acl.GetAccessRules(true, true, typeof(SecurityIdentifier)).Cast<FileSystemAccessRule>().Any(rule =>
                 rule.AccessControlType == AccessControlType.Allow &&
                 !NativePolicy.Allowed.Contains(rule.IdentityReference.Value)))
             throw new UnauthorizedAccessException("Configuração não está restrita à TI/SYSTEM.");
-        var config = JsonSerializer.Deserialize<ControlConfiguration>(File.ReadAllText(FilePath))
-            ?? throw new IOException("Configuração inválida.");
-        if (config.Version != 2 || config.Original.Registry.Length != Settings.Length ||
-            !NativePolicy.Rights.All(config.Original.Rights.ContainsKey))
-            throw new IOException("Configuração incompatível.");
-        return config;
     }
 
-    private static void Save(ControlConfiguration config) => AtomicWrite(FilePath, config);
-
-    private static void AtomicWrite<T>(string file, T value)
+    internal static T ReadPrivate<T>(string path)
     {
-        var temporary = Path.Combine(Root, Guid.NewGuid().ToString("N") + ".tmp");
-        File.WriteAllText(temporary, JsonSerializer.Serialize(value));
+        ValidateFile(path);
+        if (new FileInfo(path).Length > 1_048_576) throw new InvalidDataException("Estado de política fora do limite.");
+        return JsonSerializer.Deserialize<T>(File.ReadAllText(path)) ?? throw new InvalidDataException("Estado de política inválido.");
+    }
+
+    private static void Save(ControlConfiguration config)
+    {
+        PolicyValidation.Configuration(config);
+        AtomicWrite(FilePath, config);
+    }
+
+    internal static void AtomicWrite<T>(string file, T value)
+    {
+        if (File.Exists(file)) ValidateFile(file);
+        DurableStateFile.Write(file, value, SecureFile);
+    }
+
+    private static void SecureFile(string path)
+    {
         var acl = new FileSecurity();
         acl.SetAccessRuleProtection(true, false);
         acl.SetOwner(new SecurityIdentifier("S-1-5-32-544"));
         foreach (var sid in NativePolicy.Allowed)
             acl.AddAccessRule(new FileSystemAccessRule(
                 new SecurityIdentifier(sid), FileSystemRights.FullControl, AccessControlType.Allow));
-        new FileInfo(temporary).SetAccessControl(acl);
-        File.Move(temporary, file, true);
+        new FileInfo(path).SetAccessControl(acl);
     }
 
     internal static PolicySnapshot Capture() => new(
@@ -131,17 +151,29 @@ internal static class PolicyStore
         Settings.All(x => ReadRegistry(x) == new SavedRegistry(true, x.Value));
 
     internal static void Apply()
+        => Apply(completePreviousRestore: false);
+
+    internal static void ApplyForInstallation()
+        => Apply(completePreviousRestore: true);
+
+    private static void Apply(bool completePreviousRestore)
     {
+        // Preflight must precede even creation of privileged state directories.
+        WindowsSupport.RequireSupported();
         SecureDirectory();
         using var operation = LockOperation();
-        using var os = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion");
-        var build = Environment.OSVersion.Version.Build;
-        if (build < 26100 || os?.GetValue("InstallationType") as string != "Client" ||
-            os?.GetValue("EditionID") is not string edition ||
-            !(edition.StartsWith("Professional") || edition.StartsWith("Enterprise") || edition.StartsWith("Education")))
-            throw new InvalidOperationException("Requer Windows 11 Pro, Enterprise ou Education 24H2 ou superior.");
         MigrateLegacyIfNeeded();
         var previous = Read();
+        if (File.Exists(RestoreJournal))
+        {
+            var journal = ReadPrivate<UninstallJournal>(RestoreJournal);
+            PolicyValidation.Journal(journal);
+            if (!completePreviousRestore || previous?.Phase != "restored" ||
+                !PolicyValidation.Equal(previous.Original, journal.Configuration.Original) ||
+                !PolicyValidation.Equal(Capture(), previous.Original))
+                throw new InvalidOperationException("Existe uma restauração pendente. Preserve o journal e solicite recuperação pela TI.");
+            File.Delete(RestoreJournal);
+        }
         if (previous?.Active == true)
         {
             if (!MatchesExpected())
@@ -158,18 +190,20 @@ internal static class PolicyStore
             () => RestoreSnapshot(config.Original),
             () => Save(config with { Active = true, Phase = "active" }),
             () => Save(config with { Active = false, Phase = "restored" }));
+        NotifyPolicyChanged();
         Audit("policy-enabled", "installer");
     }
 
     private static void MigrateLegacyIfNeeded()
     {
         if (!File.Exists(FilePath)) return;
+        ValidateFile(FilePath);
+        if (new FileInfo(FilePath).Length > 1_048_576) throw new InvalidDataException("Configuração fora do limite.");
         using var document = JsonDocument.Parse(File.ReadAllText(FilePath));
         if (!document.RootElement.TryGetProperty("Version", out var version) || version.GetInt32() != 1) return;
         var legacy = JsonSerializer.Deserialize<LegacyControlConfiguration>(document.RootElement.GetRawText())
             ?? throw new IOException("Configuração anterior inválida.");
-        if (legacy.Original.Registry.Length != 4 || !NativePolicy.Rights.All(legacy.Original.Rights.ContainsKey))
-            throw new IOException("Backup anterior incompatível.");
+        PolicyValidation.Snapshot(legacy.Original, 4);
         if (legacy.Active)
         {
             foreach (var right in NativePolicy.Rights) NativePolicy.WriteRight(right, legacy.Original.Rights[right]);
@@ -215,17 +249,19 @@ internal static class PolicyStore
         if (!Directory.Exists(Root)) return;
         SecureDirectory();
         using var operation = LockOperation();
-        if (forUninstall && File.Exists(RestoreJournal)) File.Delete(RestoreJournal);
+        if (forUninstall && File.Exists(RestoreJournal))
+            throw new InvalidOperationException("Existe uma restauração anterior pendente; o journal foi preservado para a TI.");
         var config = Read();
         if (config is null || config.Phase == "restored") return;
-        if (forUninstall)
-        {
-            if (config.Active && !MatchesExpected())
-                throw new InvalidOperationException("Política alterada externamente. Restaure pela ferramenta da TI antes de desinstalar.");
-            AtomicWrite(RestoreJournal, new UninstallJournal(config, Capture()));
-        }
-        RestoreSnapshot(config.Original);
-        Save(config with { Active = false, Phase = "restored" });
+        if (forUninstall && config.Active && !MatchesExpected())
+            throw new InvalidOperationException("Política alterada externamente. Restaure pela ferramenta da TI antes de desinstalar.");
+        var beforeRestore = forUninstall ? Capture() : null;
+        PolicyTransaction.Restore(
+            () => { if (forUninstall) AtomicWrite(RestoreJournal, new UninstallJournal(config, beforeRestore!)); },
+            () => RestoreSnapshot(config.Original),
+            () => PolicyValidation.Equal(Capture(), config.Original),
+            () => Save(config with { Active = false, Phase = "restored" }));
+        NotifyPolicyChanged();
         Audit("policy-restored", "installer");
     }
 
@@ -235,10 +271,16 @@ internal static class PolicyStore
         if (!File.Exists(RestoreJournal)) return;
         SecureDirectory();
         using var operation = LockOperation();
-        var journal = JsonSerializer.Deserialize<UninstallJournal>(File.ReadAllText(RestoreJournal))!;
-        RestoreSnapshot(journal.BeforeRestore);
-        Save(journal.Configuration);
+        var journal = ReadPrivate<UninstallJournal>(RestoreJournal);
+        PolicyValidation.Journal(journal);
+        PolicyTransaction.Restore(
+            () => { },
+            () => RestoreSnapshot(journal.BeforeRestore),
+            () => PolicyValidation.Equal(Capture(), journal.BeforeRestore),
+            () => Save(journal.Configuration));
         File.Delete(RestoreJournal);
+        NotifyPolicyChanged();
+        Audit("policy-restore-rolled-back", "installer");
     }
 
     internal static void FinishRestore()
@@ -247,18 +289,56 @@ internal static class PolicyStore
         if (!File.Exists(RestoreJournal)) return;
         SecureDirectory();
         using var operation = LockOperation();
+        var journal = ReadPrivate<UninstallJournal>(RestoreJournal);
+        PolicyValidation.Journal(journal);
+        var config = Read();
+        if (config?.Phase != "restored" || !PolicyValidation.Equal(config.Original, journal.Configuration.Original) ||
+            !PolicyValidation.Equal(Capture(), config.Original))
+            throw new InvalidOperationException("A restauração não foi verificada; preserve o journal para a TI.");
         File.Delete(RestoreJournal);
     }
 
-    private static FileStream LockOperation() => new(
-        Path.Combine(Root, "operation.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+    private static FileStream LockOperation()
+    {
+        var path = Path.Combine(Root, "operation.lock");
+        if (File.Exists(path)) ValidateFile(path);
+        var stream = new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+        try { ValidateFile(path); return stream; }
+        catch { stream.Dispose(); throw; }
+    }
 
     internal static void Audit(string code, string sid)
+        => ControlAudit.TryWrite(WriteAudit, code, sid);
+
+    private static void WriteAudit(string code, string sid)
     {
-        if (!Directory.Exists(Root)) return;
-        var file = Path.Combine(Root, "audit.jsonl");
-        if (File.Exists(file) && new FileInfo(file).Length > 5_000_000)
-            File.Move(file, file + ".previous", true);
-        File.AppendAllText(file, JsonSerializer.Serialize(new { at = DateTimeOffset.UtcNow, code, sid }) + Environment.NewLine);
+        lock (AuditGate)
+        {
+            if (!Directory.Exists(Root)) return;
+            var file = Path.Combine(Root, "audit.jsonl");
+            if (File.Exists(file)) ValidateFile(file);
+            if (File.Exists(file + ".previous")) ValidateFile(file + ".previous");
+            if (File.Exists(file) && new FileInfo(file).Length > 5_000_000)
+                File.Move(file, file + ".previous", true);
+            File.AppendAllText(file, JsonSerializer.Serialize(new { at = DateTimeOffset.UtcNow, code, sid }) + Environment.NewLine);
+        }
     }
+
+    private static void NotifyPolicyChanged()
+    {
+        var hwndBroadcast = new nint(0xffff);
+        const uint wmSettingChange = 0x001a;
+        const uint abortIfHung = 0x0002;
+        _ = SendMessageTimeout(hwndBroadcast, wmSettingChange, 0, "Policy", abortIfHung, 5_000, out _);
+    }
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern nint SendMessageTimeout(
+        nint window,
+        uint message,
+        nint word,
+        string parameter,
+        uint flags,
+        uint timeout,
+        out nint result);
 }

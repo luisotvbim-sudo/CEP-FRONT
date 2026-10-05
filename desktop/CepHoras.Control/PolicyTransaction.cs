@@ -18,4 +18,14 @@ internal static class PolicyTransaction
             throw;
         }
     }
+
+    internal static void Restore(Action backup, Action restore, Func<bool> verify, Action commit)
+    {
+        backup();
+        // Failure retains the original configuration and the durable uninstall
+        // journal. MSI rollback or the administrative tool can retry safely.
+        restore();
+        if (!verify()) throw new InvalidOperationException("A verificação da política restaurada falhou.");
+        commit();
+    }
 }

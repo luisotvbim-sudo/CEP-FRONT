@@ -12,6 +12,25 @@ export function Inbox({ api }: { api: NotificationApi }) {
   const result = useQuery(() => api.inbox(page, unread), [api, page, unread])
   const action = useAction()
   useEffect(() => {
+    // A navigation request is consumed only after this destination commits.
+    // Repeated intents also need acknowledgement when the Inbox is already open.
+    const acknowledge = () => {
+      const token = window.__CEP_INBOX_INTENT__
+      const documentId = window.__CEP_DOCUMENT_ID__
+      const bridge = window.chrome?.webview
+      if (!token || typeof documentId !== 'string' || !bridge) return
+      try {
+        bridge.postMessage({ type: 'cep-inbox-consumed', token, documentId })
+        if (window.__CEP_INBOX_INTENT__ === token) window.__CEP_INBOX_INTENT__ = undefined
+      } catch {
+        // A detached bridge must leave the intent available for another delivery.
+      }
+    }
+    window.addEventListener('cep-open-notifications', acknowledge)
+    acknowledge()
+    return () => window.removeEventListener('cep-open-notifications', acknowledge)
+  }, [])
+  useEffect(() => {
     const timer = setInterval(result.reload, 60_000)
     return () => clearInterval(timer)
   }, [result.reload])
@@ -40,10 +59,11 @@ export function Inbox({ api }: { api: NotificationApi }) {
         </label>
         <QueryError error={result.error} retry={result.reload} />
         <FormNotice error={action.error} />
-        {result.pending ? (
+        {result.refreshing && <Loading text="Atualizando notificações…" />}
+        {result.initialLoading ? (
           <Loading />
         ) : (
-          <div className="notification-list">
+          <div className="notification-list" aria-busy={result.refreshing}>
             {result.data?.items?.map((row) => (
               <article key={row.id}>
                 <div>
@@ -80,7 +100,7 @@ export function Inbox({ api }: { api: NotificationApi }) {
             ))}
           </div>
         )}
-        {!result.pending && result.data?.total === 0 && (
+        {!result.initialLoading && result.data?.total === 0 && (
           <Empty title="Nenhuma notificação neste filtro">
             <p>Não há mensagens para mostrar.</p>
           </Empty>

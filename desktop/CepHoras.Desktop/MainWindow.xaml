@@ -3,20 +3,26 @@
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto" />
       <RowDefinition Height="*" />
+      <RowDefinition Height="Auto" />
     </Grid.RowDefinitions>
     <Border x:Name="UpdateBanner" Grid.Row="0" Visibility="Collapsed" Background="#FFF0E6" BorderBrush="#DA5D1E" BorderThickness="0,0,0,1" Padding="12">
       <DockPanel LastChildFill="True">
         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-          <Button x:Name="UpdateNowButton" Content="Atualizar" Click="UpdateNow_Click" Padding="12,6" Margin="8,0,0,0" />
+          <Button x:Name="UpdateNowButton" Content="Atualizar agora" Click="UpdateNow_Click" Padding="12,6" Margin="8,0,0,0" />
           <Button x:Name="UpdateLaterButton" Content="Depois" Click="UpdateLater_Click" Padding="12,6" Margin="8,0,0,0" />
         </StackPanel>
         <TextBlock x:Name="UpdateMessage" Text="Nova versão disponível." VerticalAlignment="Center" TextWrapping="Wrap" />
       </DockPanel>
     </Border>
     <StackPanel x:Name="StartupPanel" Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="40" MaxWidth="620">
+      <ProgressBar x:Name="WebViewLoadingIndicator" IsIndeterminate="True" Width="220" Height="5" Foreground="#DA5D1E" Background="#E4E4DE" Margin="0,0,0,20" AutomationProperties.Name="Carregando interface" />
       <TextBlock x:Name="StartupStatus" Text="Preparando seu espaço…" HorizontalAlignment="Center" TextAlignment="Center" FontSize="16" Foreground="#555750" TextWrapping="Wrap" />
-      <Button x:Name="ForceRestartButton" Content="Reiniciar CEP Horas" Click="ForceRestart_Click" Visibility="Collapsed" HorizontalAlignment="Center" Padding="18,9" Margin="0,18,0,0" Background="#DA5D1E" Foreground="White" BorderThickness="0" />
+      <Button x:Name="ForceRestartButton" Content="Recarregar interface" Click="ReloadWebView_Click" HorizontalAlignment="Center" Padding="18,9" Margin="0,18,0,0" Background="#DA5D1E" Foreground="White" BorderThickness="0" />
+      <Button x:Name="RepairProfileButton" Content="Recriar perfil local (preserva backup)" Click="RepairProfile_Click" HorizontalAlignment="Center" Padding="12,6" Margin="0,8,0,0" ToolTip="Use após falhas persistentes. A sessão protegida é preservada." />
     </StackPanel>
-    <wv:WebView2 x:Name="Browser" Grid.Row="1" Visibility="Hidden" />
+    <Grid x:Name="BrowserContainer" Grid.Row="1"><wv:WebView2 x:Name="Browser" Visibility="Hidden" /></Grid>
+    <Border Grid.Row="2" Padding="8,4" BorderThickness="0,1,0,0" BorderBrush="#E4E4DE">
+      <Button x:Name="ReloadInterfaceButton" Content="Recarregar interface" Click="ReloadWebView_Click" HorizontalAlignment="Center" Padding="12,4" ToolTip="Use se a página ficar em branco ou parar de responder" />
+    </Border>
   </Grid>
 </Window>
