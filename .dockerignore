@@ -10,7 +10,8 @@ coverage
 playwright-report
 test-results
 docs
-tests
+tests/*
+!tests/fixtures
 scripts
 deploy/nightly
 deploy/monitoring
