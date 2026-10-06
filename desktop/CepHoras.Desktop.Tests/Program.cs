@@ -88,6 +88,11 @@ try
     Check(!store.Exists, "Revocation left persisted state");
 
     var ledger = new ProtectedJsonFile(Path.Combine(directory, "notifications"));
+    var longDirectory = Path.Combine(directory, new string('a', 100), new string('b', 100));
+    Directory.CreateDirectory(longDirectory);
+    var longStore = new ProtectedJsonFile(Path.Combine(longDirectory, "notifications.dat"));
+    await longStore.WriteAsync(new { value = "long-path" });
+    Check((await longStore.ReadAsync<JsonElement>()).GetProperty("value").GetString() == "long-path", "Long protected path failed");
     var notificationIds = new HashSet<Guid> { Guid.NewGuid(), Guid.NewGuid() };
     await ledger.WriteAsync(notificationIds);
     Check((await ledger.ReadAsync<HashSet<Guid>>())!.SetEquals(notificationIds), "Receipt ledger changed");

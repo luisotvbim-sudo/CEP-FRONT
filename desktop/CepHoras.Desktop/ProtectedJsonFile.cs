@@ -34,7 +34,7 @@ internal sealed class ProtectedJsonFile(string path, byte[]? entropy = null)
                 await stream.WriteAsync(protectedBytes);
                 stream.Flush(flushToDisk: true);
             }
-            if (!MoveFileEx(temporary, path, 0x1 | 0x8))
+            if (!MoveFileEx(NativePath(temporary), NativePath(path), 0x1 | 0x8))
                 throw new IOException("Não foi possível publicar o estado protegido.", new Win32Exception(Marshal.GetLastWin32Error()));
         }
         finally
@@ -42,6 +42,15 @@ internal sealed class ProtectedJsonFile(string path, byte[]? entropy = null)
             CryptographicOperations.ZeroMemory(bytes);
             if (File.Exists(temporary)) File.Delete(temporary);
         }
+    }
+
+    private static string NativePath(string value)
+    {
+        var fullPath = Path.GetFullPath(value);
+        if (fullPath.StartsWith(@"\\?\", StringComparison.Ordinal)) return fullPath;
+        return fullPath.StartsWith(@"\\", StringComparison.Ordinal)
+            ? @"\\?\UNC\" + fullPath[2..]
+            : @"\\?\" + fullPath;
     }
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
