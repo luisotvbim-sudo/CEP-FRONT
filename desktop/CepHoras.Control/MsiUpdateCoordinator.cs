@@ -32,7 +32,9 @@ internal sealed class MsiUpdateCoordinator(CancellationToken stopping) : IDispos
     {
         get
         {
-            if (!initialized) return false;
+            // Failed initialization can mean an unreadable maintenance journal.
+            // Absence of a successfully read state is not proof that MSI is idle.
+            if (!initialized) return true;
             lock (gate)
             {
                 try { return RefreshState()?.InMaintenance == true; }

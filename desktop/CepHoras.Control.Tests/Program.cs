@@ -46,6 +46,8 @@ Assert(audits.All(value => !value.Contains("password", StringComparison.OrdinalI
 
 configuration = new(2, true, "active", original);
 var inMaintenance = false;
+using (var unreadableUpdater = new MsiUpdateCoordinator(CancellationToken.None))
+    Assert(unreadableUpdater.InMaintenance, "uninitialized updater cannot reopen energy or supervision before reading maintenance state");
 var updatePower = new FakePower();
 var guardedAuthority = new PowerAuthority(() => configuration, () => true, updatePower, (_, _) => { }, () => now, () => inMaintenance);
 var beforeUpdateId = Guid.NewGuid().ToString();
