@@ -1,6 +1,6 @@
 # Compatibilidade CEP-FRONT × CEP-API
 
-A janela normal de 17 dias e o botão “Atualizar sprint” requerem a API com `ManualSyncDays = 17`. A mudança não altera rotas/DTOs nem os períodos oficiais de análise; confirmar a imagem API de testes antes de aplicar este Front.
+A correção da [Issue #30](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/30) depende da [API #27](https://github.com/luisotvbim-sudo/CEP-API/pull/27): a atualização normal passa a cobrir Monday e VR Mais por 20 dias inclusivos, e a própria associação/histórico ficam acessíveis sem vínculo vigente com time. A carga administrativa continua até 90 dias. Rotas e DTOs não mudam; os snapshots OpenAPI e tipos existentes permanecem válidos. A API local em `127.0.0.1:8080` não estava disponível nesta revisão, então a interface foi validada com fixtures, sem homologação de dados reais.
 
 Alteração de senha em 05/10/2026: ativação e recuperação permitem de 6 a 200 caracteres. Publicar primeiro a API com RequiredLength=6 e contratos atualizados; depois web/cliente Windows. Não muda rotas, payloads, tipos nem allowlist. Snapshots foram regenerados da API local da entrega: o gerador atual não publica limites de senha nos schemas desses records. Homologação com PostgreSQL e versão instalada permanece necessária.
 
@@ -17,7 +17,7 @@ Revisão documental de 04/10/2026. Front auditado: `main` `eb63dbdc7f7bf83d0a4b5
 | Ativação de convite | `/auth/invitations/activate`, 204 sem sessão; formulário público web/nativo |
 | Pessoas/associação/convites | IDs Monday/VR, fila de e-mail, reenvio administrativo; enfileirar não prova entrega |
 | Times/usuários/auditoria | Telas administrativas; Líder/Membro recebem consultas autorizadas |
-| Sincronização/histórico | Normal 17 dias, full administrativo até 90; registros e resumos diários calculados na API |
+| Sincronização/histórico | Normal 20 dias inclusivos após API #27, full administrativo até 90; registros e resumos diários calculados na API |
 | Análises/notificações | Configurações/agendas globais, prévia/envio, caixa pessoal, leitura/recebimento, histórico e snapshots de análise |
 | Acompanhamento pessoal | GET autenticado próprio, períodos oficiais, situação, corte e valores/limites das fontes; [contrato do consumidor](acompanhamento-pessoal.md) |
 | Energia | Decisão pessoal, verificação/status e liberação PIN temporária; execução local requer MSI corporativo compatível |
@@ -26,7 +26,7 @@ GET de análises consulta resultados persistidos, sem nova importação. Histór
 
 ## Escopo e dependências pendentes
 
-Coordenador opera sua organização. Líder recebe a união dos times ativos com vínculo vigente hoje; Membro recebe sua pessoa se elegível. Usuário sem vínculo ativo pode receber vazio. `SystemAdmin` seleciona `organizationId` para rotas organizacionais; configurações globais e central pessoal não herdam essa seleção. Não atribuir registros históricos automaticamente a um time antigo.
+Coordenador opera sua organização. Líder recebe a união dos times ativos com vínculo vigente hoje; Membro recebe sua própria pessoa associada mesmo sem vínculo ativo após API #27. Colegas continuam limitados aos times vigentes. `SystemAdmin` seleciona `organizationId` para rotas organizacionais; configurações globais e central pessoal não herdam essa seleção. Não atribuir registros históricos automaticamente a um time antigo.
 
 Workflow de casos, justificativas/aprovações, calendário/jornada/exceções, ranking completo e exportações de planilha/PDF não estão no contrato atual. Conservar os requisitos planejados na [especificação](produto/especificacao-funcional.md), sem inventar DTOs/rotas ou números de produção.
 

@@ -21,7 +21,7 @@ Correções são realizadas nas fontes. CEP Horas lê, normaliza, calcula e apre
 | Autenticação web/nativa, convites, recuperação, revogação e isolamento por organização | Implementado |
 | Organizações, usuários, produtos, times e vínculos temporais de membro/líder | Implementado |
 | Diretórios Monday/VR, associação por IDs, convite e ativação da pessoa | Implementado |
-| Sincronização normal de 17 dias e inicial/full administrativa de 90 dias | Implementado; cobertura real exige homologação |
+| Sincronização normal de 20 dias inclusivos e inicial/full administrativa de 90 dias | Front integrado; janela normal depende da API #27 e cobertura real exige homologação |
 | Histórico bruto e resumo diário importado | Implementado; não certifica cobertura ou atualidade |
 | Motor diário/semanal/sprint, diferença, tolerância e ocorrências de integridade | Implementado |
 | Configurações/agendas globais, relatórios persistidos, envios e caixa individual | Implementado; envio automático nasce desativado |
@@ -36,10 +36,10 @@ Correções são realizadas nas fontes. CEP Horas lê, normaliza, calcula e apre
 |---|---|---|
 | Coordenador | `OrganizationAdmin` | Administração e consulta da própria organização |
 | Líder | `User` com vínculo `Manager` | União dos times ativos que lidera hoje, pessoas vinculadas hoje e próprios dados |
-| Membro | `User` com vínculo `Member` | Próprios dados com vínculo vigente |
+| Membro | `User` com pessoa associada | Próprios dados mesmo sem vínculo vigente após API #27 |
 | Administração técnica | `SystemAdmin` | Administração global; seleciona `organizationId` explicitamente nas operações organizacionais |
 
-Os vínculos são recalculados no servidor a cada requisição, com datas inclusivas e dia de negócio em São Paulo. Usuário sem vínculo vigente pode receber pessoas, times ou histórico vazios. O líder atual pode consultar registros anteriores à transferência; o líder anterior perde esse acesso. Essa é a autorização implementada, não uma atribuição histórica das horas ao time da data trabalhada. A política futura está em D-05.
+Os vínculos de gestão são recalculados no servidor a cada requisição, com datas inclusivas e dia de negócio em São Paulo. Após API #27, a própria pessoa associada é visível sem vínculo vigente; times e colegas continuam sujeitos ao vínculo atual. O líder atual pode consultar registros anteriores à transferência; o líder anterior perde esse acesso. Essa é a autorização implementada, não uma atribuição histórica das horas ao time da data trabalhada. A política futura está em D-05.
 
 Configurações e agendas são globais, mas pessoas, relatórios, envios e destinatários permanecem isolados por organização. `OrganizationAdmin` não pode escolher outra organização; `SystemAdmin` precisa selecionar uma para operações organizacionais. As rotas pessoais de energia e caixa individual não aceitam escolher pessoa ou organização.
 
@@ -103,7 +103,7 @@ Ranking futuro deve priorizar divergência absoluta, com cobertura e quantidade 
 
 ### RN-11 — Atualização e preservação
 
-Sincronização normal reconsulta hoje e 16 dias anteriores, limitada ao escopo; inicial/full administrativa cobre 90 dias e diretórios. Não é atualização apenas por cursor. Falha de uma fonte não apaga a última importação válida da outra. Retenção física de registros importados ocorre após sucesso da respectiva fonte. Tentativa recente com erro não prova atualização.
+Sincronização normal reconsulta hoje e 19 dias anteriores, limitada ao escopo, após a API #27; inicial/full administrativa cobre 90 dias e diretórios. Não é atualização apenas por cursor. Falha de uma fonte não apaga a última importação válida da outra. Retenção física de registros importados ocorre após sucesso da respectiva fonte. Tentativa recente com erro não prova atualização.
 
 Relatórios são snapshots imutáveis: GET análises não consulta fontes. Novo processamento gera nova análise. Workflow de antes/depois, preservação de justificativas e reabertura por alteração material é planejado. Idempotência da importação, dos pedidos de envio e da entrega não equivale a esse workflow.
 

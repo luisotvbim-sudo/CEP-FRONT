@@ -8,6 +8,8 @@ export const today = () =>
     month: '2-digit',
     day: '2-digit',
   }).format(new Date())
+export const daysBeforeToday = (days: number) =>
+  new Date(Date.parse(today()) - days * 86400000).toISOString().slice(0, 10)
 export function date(value?: string | null) {
   return value && /^\d{4}-\d{2}-\d{2}$/.test(value)
     ? value.split('-').reverse().join('/')
