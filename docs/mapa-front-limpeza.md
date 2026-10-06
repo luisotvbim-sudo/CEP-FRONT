@@ -87,6 +87,6 @@ Declarações tornadas internas: `AuditEvent`, `dailyDifference`, `zone`, `Query
 
 ## Verificação e limites
 
-Lint, 100 testes unitários e build TypeScript/Vite aprovados no estado final. A primeira execução de navegador encontrou quatro falhas no seletor genérico `role=status` do histórico após inclusão do sino, com 216 aprovações; seletor foi corrigido e a suíte repetida no estado final. O resultado final e os limites de publicação ficam no relatório de entrega.
+Lint, 100 testes unitários e build TypeScript/Vite aprovados no estado final. A primeira execução de navegador encontrou quatro falhas no seletor genérico `role=status` do histórico após inclusão do sino, com 216 aprovações; seletor foi corrigido e a suíte repetida no estado final: **220 testes de navegador aprovados**, nos projetos desktop/mobile, Vite isolado na porta 5193. Links documentais locais e `git diff --check` aprovados. O resultado final e os limites de publicação ficam no relatório de entrega.
 
 Testes usam fixtures isoladas; não homologam fontes reais, SMTP, ações Windows, instalação/upgrade MSI ou API em produção. Nenhum arquivo C#/XAML/WiX/protocolo nativo foi alterado, portanto não foi necessário repetir instalação ou testes nativos para esta limpeza. Não houve merge, push, deploy, recriação de contêiner, release ou integração da linha desktop mock.
