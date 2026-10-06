@@ -1,5 +1,5 @@
 import { useAction, useQuery } from '../hooks/async'
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { History, LogOut, UsersRound } from 'lucide-react'
 import logo from '../assets/conceito-logo.png'
 import { type AuthClient, type AuthSession } from '../auth/auth-client'
@@ -11,7 +11,13 @@ import { SyncPage } from '../admin/SyncPage'
 import { today } from '../admin/format'
 import { Empty, Loading, PageHeading, QueryError } from '../admin/ui'
 import '../admin/admin.css'
-import { Analyses, Inbox, useNotificationApi, useOpenInbox } from '../notifications'
+import {
+  Analyses,
+  Inbox,
+  NotificationBell,
+  useNotificationApi,
+  useOpenInbox,
+} from '../notifications'
 
 type Page = 'mine' | 'history' | 'teams' | 'notifications' | 'analyses' | 'teamAnalyses'
 
@@ -91,7 +97,13 @@ export function UserShell({
   const teams = useQuery(() => api.teams(false, today()), [api])
   const [page, setPage] = useState<Page>('mine')
   const notifications = useNotificationApi(client)
-  useOpenInbox(() => setPage('notifications'))
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const closeNotifications = useCallback(() => setNotificationsOpen(false), [])
+  const [notificationRevision, setNotificationRevision] = useState(0)
+  useOpenInbox(() => {
+    setNotificationsOpen(false)
+    setPage('notifications')
+  })
   const [teamId, setTeamId] = useState<string | null>(null)
   const [historyRevision, setHistoryRevision] = useState(0)
   const logout = useAction()
@@ -102,7 +114,6 @@ export function UserShell({
     { id: 'mine' as const, label: 'Minha jornada', icon: History },
     { id: 'history' as const, label: 'Meu histórico', icon: History },
     ...(managed.length ? [{ id: 'teams' as const, label: 'Meus times', icon: UsersRound }] : []),
-    { id: 'notifications' as const, label: 'Minhas notificações', icon: History },
     { id: 'analyses' as const, label: 'Minha análise', icon: History },
     ...(managed.length
       ? [{ id: 'teamAnalyses' as const, label: 'Análises dos times', icon: UsersRound }]
@@ -146,10 +157,25 @@ export function UserShell({
           <div>
             <span className="breadcrumb">
               CEP Horas <span>/</span>{' '}
-              <strong>{navigation.find((item) => item.id === activePage)?.label}</strong>
+              <strong>
+                {activePage === 'notifications'
+                  ? 'Minhas notificações'
+                  : navigation.find((item) => item.id === activePage)?.label}
+              </strong>
             </span>
           </div>
           <div className="admin-account">
+            <NotificationBell
+              api={notifications}
+              open={notificationsOpen}
+              revision={notificationRevision}
+              onOpen={() => setNotificationsOpen(true)}
+              onClose={closeNotifications}
+              onAll={() => {
+                setNotificationsOpen(false)
+                setPage('notifications')
+              }}
+            />
             <span className="avatar">
               {session.user.displayName?.slice(0, 1).toUpperCase() || 'M'}
             </span>
@@ -179,7 +205,7 @@ export function UserShell({
             <PersonalOverview
               client={client}
               onHistory={() => setPage('history')}
-              onNotifications={() => setPage('notifications')}
+              onNotifications={() => setNotificationsOpen(true)}
             />
           )}
           {activePage === 'history' && (
@@ -191,7 +217,12 @@ export function UserShell({
                   description="Registros importados e associação da sua conta."
                 />
               )}
-              <SyncPage api={api} allowFull={false} embedded onCompleted={() => setHistoryRevision((value) => value + 1)} />
+              <SyncPage
+                api={api}
+                allowFull={false}
+                embedded
+                onCompleted={() => setHistoryRevision((value) => value + 1)}
+              />
               <QueryError error={people.error} retry={people.reload} />
               {people.pending ? (
                 <Loading text="Localizando sua associação…" />
@@ -206,7 +237,14 @@ export function UserShell({
                   </Empty>
                 </div>
               ) : (
-                self && <HistoryView api={api} person={self} title="Meu histórico" refreshRevision={historyRevision} />
+                self && (
+                  <HistoryView
+                    api={api}
+                    person={self}
+                    title="Meu histórico"
+                    refreshRevision={historyRevision}
+                  />
+                )
               )}
             </>
           )}
@@ -264,7 +302,12 @@ export function UserShell({
               )}
             </>
           )}
-          {activePage === 'notifications' && <Inbox api={notifications} />}
+          {activePage === 'notifications' && !notificationsOpen && (
+            <Inbox
+              api={notifications}
+              onRead={() => setNotificationRevision((value) => value + 1)}
+            />
+          )}
           {activePage === 'analyses' && (
             <Analyses api={notifications} peopleApi={api} ownUserId={session.user.id} />
           )}

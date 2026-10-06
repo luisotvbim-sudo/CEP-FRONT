@@ -299,6 +299,8 @@ export async function fixture(
               ],
         },
       })
+    if (path === '/api/v1/me/notifications' && method === 'GET')
+      return route.fulfill({ json: { items: [], total: 0, page: 1, pageSize: 20 } })
     throw new Error(`Unexpected API call: ${method} ${path}`)
   })
   await page.goto('/')

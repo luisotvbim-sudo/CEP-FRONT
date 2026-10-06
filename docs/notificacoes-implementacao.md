@@ -4,6 +4,8 @@ Contexto revisto em 04/10/2026. Código auditado: Front `eb63dbd`, API `b36c6e1`
 
 ## Interface autenticada
 
+- Membro/Líder usam sino no cabeçalho em lugar do item lateral: contagem pelo `total` de `GET /me/notifications?unreadOnly=true`, consulta a cada minuto e ao abrir. Dropdown reutiliza a central com filtro, páginas de 20, mensagens completas, análise expansível e leitura explícita; leitura atualiza a contagem. Escape devolve foco ao sino; clique fora/saída do foco fecha. “Ver todas as notificações” e intenção nativa abrem a central completa. Nenhum novo contrato ou ACK de recebimento no React; administrador mantém navegação existente.
+
 - Coordenadores e `SystemAdmin` editam tolerância/automação e agendas **globais** com horário, finalidade, mensagem e versão. Conflito exige atualizar o registro; a tela informa o alcance de todas as organizações. Salvar não significa disparar.
 - Envio manual administra uma pessoa associada à conta ou todos os destinatários elegíveis da organização. Prévia resolve quantidade, datas e corte no servidor; o processamento terá seu próprio corte. Editar destinatário/mensagem/período invalida a confirmação.
 - `requestId` é conservado após resposta incerta; repetir a mesma solicitação usa a mesma identidade, sem criar envio silencioso extra. O servidor revalida autorização e conteúdo e aplica seus limites de frequência.

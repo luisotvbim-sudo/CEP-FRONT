@@ -6,7 +6,15 @@ import { Empty, Loading, PageHeading, Pagination, QueryError } from '../admin/ui
 import { useAction, useQuery } from '../hooks/async'
 import { FormNotice } from '../components/FormNotice'
 
-export function Inbox({ api }: { api: NotificationApi }) {
+export function Inbox({
+  api,
+  compact = false,
+  onRead,
+}: {
+  api: NotificationApi
+  compact?: boolean
+  onRead?(): void
+}) {
   const [page, setPage] = useState(1)
   const [unread, setUnread] = useState(true)
   const result = useQuery(() => api.inbox(page, unread), [api, page, unread])
@@ -36,15 +44,21 @@ export function Inbox({ api }: { api: NotificationApi }) {
   }, [result.reload])
   return (
     <>
-      <PageHeading
-        title="Minhas notificações"
-        description="Mensagens e análises no horário original. Avisos recuperados depois de uma desconexão não representam uma conferência atual."
-        action={
-          <button className="secondary-button" onClick={result.reload}>
-            Atualizar
-          </button>
-        }
-      />
+      {compact ? (
+        <button className="secondary-button" onClick={result.reload}>
+          Atualizar notificações
+        </button>
+      ) : (
+        <PageHeading
+          title="Minhas notificações"
+          description="Mensagens e análises no horário original. Avisos recuperados depois de uma desconexão não representam uma conferência atual."
+          action={
+            <button className="secondary-button" onClick={result.reload}>
+              Atualizar
+            </button>
+          }
+        />
+      )}
       <section className="admin-panel">
         <label className="notification-check">
           <input
@@ -89,6 +103,7 @@ export function Inbox({ api }: { api: NotificationApi }) {
                         void action.run(async () => {
                           await api.read(row.id)
                           result.reload()
+                          onRead?.()
                         })
                       }
                     >
