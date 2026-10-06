@@ -1,6 +1,6 @@
 import type { AuthClient, AuthError } from '../auth/auth-client'
 import type { AdminApi } from '../admin/api'
-import { date, duration, timestamp } from '../admin/format'
+import { date, duration, mondayDifference, timestamp } from '../admin/format'
 import { Loading, PageHeading } from '../admin/ui'
 import { periodLabels } from '../notifications/api'
 import { overviewApi, type OverviewPeriod, type OverviewStatus } from './overview-api'
@@ -53,6 +53,7 @@ export function PersonalOverview({
   const value = query.data?.period === query.period ? query.data : undefined
   const message = value && messages[value.status]
   const analysis = value?.analysis
+  const difference = mondayDifference(analysis?.deltaSeconds)
   const selectedPeriod = value?.periods?.find((item) => item.period === query.period)
   return (
     <>
@@ -142,8 +143,8 @@ export function PersonalOverview({
                   <dd>{duration(analysis.mondaySeconds)}</dd>
                 </div>
                 <div>
-                  <dt>Diferença Monday − VR</dt>
-                  <dd>{duration(analysis.deltaSeconds)}</dd>
+                  <dt>{difference.label}</dt>
+                  <dd>{difference.duration}</dd>
                 </div>
               </dl>
             )}

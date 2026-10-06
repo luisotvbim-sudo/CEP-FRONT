@@ -20,7 +20,12 @@ for (const [status, title] of [
     await expect(page.getByText(/Conferido até/)).toBeVisible()
     expect(calls.filter((call) => call.path.includes('/overview')).length).toBe(1)
     if (status === 'incomplete') {
-      await expect(page.locator('.overview-metrics').getByText('Indisponível')).toHaveCount(3)
+      await expect(page.locator('.overview-metrics').getByText('Indisponível', { exact: true })).toHaveCount(3)
+      await expect(page.locator('.overview-metrics').getByText('Diferença indisponível')).toBeVisible()
+    } else if (status === 'difference') {
+      await expect(page.locator('.overview-metrics').getByText('Faltando no Monday')).toBeVisible()
+    } else if (status === 'regular') {
+      await expect(page.locator('.overview-metrics').getByText('Sem diferença')).toBeVisible()
     }
     await expect(page.getByRole('region', { name: 'Histórico do período' })).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Dias que merecem atenção' })).toHaveCount(0)
@@ -36,6 +41,24 @@ for (const [status, title] of [
     await expect(page.locator('h1')).toHaveCount(1)
   })
 }
+
+test('positive Monday delta is shown as extra time relative to VR Mais', async ({ page }) => {
+  await fixture(page, { role: 'user' })
+  await expect(page.getByRole('heading', { name: 'Dentro da tolerância neste corte' })).toBeVisible()
+  const response = personalOverview('difference')
+  response.analysis = {
+    ...response.analysis!,
+    vrSeconds: 7200,
+    mondaySeconds: 10800,
+    deltaSeconds: 3600,
+  }
+  await page.route('**/me/time-control/overview?**', (route) =>
+    route.fulfill({ json: response }),
+  )
+  await page.getByRole('button', { name: 'Conferir agora' }).click()
+  const card = page.locator('.overview-metrics').getByText('Sobrando no Monday').locator('..')
+  await expect(card).toContainText('01:00')
+})
 
 test('failed refresh preserves previous cutoff and does not expose source internals', async ({
   page,
