@@ -5,6 +5,7 @@ web `main` `18aa262947d25f505d79501aa79aaa3f6680aa7b` com a auditoria Windows
 `32983a50414560a891f0adfa90d05c4d89e0faae` (PR #19), que incorpora a liberação
 v3 do PR #16. O merge local é `ee8ae12`. Releases 0.4.11/0.4.12 são imutáveis.
 Não confundir pacote gerado, draft, publicação, main, produção e versão instalada.
+Demanda transversal: [CEP-ORQUESTRADOR #23](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/23).
 
 ## Pacote e convite
 
@@ -64,8 +65,30 @@ gera MSI, kit TI, manifesto, assinatura e SHA256SUMS em diretório novo ignorado
 A privada permanece local, protegida, sem exportação/rotação. A mesma pública
 é validada contra ambos assemblies publicados antes da assinatura.
 
-Os resultados efetivamente executados e os hashes constarão em
-`docs/evidencias/beta-msi-0.4.13.json`. Logs de sessão/MSI/configurações privadas
+Fonte do payload: `aa5d05d46aa1fbc5fbfd1a742a9b20738d3f6d79`. Desktop e serviço
+publicados declaram `0.4.13+aa5d05d46aa1fbc5fbfd1a742a9b20738d3f6d79`.
+MSI: 99.315.505 bytes, SHA-256
+`a61e38ecb0b154f097f382bbcd929280b7599e1b730ac7e05a11a01c9a599742`.
+Kit TI: 163.622.451 bytes, SHA-256
+`370cdc4695c6b9af84e13872608048ba7136a771a99964512e0524cba83fff92`.
+
+Passaram lint, 100 unidades web, 220 testes browser desktop/mobile, 312 checks
+nativos de sessão/storage, suites Control (confiabilidade/recuperação/migração/
+hibernação), Updates (16 + 80 MSI + 4 preflight), build web, Desktop Debug,
+publish self-contained Desktop/Control Release, MSI e inspeção estrutural.
+Driver WPF/API descartável passou, incluindo loading/recuperação, bandeja,
+popup, notificações multipágina, refresh, DPAPI/restart, bridge e logout.
+O driver de falha de configuração inválida também passou.
+
+O MSI foi extraído sem instalar: 895 arquivos conferidos contra publish,
+dez assets web contra build atual e 402 arquivos de recuperação contra kit TI,
+sem divergências. RSA-PSS válido, mesma pública embutida nos dois assemblies e
+mesma identidade da 0.4.12. A extração WiX emitiu avisos de representação de
+tabelas de serviço/ACL; a inspeção do banco MSI verificou os registros originais.
+MSI permanece `Authenticode=NotSigned`.
+
+Os resultados e hashes estão na [evidência sanitizada](evidencias/beta-msi-0.4.13.json).
+Logs de sessão/MSI/configurações privadas
 não integram Git ou release. Nenhuma instalação, alteração de política,
 ação real de energia, logoff, reboot, deploy ou promoção latest ocorre neste
 trabalho de preparação.
