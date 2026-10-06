@@ -10,6 +10,7 @@ Contexto reescrito em 04/10/2026 após revisão do código. Comece por [CONTEXTO
 | Documento | Finalidade |
 |---|---|
 | [Contexto atual](CONTEXTO-ATUAL.md) | Funcionamento, arquitetura, sessão, escopos, bases e pendências para retomar |
+| [Beta MSI 0.4.13](beta-msi-0.4.13.md) | Integração web/auditoria, pacote, GitHub sem latest, dependência do convite e aceite do piloto Windows |
 | [Mapa e limpeza do Front](mapa-front-limpeza.md) | Auditoria de código e consumidores na base de testes, mudanças isoladas e candidatos preservados |
 | [Refatoração estrutural do Front](refatoracao-front.md) | Separação de responsabilidades, commits selecionáveis, checks e imagem aplicada somente nos Docker de teste |
 | [Revisão para publicação web](publicacao-web-2026-10-06.md) | Integração do PR #18, revisão de segurança/deploy e distinção entre preparação e publicação efetiva |

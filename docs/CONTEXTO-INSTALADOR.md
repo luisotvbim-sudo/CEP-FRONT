@@ -1,5 +1,11 @@
 # Contexto atual do instalador e aplicativo corporativo
 
+Preparação em 06/10/2026: [beta MSI 0.4.13](beta-msi-0.4.13.md), branch
+`codex/beta-msi-convite`, consolida a web main `18aa262` e a auditoria `32983a5`.
+Beta é atualização manual pela TI, prerelease no GitHub com `latest=false`.
+As referências 0.4.12 abaixo conservam o pacote anterior. Candidato gerado
+não comprova piloto instalado ou distribuição homologada à frota.
+
 Base corrente conferida em 06/10/2026: PR #16 e draft `installer-v0.4.12`, ambos
 em `b467c0a2571fdb8324f99d181934e21f6d785cfa`. A auditoria e as correções em
 `codex/installer-deep-cleanup` estão em

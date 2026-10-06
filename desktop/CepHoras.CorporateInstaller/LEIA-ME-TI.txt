@@ -1,11 +1,13 @@
 CEP HORAS 0.4 - INSTALACAO CORPORATIVA PELA TI
 
-PACOTE 0.4.12
+PACOTE 0.4.13 BETA
 Inclui Minha jornada, recuperacao da interface e atualizador MSI.
 O servico grava a intencao de energia antes de agendar no Windows. Apos crash,
 nao repete nem cancela automaticamente a acao anterior: o aplicativo identifica
 a solicitacao do titular e exige cancelamento explicito antes de continuar.
 Falha de disco ou estado invalido impede novas acoes ate revisao/recuperacao.
+Inclui a auditoria de sessao, manutencao, hibernacao/cancelamento e a interface
+web atual, com ativacao/recuperacao de senha de 6 a 200 caracteres.
 Testes automatizados nao substituem a homologacao do pacote instalado.
 Manifesto/assinatura do atualizador sao separados da assinatura Authenticode
 do editor Windows. Confira as evidencias entregues com este build.
@@ -75,13 +77,16 @@ firmware, reinicio critico do Windows ou GPO de dominio. A instalacao, aplicacao
 real de politica, acoes reais e desinstalacao precisam de homologacao da TI.
 
 ATUALIZACAO MSI
+- Esta versao beta e distribuida pela TI pelo download do GitHub. O atualizador
+  existente acompanha apenas releases/latest; prerelease beta nao e latest.
+  Durante o piloto, atualizacoes beta sao manuais e exigem administrador.
 - A versao 0.4.7 e o bootstrap e exige instalacao manual administrativa uma vez.
 - Versoes seguintes usam manifesto RSA-PSS/SHA256 assinado pela TI, validado
   novamente pelo servico local com chave publica embutida. Nenhum token do
   GitHub, chave privada ou senha administrativa e instalado nos clientes.
 - Atualizar agora inicia somente um MSI aprovado do canal fixo; Depois adia.
   A manutencao do update preserva as politicas e nao usa o fechamento diario.
-- Homologar a versao instalada para 0.4.12 com conta comum em VM/PC piloto
+- Homologar a versao instalada para 0.4.13 com conta comum em VM/PC piloto
   antes de publicar no canal estavel para a equipe.
 - Build sem manifesto e assinatura validos nao pertence ao canal automatico.
 - Publicacao, backup portatil da chave e recuperacao sao responsabilidades da TI.

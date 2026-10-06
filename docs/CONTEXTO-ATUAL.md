@@ -1,5 +1,11 @@
 # Contexto atual do CEP-FRONT
 
+Preparação beta 0.4.13 em 06/10/2026: [pacote e distribuição](beta-msi-0.4.13.md)
+consolidam interface main `18aa262` e auditoria Windows `32983a5`. Esta branch
+mantém senha 6–200 e a UI atual; `/download` aponta ao MSI beta 0.4.13 no GitHub.
+Publicar o draft deve preceder a implantação desse link. Piloto Windows e
+distribuição a 40 usuários são etapas distintas da geração do pacote.
+
 Mapa de manutenção e auditoria da base de testes: [limpeza do Front](mapa-front-limpeza.md). A fixture de acompanhamento pessoal fica em `tests/fixtures/overview.ts`; não é um módulo de execução do produto. Matrizes datadas abaixo são evidências históricas, e a auditoria identifica separadamente main, web de teste e desktop mock.
 
 Na branch de refatoração web, `AccountControls` apresenta a conta e `useLogout` controla a saída; `TeamHistory` mantém o histórico selecionado dentro da navegação de membro/líder. `HistoryFields` compartilha os campos de período/fonte; `useSynchronization` controla submissão e acompanhamento, enquanto `SyncPage` apresenta os modos pessoal/administrativo. `AdminApi` e `NotificationApi` dependem somente de `request`. Comportamento, contratos e estado de aplicação nos testes estão na [entrega da refatoração](refatoracao-front.md); essa estrutura não comprova integração à main ou ao desktop.
@@ -34,7 +40,7 @@ O instalador CEP Horas está neste repositório. O projeto separado CEP Hub/01-C
 
 | Área | Comportamento atual |
 |---|---|
-| Pública | Login, recuperação/redefinição, ativação de convite; `/download` apresenta o ZIP de teste sem autenticar/consultar a API |
+| Pública | Login, recuperação/redefinição, ativação de convite; `/download` apresenta o MSI beta 0.4.13 sem autenticar/consultar a API |
 | Coordenador (`organizationAdmin`) | Pessoas, associação/convite, sincronização, times/vínculos, histórico, usuários, auditoria, central própria, análises/erros, envio e configurações globais |
 | Membro (`user`) | Minha jornada, Meu histórico com botão de reprocessamento, sino/central pessoal e análises próprias |
 | Líder (`user` com vínculo `manager`) | Visão pessoal mais times geridos, histórico das pessoas visíveis e análises dos times |
@@ -107,4 +113,4 @@ Pendências de produto conservadas em RN/RF/CA/D: calendário e exceções, sobr
 
 Inspeção de código/contratos e consistência documental. Nenhum build, instalação, envio de e-mail/aviso, operação autenticada de produção ou ação de energia foi executado por esta limpeza. CI e testes históricos devem ser consultados no commit correspondente, sem reapresentá-los como resultados atuais.
 
-/download mantém somente título e card de download, sem seções de requisitos/passos/FAQ ou descrições complementares. O destino continua o ZIP de teste 0.2.0.1; simplificar a página não publica MSI nem atualizador.
+/download mantém somente título e card de download, sem seções de passos/FAQ. O card identifica MSI beta 0.4.13 e Windows 11 x64 Pro/Enterprise/Education 24H2+. Alterar o destino na branch não publica o MSI nem ativa canal do atualizador.
