@@ -21,15 +21,16 @@ export function SyncPage({ api, allowFull = true, embedded = false, onCompleted 
     useSynchronization(api, allowFull, onCompleted)
 
   if (embedded) {
+    const statusFor = (source: 'monday' | 'vrMais') => {
+      const item = batch?.sources?.find((entry) => entry.source === source)
+      const label = sourceLabel(source)
+      if (!item) return `${label}: sem resultado`
+      if (item.errorCode === 'monday_not_configured' || item.errorCode === 'vr_mais_not_configured') return `${label}: integração desabilitada`
+      return `${label}: ${syncLabels[item.status ?? ''] || 'Sem resultado'}`
+    }
     const message = running
       ? 'Reprocessando dados…'
-      : batch?.status === 'succeeded'
-        ? 'Dados atualizados.'
-        : batch?.status === 'partiallySucceeded'
-          ? 'Atualização parcial. Alguns dados não foram atualizados.'
-          : batch?.status === 'failed'
-            ? 'Não foi possível atualizar os dados. Tente novamente.'
-            : null
+      : batch ? `${statusFor('monday')} · ${statusFor('vrMais')}` : null
     return (
       <>
         <button
@@ -39,10 +40,10 @@ export function SyncPage({ api, allowFull = true, embedded = false, onCompleted 
           onClick={() => void start()}
         >
           <RefreshCw size={17} aria-hidden="true" className={running ? 'spin' : ''} />
-          {running ? 'Reprocessando dados…' : 'Reprocessar dados do Monday'}
+          {running ? 'Reprocessando dados…' : 'Revalidar Monday e VR Mais (20 dias)'}
         </button>
         <p id="history-reprocess-help" className="muted">
-          Use este botão sempre que editar registros no Monday para atualizar os dados no CEP.
+          Revalida os últimos 20 dias inclusivos das duas fontes. Confira o resultado de Monday e VR Mais abaixo.
         </p>
         <FormNotice error={error} />
         <QueryError error={pollError} retry={() => void refresh()} />
@@ -84,7 +85,7 @@ export function SyncPage({ api, allowFull = true, embedded = false, onCompleted 
               <span>Reprocessar até 90 dias e diretórios (carga administrativa)</span>
             </label>
           ) : null}
-          {(!allowFull || !full) && <p className="muted">Atualiza os últimos 17 dias, incluindo hoje.</p>}
+          {(!allowFull || !full) && <p className="muted">Atualiza Monday e VR Mais nos últimos 20 dias inclusivos, incluindo hoje.</p>}
         </div>
         <button
           className="primary-button compact"
@@ -92,7 +93,7 @@ export function SyncPage({ api, allowFull = true, embedded = false, onCompleted 
           onClick={() => void start()}
         >
           <RefreshCw size={17} className={running ? 'spin' : ''} />
-          {running ? 'Coleta em andamento…' : allowFull && full ? 'Reprocessar até 90 dias' : 'Atualizar sprint'}
+          {running ? 'Coleta em andamento…' : allowFull && full ? 'Reprocessar até 90 dias' : 'Atualizar últimos 20 dias'}
         </button>
       </div>
       <FormNotice error={error} />

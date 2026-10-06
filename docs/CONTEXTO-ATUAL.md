@@ -13,9 +13,9 @@ Na branch de refatoração web, `AccountControls` apresenta a conta e `useLogout
 
 Membro/Líder acessam avisos pessoais pelo sino no cabeçalho, com contagem de não lidas e dropdown paginado. “Ver meus avisos” abre o dropdown; a central completa e o destino nativo continuam disponíveis. Abrir/expandir não marca leitura nem recebimento. Administração conserva sua navegação atual. Ver [notificações](notificacoes-implementacao.md).
 
-Membro/Líder usam o botão “Reprocessar dados do Monday” em Meu histórico, com a orientação “Use este botão sempre que editar registros no Monday para atualizar os dados no CEP.” O bloco pessoal mostra somente o botão, a orientação e feedback acessível de andamento, conclusão/resultado parcial ou erro, sem painéis técnicos por fonte. A operação normal continua consultando Monday e VR Mais por 17 dias; o rótulo não restringe a API ao Monday. Sucesso total ou parcial recarrega o histórico com os filtros atuais, sem repetir a submissão. Coordenador conserva a tela administrativa e opção de até 90 dias.
+Membro/Líder usam “Revalidar Monday e VR Mais (20 dias)” em Meu histórico. O bloco pessoal mostra o botão, a orientação e o estado de cada fonte, sem painéis técnicos. Uma fonte concluída recarrega a lista de pessoas e o histórico com os filtros atuais, sem repetir a submissão. A operação normal de 20 dias inclusivos e o acesso à própria associação sem time vigente dependem da API #27. Coordenador conserva a tela administrativa e opção de até 90 dias.
 
-Sincronização normal: botão administrativo “Atualizar sprint” e botão pessoal “Reprocessar dados do Monday”, janela móvel de 17 dias incluindo hoje, dependente da API com essa política. O nome do botão não muda os períodos oficiais de análise da sprint (1–14/15–fim do mês); reprocessamento administrativo permanece até 90 dias.
+Sincronização normal: botão administrativo “Atualizar últimos 20 dias” e botão pessoal “Revalidar Monday e VR Mais (20 dias)”, janela móvel de hoje e 19 dias anteriores, dependente da API #27. A janela de coleta não muda os períodos oficiais de análise da sprint (1–14/15–fim do mês); reprocessamento administrativo permanece até 90 dias.
 
 Detalhe de registro Monday: somente Início/Fim, origem informada Manual/Cronômetro e link da atividade quando disponível. Título, duração e estado continuam fora do detalhe; VR mostra apenas horários conhecidos/batidas informadas, link e origem explícita, sem metadados complementares nem pareamento inferido. Ausência de flags de origem não permite inferir cronômetro. Ver [histórico diário](historico-diario.md).
 
@@ -47,7 +47,7 @@ O instalador CEP Horas está neste repositório. O projeto separado CEP Hub/01-C
 | Líder (`user` com vínculo `manager`) | Visão pessoal mais times geridos, histórico das pessoas visíveis e análises dos times |
 | Administrador técnico (`systemAdmin`) | Organizações, configurações globais e central própria; seleciona organização para operações de pessoas/envio/histórico/administração |
 
-Vínculos considerados pela autorização são os vigentes hoje em times ativos, inclusive ao consultar registros antigos. Usuário sem vínculo ativo pode não receber pessoa/histórico mesmo tendo associação. Não interpretar esse vazio como zero horas ou inventar atribuição histórica dos registros ao time. A política pós-transferência continua parcialmente pendente na especificação.
+Vínculos considerados pela autorização de colegas são os vigentes hoje em times ativos, inclusive ao consultar registros antigos. A própria pessoa associada poderá ler sua pessoa/histórico sem vínculo ativo após API #27. Não interpretar ausência de associação ou registros como zero horas nem inventar atribuição histórica ao time. A política pós-transferência continua parcialmente pendente na especificação.
 
 ## Sessão e transporte
 
@@ -65,7 +65,7 @@ Desde a entrega em branch de 05/10/2026, Minha jornada usa [acompanhamento pesso
 
 Diretórios Monday/VR são paginados no backend; a interface escolhe IDs internos ativos e ainda não associados. Correspondência por e-mail exato/único é sugestão, exige confirmação humana. Nomes iguais não criam associação automática. Associar/convidar enfileira e-mail, sem provar entrega.
 
-Atualização normal reavalia hoje e os 16 dias anteriores; reprocessamento completo/carga inicial administrativa cobre até 90 dias. Não é delta puro por cursor. Fontes apresentam tentativa, resultado, contagens/cobertura e falhas independentes; última tentativa não significa último sucesso. Membro/Líder não recebem a opção de reprocessamento administrativo, e sua última tentativa é a que solicitaram.
+Atualização normal reavalia hoje e os 19 dias anteriores após API #27; reprocessamento completo/carga inicial administrativa cobre até 90 dias. Não é delta puro por cursor. Fontes apresentam tentativa, resultado, contagens/cobertura e falhas independentes; última tentativa não significa último sucesso. Membro/Líder não recebem a opção de reprocessamento administrativo, e sua última tentativa é a que solicitaram.
 
 `GET /organization/time-control/history` aceita até 90 dias inclusivos e retorna registros mais resumos diários da API. `DailyHistory`/`history-data.ts` agrupam/apresentam, sem calcular totais. Filtro de fonte restringe detalhes/dias encontrados; resumo de cada dia usa ambas as identidades. Datas civis preservam o dia da API; instantes usam São Paulo e durações mantêm segundos/sinal, inclusive acima de 24h.
 

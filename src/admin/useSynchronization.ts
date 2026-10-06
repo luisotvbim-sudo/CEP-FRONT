@@ -13,13 +13,13 @@ export function useSynchronization(
   const [full, setFull] = useState(false)
   const [error, setError] = useState<AuthError | null>(null)
   const [pollError, setPollError] = useState<AuthError | null>(null)
-  const requestedBatch = useRef(false)
+  const notifiedBatch = useRef<string | undefined>(undefined)
   const completion = useRef(onCompleted)
   useEffect(() => { completion.current = onCompleted }, [onCompleted])
   useEffect(() => {
-    if (!requestedBatch.current || !batch || batch.status === 'running') return
-    requestedBatch.current = false
-    if (batch.status === 'succeeded' || batch.status === 'partiallySucceeded') completion.current?.()
+    if (!batch?.id || batch.status === 'running' || batch.id === notifiedBatch.current) return
+    notifiedBatch.current = batch.id
+    if (batch.sources?.some((source) => source.status === 'succeeded' || source.status === 'partiallySucceeded')) completion.current?.()
   }, [batch])
   const active = useRef(true)
   const inFlight = useRef(false)
@@ -81,7 +81,6 @@ export function useSynchronization(
     batchId.current = undefined
     try {
       const result = await api.synchronize(allowFull && full)
-      requestedBatch.current = true
       revision.current++
       previousBatch.current = undefined
       if (active.current) {

@@ -4,8 +4,8 @@ import { useAction } from '../hooks/async'
 import type { AdminApi, History, Source } from './api'
 import { today, validatePeriod } from './format'
 
-export function useHistory(api: AdminApi) {
-  const [from, setFrom] = useState(() => `${today().slice(0, 7)}-01`)
+export function useHistory(api: AdminApi, initialFrom?: string) {
+  const [from, setFrom] = useState(() => initialFrom ?? `${today().slice(0, 7)}-01`)
   const [to, setTo] = useState(today)
   const [source, setSource] = useState<Source | ''>('')
   const [result, setResult] = useState<History | null>(null)

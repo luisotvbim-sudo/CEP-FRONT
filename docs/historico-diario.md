@@ -1,6 +1,6 @@
 # Histórico diário — contrato e apresentação
 
-Membro/Líder usam o botão “Reprocessar dados do Monday” em Meu histórico, com a orientação “Use este botão sempre que editar registros no Monday para atualizar os dados no CEP.” O bloco pessoal mostra somente o botão, a orientação e feedback acessível de andamento, conclusão/resultado parcial ou erro, sem painéis técnicos por fonte. A operação normal continua consultando Monday e VR Mais por 17 dias; o rótulo não restringe a API ao Monday. Sucesso total ou parcial recarrega o histórico com os filtros atuais, sem repetir a submissão. Coordenador conserva a tela administrativa e opção de até 90 dias.
+Membro/Líder usam “Revalidar Monday e VR Mais (20 dias)” em Meu histórico. O bloco pessoal mostra estado separado por fonte, sem painéis técnicos. Após sucesso de uma fonte, a lista de pessoas e o histórico são recarregados; ausência de associação ou registros não significa zero horas. A janela normal de 20 dias inclusivos e o acesso pessoal sem time vigente dependem da API #27. Coordenador conserva a opção administrativa de até 90 dias.
 
 Revisado em 04/10/2026, Front `eb63dbd` e API `b36c6e1`. Histórico administrativo, próprio e de pessoa dos times compartilham `DailyHistory`, `useHistory` e `history-data.ts`. Ver [contexto](CONTEXTO-ATUAL.md) e [compatibilidade](compatibilidade-backend.md).
 

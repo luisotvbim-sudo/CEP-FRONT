@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react'
 import type { AdminApi, Person } from '../admin/api'
 import { DailyHistory } from '../admin/DailyHistory'
 import { useHistory } from '../admin/useHistory'
-import { date, timestamp } from '../admin/format'
+import { date, daysBeforeToday, timestamp } from '../admin/format'
 import { Empty, Loading, PageHeading } from '../admin/ui'
 import { FormNotice } from '../components/FormNotice'
 
@@ -32,14 +32,17 @@ export function HistoryView({
     action,
     changed: change,
     submit,
-  } = useHistory(api)
-  const seenRevision = useRef(refreshRevision)
+  } = useHistory(api, nested ? undefined : daysBeforeToday(19))
+  const seenRevision = useRef(0)
+  const submitRef = useRef(submit)
+  submitRef.current = submit
   useEffect(() => {
-    if (seenRevision.current === refreshRevision || action.pending) return
-    seenRevision.current = refreshRevision
-    if (person.id) submit(person.id)
-    // Use the current filters when a completed synchronization invalidates history.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (refreshRevision === 0 || seenRevision.current === refreshRevision || action.pending || !person.id) return
+    const timer = setTimeout(() => {
+      seenRevision.current = refreshRevision
+      submitRef.current(person.id)
+    }, 0)
+    return () => clearTimeout(timer)
   }, [refreshRevision, action.pending, person.id])
   const entry = result?.people?.find((value) => value.workforcePersonId === person.id)
   const records = entry?.records ?? []
@@ -77,7 +80,7 @@ export function HistoryView({
             </HistoryFields>
           </fieldset>
           <p className="muted">
-            Até 90 dias inclusivos. A atualização normal recarrega somente os últimos 17 dias.
+            Até 90 dias inclusivos para consulta. A revalidação pessoal coleta os últimos 20 dias inclusivos.
           </p>
           <FormNotice error={validation || action.error} />
         </form>
