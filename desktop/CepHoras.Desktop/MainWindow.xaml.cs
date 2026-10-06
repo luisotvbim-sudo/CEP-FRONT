@@ -53,7 +53,7 @@ public partial class MainWindow : Window
     {
         this.forceVisibleAfterRecovery = forceVisibleAfterRecovery;
         InitializeComponent();
-        if (DesktopTestEnvironment.Enabled) { Title = "CEP Horas · TESTE · energia simulada"; ReloadInterfaceButton.Content = "TESTE · API local · energia simulada · Recarregar interface"; }
+        if (DesktopTestEnvironment.Enabled) { Title = "CEP Horas Â· TESTE Â· energia simulada"; ReloadInterfaceButton.Content = "TESTE Â· API local Â· energia simulada Â· Recarregar interface"; }
         Loaded += Initialize;
         SystemEvents.PowerModeChanged += OnPowerModeChanged;
         System.Windows.Application.Current.SessionEnding += OnSessionEnding;
@@ -146,10 +146,10 @@ public partial class MainWindow : Window
         {
             WriteWebViewDiagnostic("initialization-failed", error.GetType().Name);
             FailWebView(browserCreationUnconfirmed
-                ? "O navegador não confirmou a inicialização. Abra o aplicativo novamente ou solicite suporte à TI."
+                ? "O navegador nÃ£o confirmou a inicializaÃ§Ã£o. Abra o aplicativo novamente ou solicite suporte Ã  TI."
                 : hostSetupReady
-                ? "Não foi possível iniciar a interface do CEP Horas."
-                : "Não foi possível preparar o CEP Horas. Confira a instalação e a configuração da API e abra o aplicativo novamente.",
+                ? "NÃ£o foi possÃ­vel iniciar a interface do CEP Horas."
+                : "NÃ£o foi possÃ­vel preparar o CEP Horas. Confira a instalaÃ§Ã£o e a configuraÃ§Ã£o da API e abra o aplicativo novamente.",
                 hostSetupReady ? "initialization-failed" : "host-initialization-failed", hostSetupReady && !browserCreationUnconfirmed);
         }
     }
@@ -224,7 +224,7 @@ public partial class MainWindow : Window
             var payload = root.GetProperty("payload");
             if (type == "cep-power")
             {
-                if (!managedInstallation || power is null) throw new PowerBridgeFailure("native_power_unavailable");
+                if ((!managedInstallation && !DesktopTestEnvironment.Enabled) || power is null) throw new PowerBridgeFailure("native_power_unavailable");
                 var powerResult = await power.Execute(operation, payload);
                 Respond(new { id, ok = true, result = powerResult });
                 return;
@@ -252,10 +252,10 @@ public partial class MainWindow : Window
         };
         tray.ContextMenuStrip.Items.Add("Abrir CEP Horas", null, (_, _) => OpenWindow(false));
         tray.ContextMenuStrip.Items.Add("Recarregar interface", null, async (_, _) => { OpenWindow(false); await ReloadWebView(); });
-        tray.ContextMenuStrip.Items.Add("Minhas notificações", null, (_, _) => OpenWindow(true));
-        tray.ContextMenuStrip.Items.Add("Testar notificação", null, (_, _) => ShowTestNotification());
+        tray.ContextMenuStrip.Items.Add("Minhas notificaÃ§Ãµes", null, (_, _) => OpenWindow(true));
+        tray.ContextMenuStrip.Items.Add("Testar notificaÃ§Ã£o", null, (_, _) => ShowTestNotification());
         if (managedInstallation)
-            tray.ContextMenuStrip.Items.Add("Verificar atualizações", null, async (_, _) =>
+            tray.ContextMenuStrip.Items.Add("Verificar atualizaÃ§Ãµes", null, async (_, _) =>
             {
                 OpenWindow(false);
                 await CheckMsiUpdates();
@@ -327,17 +327,20 @@ public partial class MainWindow : Window
         if (closed || tray is null) return;
         Dispatcher.Invoke(() => tray.ShowBalloonTip(
             15_000,
-            "CEP Horas — atenção da TI",
-            "A proteção de energia do Windows não pôde ser reativada. Mantenha o CEP Horas aberto e solicite suporte à TI.",
+            "CEP Horas â€” atenÃ§Ã£o da TI",
+            "A proteÃ§Ã£o de energia do Windows nÃ£o pÃ´de ser reativada. Mantenha o CEP Horas aberto e solicite suporte Ã  TI.",
             System.Windows.Forms.ToolTipIcon.Warning));
     }
 
     private async Task RequestProtectedExit()
     {
         if (closingWithPassword || closed || installingUpdate || restartingInterface) return;
-        var dialog = new ClosePasswordDialog();
-        if (IsVisible) dialog.Owner = this;
-        if (dialog.ShowDialog() != true) return;
+        if (!DesktopTestEnvironment.Enabled)
+        {
+            var dialog = new ClosePasswordDialog();
+            if (IsVisible) dialog.Owner = this;
+            if (dialog.ShowDialog() != true) return;
+        }
 
         closingWithPassword = true;
         try
@@ -347,7 +350,7 @@ public partial class MainWindow : Window
             {
                 var response = await ControlClient.Send(new ControlRequest("desktop-suspend"));
                 if (response.Code != "desktop_suspended")
-                    throw new InvalidOperationException("O serviço não autorizou o fechamento.");
+                    throw new InvalidOperationException("O serviÃ§o nÃ£o autorizou o fechamento.");
                 WindowsPolicyNotification.NotifyShell();
             }
             exiting = true;
@@ -356,10 +359,10 @@ public partial class MainWindow : Window
         catch
         {
             if (IsVisible)
-                System.Windows.MessageBox.Show(this, "Não foi possível autorizar o fechamento. Tente novamente ou solicite suporte à TI.",
+                System.Windows.MessageBox.Show(this, "NÃ£o foi possÃ­vel autorizar o fechamento. Tente novamente ou solicite suporte Ã  TI.",
                     "CEP Horas", MessageBoxButton.OK, MessageBoxImage.Error);
             else
-                System.Windows.MessageBox.Show("Não foi possível autorizar o fechamento. Tente novamente ou solicite suporte à TI.",
+                System.Windows.MessageBox.Show("NÃ£o foi possÃ­vel autorizar o fechamento. Tente novamente ou solicite suporte Ã  TI.",
                     "CEP Horas", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally { closingWithPassword = false; }
@@ -370,7 +373,7 @@ public partial class MainWindow : Window
         if (closed || tray is null) return;
         updatePopup = false;
         testPopup = false;
-        tray?.ShowBalloonTip(10_000, "CEP Horas", $"Você tem {count} nova(s) notificação(ões). Abra a central para conferir as mensagens e seus horários originais.", System.Windows.Forms.ToolTipIcon.Info);
+        tray?.ShowBalloonTip(10_000, "CEP Horas", $"VocÃª tem {count} nova(s) notificaÃ§Ã£o(Ãµes). Abra a central para conferir as mensagens e seus horÃ¡rios originais.", System.Windows.Forms.ToolTipIcon.Info);
         RecordNativeEvent("notification-summary-requested");
     }
 
@@ -379,8 +382,8 @@ public partial class MainWindow : Window
         if (closed || tray is null) return;
         updatePopup = false;
         testPopup = true;
-        tray.ShowBalloonTip(10_000, "CEP Horas · teste de notificação",
-            "Este é um teste local do aviso do Windows. Nenhuma mensagem foi enviada a outras pessoas. Clique para abrir o CEP Horas.",
+        tray.ShowBalloonTip(10_000, "CEP Horas Â· teste de notificaÃ§Ã£o",
+            "Este Ã© um teste local do aviso do Windows. Nenhuma mensagem foi enviada a outras pessoas. Clique para abrir o CEP Horas.",
             System.Windows.Forms.ToolTipIcon.Info);
         RecordNativeEvent("test-popup-requested");
     }
@@ -416,12 +419,12 @@ public partial class MainWindow : Window
             var release = await updates.CheckAsync(installed, lifetime.Token);
             if (closed || installingUpdate || release is null || release.Version == dismissedUpdate) return;
             availableUpdate = release;
-            UpdateMessage.Text = $"CEP Horas {release.Version} disponível. Você pode atualizar agora ou continuar trabalhando.";
+            UpdateMessage.Text = $"CEP Horas {release.Version} disponÃ­vel. VocÃª pode atualizar agora ou continuar trabalhando.";
             UpdateNowButton.IsEnabled = true;
             UpdateBanner.Visibility = Visibility.Visible;
         }
         catch (OperationCanceledException) when (closed) { }
-        catch { /* A falta de conexão com o GitHub não impede o uso do aplicativo. */ }
+        catch { /* A falta de conexÃ£o com o GitHub nÃ£o impede o uso do aplicativo. */ }
         finally { checkingForUpdates = false; }
     }
 
@@ -436,19 +439,19 @@ public partial class MainWindow : Window
         installingUpdate = true;
         UpdateNowButton.IsEnabled = false;
         UpdateLaterButton.IsEnabled = false;
-        UpdateMessage.Text = "Baixando e verificando a atualização…";
+        UpdateMessage.Text = "Baixando e verificando a atualizaÃ§Ã£oâ€¦";
         try
         {
             var package = await updates.DownloadAsync(availableUpdate,
                 Path.Combine(AppContext.BaseDirectory, "AppxManifest.xml"), lifetime.Token);
             if (closed) return;
             Process.Start(new ProcessStartInfo(package) { UseShellExecute = true });
-            UpdateMessage.Text = "O instalador do Windows foi aberto. Confirme a atualização e feche o CEP Horas se solicitado.";
+            UpdateMessage.Text = "O instalador do Windows foi aberto. Confirme a atualizaÃ§Ã£o e feche o CEP Horas se solicitado.";
         }
         catch (OperationCanceledException) when (closed) { }
         catch
         {
-            UpdateMessage.Text = "Não foi possível abrir a atualização. Tente novamente mais tarde.";
+            UpdateMessage.Text = "NÃ£o foi possÃ­vel abrir a atualizaÃ§Ã£o. Tente novamente mais tarde.";
         }
         finally
         {
