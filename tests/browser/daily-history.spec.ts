@@ -114,6 +114,11 @@ test('daily history groups sources, expands with keyboard, preserves seconds and
   const vr = page.getByRole('region', { name: 'VR Mais em 01/09/2026', exact: true })
   await vr.getByText('Detalhes do registro').click()
   await expect(vr.getByText('Batidas informadas: 08:00 · 12:00 · 13:00 · 18:03')).toBeVisible()
+  await expect(vr.getByText('Importado em', { exact: true })).toHaveCount(0)
+  await expect(vr.getByText('Referência externa', { exact: true })).toHaveCount(0)
+  await expect(vr.getByText('Início', { exact: true })).toHaveCount(0)
+  await expect(vr.getByText('Fim', { exact: true })).toHaveCount(0)
+  await expect(vr.getByText('Cronômetro', { exact: true })).toHaveCount(0)
   expect(
     (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze())
       .violations,

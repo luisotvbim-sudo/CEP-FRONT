@@ -1,6 +1,6 @@
 # Contexto atual do CEP-FRONT
 
-Detalhe de registro Monday: somente Início/Fim, origem informada Manual/Cronômetro e link da atividade quando disponível. Título, duração e estado continuam fora do detalhe; VR permanece com a apresentação existente. Ausência de flags de origem não permite inferir cronômetro. Ver [histórico diário](historico-diario.md).
+Detalhe de registro Monday: somente Início/Fim, origem informada Manual/Cronômetro e link da atividade quando disponível. Título, duração e estado continuam fora do detalhe; VR mostra apenas horários conhecidos/batidas informadas, link e origem explícita, sem metadados complementares nem pareamento inferido. Ausência de flags de origem não permite inferir cronômetro. Ver [histórico diário](historico-diario.md).
 
 Política de senha em 05/10/2026: formulários de ativação e recuperação e mensagens permitem mínimo de 6 e máximo de 200 caracteres. Requer API com a regra atualizada antes da publicação do cliente; sem mudanças nas rotas/allowlist. Código e builds não comprovam publicação web ou versão Windows instalada.
 

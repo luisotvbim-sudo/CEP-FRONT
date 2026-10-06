@@ -18,15 +18,19 @@ export function RecordDetails({ record }: { record: TimeRecord }) {
     <details className={monday ? 'record-details monday-record-details' : 'record-details'}>
       <summary>Detalhes do registro</summary>
       <dl>
-        <div>
-          <dt>Início</dt>
-          <dd>{timestamp(record.startedAt)}</dd>
-        </div>
-        <div>
-          <dt>Fim</dt>
-          <dd>{timestamp(record.endedAt)}</dd>
-        </div>
-        {monday ? (
+        {(monday || record.startedAt) && (
+          <div>
+            <dt>Início</dt>
+            <dd>{timestamp(record.startedAt)}</dd>
+          </div>
+        )}
+        {(monday || record.endedAt) && (
+          <div>
+            <dt>Fim</dt>
+            <dd>{timestamp(record.endedAt)}</dd>
+          </div>
+        )}
+        {monday && (
           <div>
             <dt>Origem</dt>
             <dd>
@@ -37,22 +41,13 @@ export function RecordDetails({ record }: { record: TimeRecord }) {
                   : 'Indisponível'}
             </dd>
           </div>
-        ) : (
-          <>
-            <div>
-              <dt>Importado em</dt>
-              <dd>{timestamp(record.lastSyncedAt)}</dd>
-            </div>
-            <div>
-              <dt>Referência externa</dt>
-              <dd>{record.externalKey || 'Indisponível'}</dd>
-            </div>
-          </>
         )}
       </dl>
       {!monday && cards.length > 0 && <p>Batidas informadas: {cards.join(' · ')}</p>}
       {!monday && details.manual && <p>Lançamento manual informado pela fonte.</p>}
-      {!monday && details.running && <p>Cronômetro em andamento; duração provisória.</p>}
+      {!monday && !record.startedAt && !record.endedAt && cards.length === 0 && (
+        <p>Horários indisponíveis.</p>
+      )}
       {url && (
         <a href={url} target="_blank" rel="noopener noreferrer">
           Abrir atividade <ExternalLink size={13} />
