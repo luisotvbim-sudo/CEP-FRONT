@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
-import { fixture } from './admin-fixture'
+import { fixture, ids } from './admin-fixture'
 import { personalOverview } from '../fixtures/overview'
 
 for (const [status, title] of [
@@ -93,9 +93,50 @@ test('rapid period selection reads only the last choice and logout removes perso
     .poll(() => calls.filter((call) => call.path.includes('overview?period=sprint')).length)
     .toBe(1)
   expect(calls.filter((call) => call.path.includes('overview?period=weekly'))).toHaveLength(0)
+  await expect
+    .poll(() => calls.filter((call) => call.path.includes('/history?from=2026-09-15')).length)
+    .toBe(1)
   await page.getByRole('button', { name: 'Sair da conta' }).click()
   await expect(page.getByRole('button', { name: 'Entrar na minha conta' })).toBeVisible()
   await expect(page.getByText('Dentro da tolerância neste corte')).toHaveCount(0)
+  await expect(page.getByRole('region', { name: 'Histórico do período' })).toHaveCount(0)
+})
+
+test('my journey shows both sources from the selected official period', async ({ page }) => {
+  const calls = await fixture(page, { role: 'user' })
+  await page.getByLabel('Período oficial').selectOption('previousDay')
+  const history = page.getByRole('region', { name: 'Histórico do período' })
+  await expect(history).toContainText('20/09/2026 a 20/09/2026')
+  await expect(history.getByRole('button', { name: 'Expandir dia 20/09/2026' })).toBeVisible()
+  await history.getByRole('button', { name: 'Expandir dia 20/09/2026' }).click()
+  await expect(history.getByRole('heading', { name: 'Monday' })).toBeVisible()
+  await expect(history.getByRole('heading', { name: 'VR Mais' })).toBeVisible()
+  expect(
+    calls.some(
+      ({ path }) =>
+        path.includes('/history?from=2026-09-20&to=2026-09-20') &&
+        path.includes(`workforcePersonId=${ids.person}`),
+    ),
+  ).toBe(true)
+})
+
+test('history failure offers retry without hiding the live overview', async ({ page }) => {
+  await fixture(page, { role: 'user' })
+  const history = page.getByRole('region', { name: 'Histórico do período' })
+  await expect(history.getByRole('button', { name: 'Expandir dia 20/09/2026' })).toBeVisible()
+  let attempts = 0
+  await page.route('**/organization/time-control/history?**', (route) => {
+    attempts++
+    return attempts === 1
+      ? route.fulfill({ status: 503, json: { code: 'history_unavailable' } })
+      : route.fallback()
+  })
+  await page.getByLabel('Período oficial').selectOption('previousDay')
+  await expect(history.getByRole('button', { name: 'Tentar novamente' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Dentro da tolerância neste corte' })).toBeVisible()
+  await history.getByRole('button', { name: 'Tentar novamente' }).click()
+  await expect(history.getByRole('button', { name: 'Expandir dia 20/09/2026' })).toBeVisible()
+  expect(attempts).toBe(2)
 })
 
 test('personal overview fits 360 pixels and produces synthetic review captures', async ({

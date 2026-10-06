@@ -1,10 +1,12 @@
-import type { AuthClient } from '../auth/auth-client'
+import type { AuthClient, AuthError } from '../auth/auth-client'
+import type { AdminApi } from '../admin/api'
 import { date, duration, timestamp } from '../admin/format'
 import { Loading, PageHeading } from '../admin/ui'
 import { AnalysisDetails } from '../notifications/AnalysisDetails'
 import { periodLabels } from '../notifications/api'
 import { overviewApi, type OverviewPeriod, type OverviewStatus } from './overview-api'
 import { useOverview } from './useOverview'
+import { PersonalPeriodHistory } from './PersonalPeriodHistory'
 import './overview.css'
 
 const messages: Record<OverviewStatus, { title: string; detail: string }> = {
@@ -35,17 +37,28 @@ const messages: Record<OverviewStatus, { title: string; detail: string }> = {
 
 export function PersonalOverview({
   client,
+  historyApi,
+  personId,
+  associationPending,
+  associationError,
+  retryAssociation,
   onHistory,
   onNotifications,
 }: {
   client: AuthClient
+  historyApi: AdminApi
+  personId?: string | null
+  associationPending: boolean
+  associationError: AuthError | null
+  retryAssociation(): void
   onHistory(): void
   onNotifications(): void
 }) {
   const query = useOverview(overviewApi(client))
-  const value = query.data
+  const value = query.data?.period === query.period ? query.data : undefined
   const message = value && messages[value.status]
   const analysis = value?.analysis
+  const selectedPeriod = value?.periods?.find((item) => item.period === query.period)
   return (
     <>
       <PageHeading
@@ -218,6 +231,17 @@ export function PersonalOverview({
           anteriores conservam o corte original; ler um aviso não resolve uma ocorrência.
         </p>
       </section>
+      {selectedPeriod?.from && selectedPeriod.to && (
+        <PersonalPeriodHistory
+          api={historyApi}
+          personId={personId}
+          associationPending={associationPending}
+          associationError={associationError}
+          retryAssociation={retryAssociation}
+          from={selectedPeriod.from}
+          to={selectedPeriod.to}
+        />
+      )}
     </>
   )
 }
