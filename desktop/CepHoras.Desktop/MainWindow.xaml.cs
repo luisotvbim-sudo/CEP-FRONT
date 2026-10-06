@@ -40,6 +40,8 @@ public partial class MainWindow : Window
     private bool testPopup;
     private bool updatePopup;
     private System.Windows.Forms.NotifyIcon? tray;
+    private System.Drawing.Icon? trayIcon;
+    private Stream? trayIconStream;
     private readonly DispatcherTimer notificationTimer = new() { Interval = TimeSpan.FromSeconds(60) };
     private NotificationDelivery? notifications;
     private PowerBridgeHandler? power;
@@ -77,6 +79,8 @@ public partial class MainWindow : Window
             msiStatusTimer.Stop();
             webViewHealthTimer.Stop();
             tray?.Dispose();
+            trayIcon?.Dispose();
+            trayIconStream?.Dispose();
             Browser.Dispose();
             profileLease?.Dispose();
             session?.Dispose();

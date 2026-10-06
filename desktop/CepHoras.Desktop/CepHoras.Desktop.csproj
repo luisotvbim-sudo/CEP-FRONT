@@ -10,11 +10,13 @@
     <AssemblyName>CepHoras</AssemblyName>
     <RootNamespace>CepHoras.Desktop</RootNamespace>
     <Version>0.2.0</Version>
+    <ApplicationIcon>Assets\Conceito.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../CepHoras.Updates/CepHoras.Updates.csproj" />
     <ProjectReference Include="../CepHoras.Control.Protocol/CepHoras.Control.Protocol.csproj" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4191.47" />
+    <Resource Include="Assets\Conceito.ico" />
     <Content Include="../../dist/**/*" Link="wwwroot/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
   <Target Name="RequireFrontendBuild" BeforeTargets="BeforeBuild" Condition="!Exists('../../dist/index.html')">

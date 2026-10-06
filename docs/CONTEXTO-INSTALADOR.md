@@ -1,6 +1,8 @@
 # Contexto atual do instalador e aplicativo corporativo
 
-Na branch `codex/power-pin-bridge-error`, o candidato MSI 0.4.15 conserva a
+Na branch `codex/app-icon-windows`, o candidato MSI 0.4.16 acrescenta o
+[ícone nativo e atalho da área de trabalho](icone-windows-0.4.16.md).
+Na branch anterior `codex/power-pin-bridge-error`, o candidato MSI 0.4.15 conserva a
 matriz 0.4.14 e corrige o [envelope de erro do bridge](pin-admin-bridge-0.4.15.md).
 Na branch anterior `codex/windows10-compat`, o candidato MSI 0.4.14 amplia o preflight
 para Windows 10 22H2 x64 Pro/Enterprise/Education e preserva Windows 11 24H2+.
