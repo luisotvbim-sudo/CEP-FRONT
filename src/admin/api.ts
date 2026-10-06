@@ -20,7 +20,7 @@ export type History = Schema['WorkforceAdminHistoryResponse']
 const root = '/organization/time-control'
 export class AdminApi {
   constructor(
-    private readonly client: AuthClient,
+    private readonly client: Pick<AuthClient, 'request'>,
     private readonly organizationId?: string,
   ) {}
   private request<T>(method: 'GET' | 'POST' | 'PATCH', path: string, body?: object): Promise<T> {

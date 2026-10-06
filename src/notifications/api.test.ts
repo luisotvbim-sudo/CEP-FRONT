@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { AuthClient } from '../auth/auth-client'
 import { NotificationApi } from './api'
 
 describe('notification scoping and command safety', () => {
@@ -7,7 +6,7 @@ describe('notification scoping and command safety', () => {
     const request = vi.fn().mockResolvedValue({})
     return {
       request,
-      api: new NotificationApi({ request } as unknown as AuthClient, 'org-selected'),
+      api: new NotificationApi({ request }, 'org-selected'),
     }
   }
   it('never scopes global settings or schedules to the selected organization', async () => {
