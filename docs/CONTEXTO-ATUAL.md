@@ -1,5 +1,7 @@
 # Contexto atual do CEP-FRONT
 
+Detalhe de registro Monday: somente Início/Fim, origem informada Manual/Cronômetro e link da atividade quando disponível. Título, duração e estado continuam fora do detalhe; VR permanece com a apresentação existente. Ausência de flags de origem não permite inferir cronômetro. Ver [histórico diário](historico-diario.md).
+
 Política de senha em 05/10/2026: formulários de ativação e recuperação e mensagens permitem mínimo de 6 e máximo de 200 caracteres. Requer API com a regra atualizada antes da publicação do cliente; sem mudanças nas rotas/allowlist. Código e builds não comprovam publicação web ou versão Windows instalada.
 
 Continuidade em 05/10/2026: acompanhamento pessoal integrado à main `53d8e5be438e18b2c67e7bcff82f8806330ada8e`, API/main `ba07f772f3ed9914a80ef9dfa4543385a742ecea`. A branch `codex/instalador-pronto` integra essas mudanças ao serviço/atualizador e ao [pacote 0.4.11](instalador-0.4.11.md), com recuperação durável de energia. Matrizes antigas abaixo conservam a auditoria datada; conferir o registro desta entrega antes de assumir versão publicada ou instalada.

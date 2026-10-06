@@ -892,6 +892,7 @@
   gap: 6px;
   color: #bd611f;
 }
+.monday-record-details a { color: var(--orange-hover); }
 .record-details p {
   font-size: 10px;
 }
