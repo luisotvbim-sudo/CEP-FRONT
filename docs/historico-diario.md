@@ -4,6 +4,8 @@ Membro/Líder usam o botão “Reprocessar dados do Monday” em Meu histórico,
 
 Revisado em 04/10/2026, Front `eb63dbd` e API `b36c6e1`. Histórico administrativo, próprio e de pessoa dos times compartilham `DailyHistory`, `useHistory` e `history-data.ts`. Ver [contexto](CONTEXTO-ATUAL.md) e [compatibilidade](compatibilidade-backend.md).
 
+Na branch de [refatoração estrutural](refatoracao-front.md), `HistoryFields` também compartilha os campos de período/fonte, conservando os IDs específicos de cada tela. `TeamHistory` mantém seleção e histórico por pessoa fora do shell de navegação; `useSynchronization` concentra o controle do reprocessamento. Consultas, invalidação, escopo e apresentação dos resultados continuam conforme este contrato.
+
 ## Comportamento existente
 
 - Cada data com registros aparece inicialmente fechada, com Monday, VR e diferença Monday − VR retornados pela API, sinal e descrição.

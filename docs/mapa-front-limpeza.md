@@ -2,6 +2,8 @@
 
 Auditoria iniciada em 05/10 e concluída em 06/10/2026, America/Sao_Paulo. Este mapa descreve a base de testes `51b37ed6a3cde1f19e334c8c166e2062dca67e53` e a limpeza em `codex/front-deep-cleanup`. Não certifica a versão em produção ou instalada.
 
+A continuação separa conta/logout, histórico de time, campos de histórico, capacidades dos clientes e controle de sincronização. Commits, verificações posteriores e aplicação nos Docker de teste estão na [refatoração estrutural](refatoracao-front.md). As contagens de módulos e verificações abaixo descrevem a primeira auditoria.
+
 ## Bases que não devem ser confundidas
 
 | Base | Evidência e limite |
