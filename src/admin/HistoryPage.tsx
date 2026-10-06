@@ -1,10 +1,11 @@
+import { HistoryFields } from './HistoryFields'
 import { useQuery } from '../hooks/async'
 import { useState } from 'react'
 import { Search } from 'lucide-react'
 import { DailyHistory } from './DailyHistory'
 import { useHistory } from './useHistory'
 import { FormNotice } from '../components/FormNotice'
-import type { AdminApi, Person, Source } from './api'
+import type { AdminApi, Person } from './api'
 import { date, timestamp } from './format'
 import { Badge, Empty, Loading, PageHeading, Pagination, QueryError, SearchBox } from './ui'
 
@@ -131,54 +132,21 @@ export function HistoryPage({
                 changed()
               }}
             />
-            <div className="form-grid history-fields">
-              <div>
-                <label htmlFor="history-from">De</label>
-                <input
-                  id="history-from"
-                  type="date"
-                  required
-                  value={from}
-                  onChange={(e) => {
-                    setFrom(e.target.value)
-                    changed()
-                  }}
-                />
-              </div>
-              <div>
-                <label htmlFor="history-to">Até</label>
-                <input
-                  id="history-to"
-                  type="date"
-                  required
-                  min={from}
-                  value={to}
-                  onChange={(e) => {
-                    setTo(e.target.value)
-                    changed()
-                  }}
-                />
-              </div>
-              <div>
-                <label htmlFor="history-source">Fonte</label>
-                <select
-                  id="history-source"
-                  value={source}
-                  onChange={(e) => {
-                    setSource(e.target.value as Source | '')
-                    changed()
-                  }}
-                >
-                  <option value="">Todas as fontes</option>
-                  <option value="monday">Monday</option>
-                  <option value="vrMais">VR Mais</option>
-                </select>
-              </div>
+            <HistoryFields
+              idPrefix="history"
+              from={from}
+              to={to}
+              source={source}
+              setFrom={setFrom}
+              setTo={setTo}
+              setSource={setSource}
+              changed={changed}
+            >
               <button className="primary-button compact" type="submit">
                 <Search size={16} />
                 {action.pending ? 'Consultando…' : 'Consultar histórico'}
               </button>
-            </div>
+            </HistoryFields>
           </fieldset>
           <p className="muted">
             Até 90 dias inclusivos. Datas e horários apresentados em São Paulo.

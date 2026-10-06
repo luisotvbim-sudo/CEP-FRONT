@@ -1,5 +1,6 @@
+import { HistoryFields } from '../admin/HistoryFields'
 import { useEffect, useRef } from 'react'
-import type { AdminApi, Person, Source } from '../admin/api'
+import type { AdminApi, Person } from '../admin/api'
 import { DailyHistory } from '../admin/DailyHistory'
 import { useHistory } from '../admin/useHistory'
 import { date, timestamp } from '../admin/format'
@@ -60,53 +61,20 @@ export function HistoryView({
           }}
         >
           <fieldset className="unframed" disabled={action.pending}>
-            <div className="form-grid history-fields">
-              <div>
-                <label htmlFor="user-history-from">De</label>
-                <input
-                  id="user-history-from"
-                  type="date"
-                  required
-                  value={from}
-                  onChange={(e) => {
-                    setFrom(e.target.value)
-                    change()
-                  }}
-                />
-              </div>
-              <div>
-                <label htmlFor="user-history-to">Até</label>
-                <input
-                  id="user-history-to"
-                  type="date"
-                  required
-                  min={from}
-                  value={to}
-                  onChange={(e) => {
-                    setTo(e.target.value)
-                    change()
-                  }}
-                />
-              </div>
-              <div>
-                <label htmlFor="user-history-source">Fonte</label>
-                <select
-                  id="user-history-source"
-                  value={source}
-                  onChange={(e) => {
-                    setSource(e.target.value as Source | '')
-                    change()
-                  }}
-                >
-                  <option value="">Todas as fontes</option>
-                  <option value="monday">Monday</option>
-                  <option value="vrMais">VR Mais</option>
-                </select>
-              </div>
+            <HistoryFields
+              idPrefix="user-history"
+              from={from}
+              to={to}
+              source={source}
+              setFrom={setFrom}
+              setTo={setTo}
+              setSource={setSource}
+              changed={change}
+            >
               <button className="primary-button compact" type="submit">
                 {action.pending ? 'Consultando…' : 'Consultar histórico'}
               </button>
-            </div>
+            </HistoryFields>
           </fieldset>
           <p className="muted">
             Até 90 dias inclusivos. A atualização normal recarrega somente os últimos 17 dias.
