@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import type { AdminApi, Person, Source } from '../admin/api'
 import { DailyHistory } from '../admin/DailyHistory'
 import { useHistory } from '../admin/useHistory'
@@ -10,11 +11,13 @@ export function HistoryView({
   person,
   title,
   nested = false,
+  refreshRevision = 0,
 }: {
   api: AdminApi
   person: Person
   title: string
   nested?: boolean
+  refreshRevision?: number
 }) {
   const {
     from,
@@ -29,6 +32,14 @@ export function HistoryView({
     changed: change,
     submit,
   } = useHistory(api)
+  const seenRevision = useRef(refreshRevision)
+  useEffect(() => {
+    if (seenRevision.current === refreshRevision || action.pending) return
+    seenRevision.current = refreshRevision
+    if (person.id) submit(person.id)
+    // Use the current filters when a completed synchronization invalidates history.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshRevision, action.pending, person.id])
   const entry = result?.people?.find((value) => value.workforcePersonId === person.id)
   const records = entry?.records ?? []
   return (

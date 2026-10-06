@@ -1,5 +1,7 @@
 # Histórico diário — contrato e apresentação
 
+Membro/Líder atualizam as fontes pelo botão “Atualizar sprint” em Meu histórico; não há página/item Atualização na navegação pessoal. O controle conserva andamento, resultados por fonte e erros; sucesso total ou parcial recarrega o histórico com os filtros atuais, sem repetir a submissão. Coordenador conserva a sincronização administrativa e opção de até 90 dias.
+
 Revisado em 04/10/2026, Front `eb63dbd` e API `b36c6e1`. Histórico administrativo, próprio e de pessoa dos times compartilham `DailyHistory`, `useHistory` e `history-data.ts`. Ver [contexto](CONTEXTO-ATUAL.md) e [compatibilidade](compatibilidade-backend.md).
 
 ## Comportamento existente

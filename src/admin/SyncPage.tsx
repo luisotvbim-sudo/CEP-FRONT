@@ -12,13 +12,26 @@ const sourceAdvice: Record<string, string> = {
   monday_invalid_configuration: 'Peça ao coordenador para revisar a configuração do Monday no servidor.',
 }
 
-export function SyncPage({ api, allowFull = true }: { api: AdminApi; allowFull?: boolean }) {
+export function SyncPage({ api, allowFull = true, embedded = false, onCompleted }: {
+  api: AdminApi
+  allowFull?: boolean
+  embedded?: boolean
+  onCompleted?: () => void
+}) {
   const [batch, setBatch] = useState<Sync | null>(null)
   const [loading, setLoading] = useState(true)
   const [starting, setStarting] = useState(false)
   const [full, setFull] = useState(false)
   const [error, setError] = useState<AuthError | null>(null)
   const [pollError, setPollError] = useState<AuthError | null>(null)
+  const requestedBatch = useRef(false)
+  const completion = useRef(onCompleted)
+  useEffect(() => { completion.current = onCompleted }, [onCompleted])
+  useEffect(() => {
+    if (!requestedBatch.current || !batch || batch.status === 'running') return
+    requestedBatch.current = false
+    if (batch.status === 'succeeded' || batch.status === 'partiallySucceeded') completion.current?.()
+  }, [batch])
   const active = useRef(true)
   const inFlight = useRef(false)
   const batchId = useRef<string | undefined>(undefined)
@@ -78,7 +91,8 @@ export function SyncPage({ api, allowFull = true }: { api: AdminApi; allowFull?:
     setBatch(null)
     batchId.current = undefined
     try {
-      const result = await api.synchronize(full)
+      const result = await api.synchronize(allowFull && full)
+      requestedBatch.current = true
       revision.current++
       previousBatch.current = undefined
       if (active.current) {
@@ -106,7 +120,7 @@ export function SyncPage({ api, allowFull = true }: { api: AdminApi; allowFull?:
 
   return (
     <>
-      <PageHeading
+      {!embedded && <PageHeading
         title="Sincronização"
         description="Acompanhe a coleta de perfis e registros de horas de cada fonte."
         action={
@@ -121,7 +135,7 @@ export function SyncPage({ api, allowFull = true }: { api: AdminApi; allowFull?:
             <RefreshCw size={15} /> Consultar estado
           </button>
         }
-      />
+      />}
       <div className="admin-panel sync-control">
         <div>
           <h2>Atualizar dados das fontes</h2>

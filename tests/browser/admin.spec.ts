@@ -179,7 +179,8 @@ test('member sees only the operational area and their scoped history', async ({ 
   await page.getByRole('button', { name: 'Consultar histórico' }).click()
   await expect(page.getByText('Duração indisponível não foi convertida em zero.')).toBeVisible()
   expect(calls.some((c) => c.path.includes(`workforcePersonId=${ids.person}`))).toBe(true)
-  await page.getByRole('button', { name: 'Atualização', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Atualização', exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Meu histórico', exact: true }).click()
   await expect(page.getByText(/Reprocessar até 90 dias/)).toHaveCount(0)
   await page.getByRole('button', { name: 'Atualizar sprint' }).click()
   expect(calls.some((c) => c.path.includes('/synchronizations?full=false'))).toBe(true)
@@ -233,7 +234,8 @@ test('member does not follow an unknown synchronization after another user start
   page,
 }) => {
   await fixture(page, { role: 'user' })
-  await page.getByRole('button', { name: 'Atualização', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Atualização', exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Meu histórico', exact: true }).click()
   await expect(page.getByText('Integração desabilitada', { exact: true })).toHaveCount(2)
   await page.route('**/synchronizations?full=false', (route) =>
     route.fulfill({ status: 409, json: { code: 'sync_already_running' } }),

@@ -1,65 +1,19 @@
 import { useAction, useQuery } from '../hooks/async'
 import { useMemo, useState } from 'react'
-import { History, LogOut, RefreshCw, UsersRound } from 'lucide-react'
+import { History, LogOut, UsersRound } from 'lucide-react'
 import logo from '../assets/conceito-logo.png'
-import { AuthError, type AuthClient, type AuthSession } from '../auth/auth-client'
+import { type AuthClient, type AuthSession } from '../auth/auth-client'
 import { FormNotice } from '../components/FormNotice'
 import { AdminApi, type Assignment, type Person, type Team } from '../admin/api'
 import { HistoryView } from './HistoryView'
 import { PersonalOverview } from './PersonalOverview'
 import { SyncPage } from '../admin/SyncPage'
-import { sourceLabel, syncLabels, timestamp, today } from '../admin/format'
-import { Badge, Empty, Loading, PageHeading, QueryError } from '../admin/ui'
+import { today } from '../admin/format'
+import { Empty, Loading, PageHeading, QueryError } from '../admin/ui'
 import '../admin/admin.css'
 import { Analyses, Inbox, useNotificationApi, useOpenInbox } from '../notifications'
 
-type Page = 'mine' | 'history' | 'teams' | 'sync' | 'notifications' | 'analyses' | 'teamAnalyses'
-
-function LatestSources({ api }: { api: AdminApi }) {
-  const latest = useQuery(async () => {
-    try {
-      return await api.latest()
-    } catch (failure) {
-      if (failure instanceof AuthError && failure.code === 'sync_not_found') return null
-      throw failure
-    }
-  }, [api])
-  if (latest.pending) return <Loading text="Consultando a última tentativa de atualização…" />
-  if (latest.error) return <QueryError error={latest.error} retry={latest.reload} />
-  if (!latest.data)
-    return (
-      <p className="muted">
-        Você ainda não solicitou uma atualização. Isso não informa a cobertura histórica das fontes.
-      </p>
-    )
-  return (
-    <div className="user-source-status">
-      <p className="muted">
-        Última tentativa solicitada por você: {timestamp(latest.data.startedAt)}. Esta data não é
-        necessariamente o último sucesso de cada fonte.
-      </p>
-      <div className="button-row">
-        {(['monday', 'vrMais'] as const).map((source) => {
-          const item = latest.data?.sources?.find((entry) => entry.source === source)
-          return (
-            <Badge
-              key={source}
-              tone={
-                item?.status === 'succeeded'
-                  ? 'good'
-                  : item?.status === 'failed' || item?.status === 'partiallySucceeded'
-                    ? 'warning'
-                    : 'neutral'
-              }
-            >
-              {sourceLabel(source)}: {syncLabels[item?.status ?? ''] || 'Sem resultado'}
-            </Badge>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
+type Page = 'mine' | 'history' | 'teams' | 'notifications' | 'analyses' | 'teamAnalyses'
 
 function TeamHistory({ api, team, people }: { api: AdminApi; team: Team; people: Person[] }) {
   const assignments = useQuery(() => api.assignments(team.id!, false, today()), [api, team.id])
@@ -139,6 +93,7 @@ export function UserShell({
   const notifications = useNotificationApi(client)
   useOpenInbox(() => setPage('notifications'))
   const [teamId, setTeamId] = useState<string | null>(null)
+  const [historyRevision, setHistoryRevision] = useState(0)
   const logout = useAction()
   const self = people.data?.find((person) => person.userId === session.user.id)
   const managed = teams.data ?? []
@@ -147,7 +102,6 @@ export function UserShell({
     { id: 'mine' as const, label: 'Minha jornada', icon: History },
     { id: 'history' as const, label: 'Meu histórico', icon: History },
     ...(managed.length ? [{ id: 'teams' as const, label: 'Meus times', icon: UsersRound }] : []),
-    { id: 'sync' as const, label: 'Atualização', icon: RefreshCw },
     { id: 'notifications' as const, label: 'Minhas notificações', icon: History },
     { id: 'analyses' as const, label: 'Minha análise', icon: History },
     ...(managed.length
@@ -237,10 +191,7 @@ export function UserShell({
                   description="Registros importados e associação da sua conta."
                 />
               )}
-              <div className="admin-panel">
-                <h2>Situação das fontes</h2>
-                <LatestSources api={api} />
-              </div>
+              <SyncPage api={api} allowFull={false} embedded onCompleted={() => setHistoryRevision((value) => value + 1)} />
               <QueryError error={people.error} retry={people.reload} />
               {people.pending ? (
                 <Loading text="Localizando sua associação…" />
@@ -255,7 +206,7 @@ export function UserShell({
                   </Empty>
                 </div>
               ) : (
-                self && <HistoryView api={api} person={self} title="Meu histórico" />
+                self && <HistoryView api={api} person={self} title="Meu histórico" refreshRevision={historyRevision} />
               )}
             </>
           )}
@@ -313,7 +264,6 @@ export function UserShell({
               )}
             </>
           )}
-          {activePage === 'sync' && <SyncPage api={api} allowFull={false} />}
           {activePage === 'notifications' && <Inbox api={notifications} />}
           {activePage === 'analyses' && (
             <Analyses api={notifications} peopleApi={api} ownUserId={session.user.id} />
