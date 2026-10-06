@@ -151,7 +151,7 @@ export function SyncPage({ api, allowFull = true, embedded = false, onCompleted 
 
   return (
     <>
-      {!embedded && <PageHeading
+      <PageHeading
         title="Sincronização"
         description="Acompanhe a coleta de perfis e registros de horas de cada fonte."
         action={
@@ -166,7 +166,7 @@ export function SyncPage({ api, allowFull = true, embedded = false, onCompleted 
             <RefreshCw size={15} /> Consultar estado
           </button>
         }
-      />}
+      />
       <div className="admin-panel sync-control">
         <div>
           <h2>Atualizar dados das fontes</h2>
