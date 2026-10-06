@@ -98,3 +98,5 @@ Pendências de produto conservadas em RN/RF/CA/D: calendário e exceções, sobr
 ## O que foi validado nesta reescrita
 
 Inspeção de código/contratos e consistência documental. Nenhum build, instalação, envio de e-mail/aviso, operação autenticada de produção ou ação de energia foi executado por esta limpeza. CI e testes históricos devem ser consultados no commit correspondente, sem reapresentá-los como resultados atuais.
+
+/download mantém somente título e card de download, sem seções de requisitos/passos/FAQ ou descrições complementares. O destino continua o ZIP de teste 0.2.0.1; simplificar a página não publica MSI nem atualizador.
