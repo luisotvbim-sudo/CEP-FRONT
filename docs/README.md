@@ -1,5 +1,8 @@
 # Documentação atual do CEP-FRONT
 
+Referência Windows conferida em 06/10/2026: [contexto do instalador](CONTEXTO-INSTALADOR.md) e [auditoria 0.4.12](AUDITORIA-INSTALADOR-2026-10-06.md). As matrizes datadas de 04/10 abaixo são históricas; a auditoria separa código, draft, checks e homologação pendente.
+
+
 Contexto reescrito em 04/10/2026 após revisão do código. Comece por [CONTEXTO-ATUAL](CONTEXTO-ATUAL.md), [especificação funcional](produto/especificacao-funcional.md) e [compatibilidade](compatibilidade-backend.md). README/AGENTS na raiz definem execução e limites de trabalho; a [fila central](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues) conserva objetivos e dependências.
 
 ## Fontes correntes
@@ -23,6 +26,7 @@ Contexto reescrito em 04/10/2026 após revisão do código. Comece por [CONTEXTO
 | [Contexto do instalador](CONTEXTO-INSTALADOR.md) / [instalador corporativo](instalador-corporativo.md) | Serviço, políticas Windows, empacotamento, bases e homologação |
 | [Atualizador MSI](atualizador-msi.md) | Contrato de distribuição e implementação da branch PR #9, fora da main auditada |
 | [Instalador 0.4.11](instalador-0.4.11.md) | Integração da main, recuperação durável de energia, verificação Windows, assinatura do atualizador e aceite de piloto |
+| [Liberação de energia 0.4.12](liberacao-energia-0.4.12.md) | Direitos originais preservados, restauração ao fechar e migração de sessões antigas |
 | [Refatoração / piloto 0.4.10](refatoracao-instalador.md) | Evidência histórica do piloto anterior; sucedido pelo pacote 0.4.11 |
 | [Deploy web](../deploy/README.md) | Contêiner, proxy de borda e operação do front web |
 

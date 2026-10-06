@@ -1,6 +1,6 @@
 CEP HORAS 0.4 - INSTALACAO CORPORATIVA PELA TI
 
-PACOTE 0.4.11
+PACOTE 0.4.12
 Inclui Minha jornada, recuperacao da interface e atualizador MSI.
 O servico grava a intencao de energia antes de agendar no Windows. Apos crash,
 nao repete nem cancela automaticamente a acao anterior: o aplicativo identifica
@@ -24,8 +24,9 @@ REGRA
 
 CONTROLE LOCAL
 - Servico automatico LocalSystem, protegido pelas permissoes normais do SCM.
-- SeShutdownPrivilege e SeRemoteShutdownPrivilege ficam apenas com SYSTEM e
-  Administradores; o menu de energia e ocultado e a tela sem login nao desliga.
+- Direitos originais de desligamento da conta sao preservados. O CEP oculta
+  controles de energia e impede desligamento na tela sem login enquanto ativo.
+  Esse perfil permite desligamento por comandos externos, por escolha aprovada.
 - Toque curto nos botoes fisicos de energia/sono e fechamento da tampa recebem
   a politica Nao fazer nada. Pressao fisica prolongada e corte de energia nao
   podem ser bloqueados.
@@ -36,9 +37,9 @@ CONTROLE LOCAL
   reaplica as restricoes e reativa a supervisao.
 - A liberacao global ao fechar exige somente uma sessao Windows ativa. Com
   varias sessoes, o servico recusa liberar politicas para todas elas.
-- A senha diaria de fechamento funciona offline e nao libera nenhuma acao de energia.
+- A senha diaria funciona offline, restaura os controles e nao executa energia.
   O PIN administrativo de seis digitos da API e uma credencial separada.
-- Logoff ou reinicio do servico reaplica a protecao antes da proxima sessao.
+- Logoff ou reinicio do servico reaplica registros, preservando direitos de logon.
 - Administradores e SYSTEM permanecem como caminho de recuperacao.
 
 HOMOLOGACAO
@@ -48,7 +49,9 @@ HOMOLOGACAO
 2. Requer Windows 11 x64 Pro/Enterprise/Education 24H2+ (build >=26100) e
    WebView2 Evergreen por maquina. Instalacao inicial exige administrador;
    .NET esta incluido no pacote self-contained.
-3. Saia e entre novamente em todas as contas apos instalar/restaurar.
+3. Ao migrar da versao antiga, salve o trabalho e saia/entre no Windows uma vez.
+   Isso renova sessoes que ja perderam a permissao de desligamento.
+   Depois, abrir/fechar o CEP preserva essa permissao. GPO original e mantida.
 4. Valide API local/publicada, allowed, blocked, indeterminate e contingencia.
 5. Valide as tres acoes, contagem de 10 segundos e cancelamento.
 6. Valide Start, Ctrl+Alt+Del, Alt+F4 na area de trabalho, shutdown.exe,
@@ -78,7 +81,7 @@ ATUALIZACAO MSI
   GitHub, chave privada ou senha administrativa e instalado nos clientes.
 - Atualizar agora inicia somente um MSI aprovado do canal fixo; Depois adia.
   A manutencao do update preserva as politicas e nao usa o fechamento diario.
-- Homologar a versao instalada para 0.4.11 com conta comum em VM/PC piloto
+- Homologar a versao instalada para 0.4.12 com conta comum em VM/PC piloto
   antes de publicar no canal estavel para a equipe.
 - Build sem manifesto e assinatura validos nao pertence ao canal automatico.
 - Publicacao, backup portatil da chave e recuperacao sao responsabilidades da TI.

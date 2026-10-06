@@ -1,6 +1,8 @@
 using System.IO;
 using System.Security.Cryptography;
 using System.Text.Json;
+using System.ComponentModel;
+using System.Runtime.InteropServices;
 
 namespace CepHoras.Desktop;
 
@@ -22,12 +24,36 @@ internal sealed class ProtectedJsonFile(string path, byte[]? entropy = null)
     public async Task WriteAsync<T>(T value)
     {
         var bytes = JsonSerializer.SerializeToUtf8Bytes(value, Json);
+        var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {
             var protectedBytes = ProtectedData.Protect(bytes, entropy, DataProtectionScope.CurrentUser);
-            await File.WriteAllBytesAsync(path + ".tmp", protectedBytes);
-            File.Move(path + ".tmp", path, true);
+            await using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None,
+                4096, FileOptions.Asynchronous | FileOptions.WriteThrough))
+            {
+                await stream.WriteAsync(protectedBytes);
+                stream.Flush(flushToDisk: true);
+            }
+            if (!MoveFileEx(NativePath(temporary), NativePath(path), 0x1 | 0x8))
+                throw new IOException("Não foi possível publicar o estado protegido.", new Win32Exception(Marshal.GetLastWin32Error()));
         }
-        finally { CryptographicOperations.ZeroMemory(bytes); }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(bytes);
+            if (File.Exists(temporary)) File.Delete(temporary);
+        }
     }
+
+    private static string NativePath(string value)
+    {
+        var fullPath = Path.GetFullPath(value);
+        if (fullPath.StartsWith(@"\\?\", StringComparison.Ordinal)) return fullPath;
+        return fullPath.StartsWith(@"\\", StringComparison.Ordinal)
+            ? @"\\?\UNC\" + fullPath[2..]
+            : @"\\?\" + fullPath;
+    }
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool MoveFileEx(string existing, string destination, uint flags);
 }

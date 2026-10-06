@@ -1,5 +1,8 @@
 # Menu de energia: contrato e execução
 
+Referência Windows conferida em 06/10/2026: [contexto do instalador](CONTEXTO-INSTALADOR.md) e [auditoria 0.4.12](AUDITORIA-INSTALADOR-2026-10-06.md). As matrizes datadas de 04/10 abaixo são históricas; a auditoria separa código, draft, checks e homologação pendente.
+
+
 Reconciliado em 04/10/2026. O contrato pessoal foi conferido na CEP API `main` `b36c6e149b42253b44860d98c6ffe44f98c53dd6`; interface e bridge estão presentes no CEP-FRONT `main` `eb63dbdc7f7bf83d0a4b51ee5567ed5aa80c138c`. As branches integrada e do atualizador preservam esse fluxo. A [matriz do instalador](CONTEXTO-INSTALADOR.md) separa funcionalidades por base.
 
 ## Interface e decisão
@@ -69,6 +72,8 @@ Falha Monday/VR, banco indisponível com resposta HTTP, autenticação, PIN, cor
 ## Energia e manutenção do aplicativo
 
 Fechar a janela normalmente envia o host para a bandeja. Desde a branch integrada 0.4.6, **Fechar CEP Horas** usa uma verificação diária local independente do PIN. O serviço restaura políticas antes de suspender relançamento para aquela sessão; abrir manualmente reaplica proteção. Essa restauração muda configurações da máquina, por isso múltiplas sessões precisam ser avaliadas no piloto. A main 0.4.3 não contém essa função.
+
+A [correção 0.4.12](liberacao-energia-0.4.12.md) preserva os direitos de logon originais para permitir restaurar os controles sem abandonar a sessão a cada fechamento. A escolha foi explicitamente aprovada, incluindo o limite de permitir comandos externos de desligamento. Não muda a decisão/revalidação da API dentro do CEP. Sessões antigas sem permissão exigem uma renovação inicial; GPO original não é removida.
 
 No [pacote 0.4.11](instalador-0.4.11.md), manutenção MSI cancela pedidos conhecidos desta instância, bloqueia novos agendamentos e preserva políticas. Pedido herdado após crash ou intenção sem confirmação exige cancelamento explícito do titular, com ID e broker original; manutenção/recarga/startup não o cancelam automaticamente. Não usa `desktop-suspend`. Recuperar/recarregar o WebView2 não agenda ação de energia nem encerra o serviço.
 

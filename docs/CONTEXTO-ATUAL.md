@@ -13,6 +13,10 @@ Sincronização normal: botão administrativo “Atualizar sprint” e botão pe
 Detalhe de registro Monday: somente Início/Fim, origem informada Manual/Cronômetro e link da atividade quando disponível. Título, duração e estado continuam fora do detalhe; VR mostra apenas horários conhecidos/batidas informadas, link e origem explícita, sem metadados complementares nem pareamento inferido. Ausência de flags de origem não permite inferir cronômetro. Ver [histórico diário](historico-diario.md).
 
 Política de senha em 05/10/2026: formulários de ativação e recuperação e mensagens permitem mínimo de 6 e máximo de 200 caracteres. Requer API com a regra atualizada antes da publicação do cliente; sem mudanças nas rotas/allowlist. Código e builds não comprovam publicação web ou versão Windows instalada.
+Referência Windows conferida em 06/10/2026: [contexto do instalador](CONTEXTO-INSTALADOR.md) e [auditoria 0.4.12](AUDITORIA-INSTALADOR-2026-10-06.md). As matrizes datadas de 04/10 abaixo são históricas; a auditoria separa código, draft, checks e homologação pendente.
+
+
+Correção em 05/10/2026 na branch `codex/liberacao-energia-ao-fechar`, base main `72941ad`: [0.4.12](liberacao-energia-0.4.12.md) preserva direitos de logon para restaurar controles ao fechar com senha diária, por escolha explícita do usuário. Não substitui a evidência do pacote 0.4.11 já instalado; consultar resultado de build/instalação no registro central da Issue #19.
 
 Continuidade em 05/10/2026: acompanhamento pessoal integrado à main `53d8e5be438e18b2c67e7bcff82f8806330ada8e`, API/main `ba07f772f3ed9914a80ef9dfa4543385a742ecea`. A branch `codex/instalador-pronto` integra essas mudanças ao serviço/atualizador e ao [pacote 0.4.11](instalador-0.4.11.md), com recuperação durável de energia. Matrizes antigas abaixo conservam a auditoria datada; conferir o registro desta entrega antes de assumir versão publicada ou instalada.
 

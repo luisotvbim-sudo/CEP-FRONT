@@ -72,15 +72,36 @@ const server = createServer(async (req, res) => {
     res.end(JSON.stringify(user))
   } else if (url.pathname === '/api/v1/me/notifications') {
     assert.equal(req.headers.authorization, `Bearer fixture-access-${refreshes}`)
-    const pending = notificationIds.filter((id) => !deliveredNotifications.has(id))
+    const pending =
+      url.searchParams.get('pendingOnly') === 'true'
+        ? notificationIds.filter((id) => !deliveredNotifications.has(id))
+        : notificationIds
     const page = Number(url.searchParams.get('page') ?? 1)
     const pageSize = Number(url.searchParams.get('pageSize') ?? 100)
-    pendingPages.push(page)
+    if (url.searchParams.get('pendingOnly') === 'true') pendingPages.push(page)
     res.end(
       JSON.stringify({
-        items: pending
-          .slice((page - 1) * pageSize, page * pageSize)
-          .map((id) => ({ id, readAt: null })),
+        items: pending.slice((page - 1) * pageSize, page * pageSize).map((id) => ({
+          id,
+          message: 'Notificação descartável do driver WPF, sem envio real.',
+          createdAt: '2026-10-05T15:00:00Z',
+          readAt: null,
+          deliveredAt: deliveredNotifications.has(id) ? '2026-10-05T15:01:00Z' : null,
+          analysis: {
+            from: '2026-10-05',
+            to: '2026-10-05',
+            cutoff: '2026-10-05T15:00:00Z',
+            toleranceMinutes: 30,
+            vrSeconds: null,
+            mondaySeconds: null,
+            deltaSeconds: null,
+            absoluteDivergenceSeconds: null,
+            sources: [],
+            days: [],
+            hasIssues: false,
+            settingsVersion: '30000000-0000-0000-0000-000000000001',
+          },
+        })),
         total: pending.length,
         page,
         pageSize,
@@ -109,15 +130,13 @@ const server = createServer(async (req, res) => {
   } else if (url.pathname === '/api/v1/organization/invitations' && req.method === 'POST') {
     assert.equal(req.headers.authorization, `Bearer fixture-access-${refreshes}`)
     adminInvites++
-    res
-      .writeHead(201)
-      .end(
-        JSON.stringify({
-          id: '90000000-0000-0000-0000-000000000002',
-          email: body.email,
-          role: body.role,
-        }),
-      )
+    res.writeHead(201).end(
+      JSON.stringify({
+        id: '90000000-0000-0000-0000-000000000002',
+        email: body.email,
+        role: body.role,
+      }),
+    )
   } else if (url.pathname === '/api/v1/organization/invitations') {
     assert.equal(req.headers.authorization, `Bearer fixture-access-${refreshes}`)
     protectedCalls++
@@ -313,12 +332,18 @@ try {
   assert.equal((await nativeUiState(page)).browser, true)
   // A renderer fault during a download defers recovery, then resumes once
   // failure releases maintenance. No MSI, service or privileged action runs.
-  const emptyFailures = (await nativeEvents()).filter((event) => event === 'webview-rendered-root-empty').length
+  const emptyFailures = (await nativeEvents()).filter(
+    (event) => event === 'webview-rendered-root-empty',
+  ).length
   await nativeAction(page, 'reset-recovery-budget')
   await nativeAction(page, 'update-downloading')
   await page.evaluate(() => document.getElementById('root').replaceChildren())
   for (let attempt = 0; attempt < 80; attempt++) {
-    if ((await nativeEvents()).filter((event) => event === 'webview-rendered-root-empty').length > emptyFailures) break
+    if (
+      (await nativeEvents()).filter((event) => event === 'webview-rendered-root-empty').length >
+      emptyFailures
+    )
+      break
     await new Promise((resolve) => setTimeout(resolve, 100))
   }
   assert.equal((await nativeUiState(page)).browser, false)

@@ -77,10 +77,22 @@ try
     catch (CryptographicException) { checks++; }
     await store.WriteAsync(new { token = "replacement", expiresAt = token.expiresAt });
     Check((await store.ReadAsync<JsonElement>()).GetProperty("token").GetString() == "replacement", "Token rotation failed");
+    using (var held = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+    {
+        try { await store.WriteAsync(new { token = "must-not-publish" }); throw new InvalidOperationException("Locked replacement succeeded"); }
+        catch (IOException) { checks++; }
+    }
+    Check((await store.ReadAsync<JsonElement>()).GetProperty("token").GetString() == "replacement", "Failed replacement damaged the previous ciphertext");
+    Check(!Directory.EnumerateFiles(directory, "*.tmp").Any(), "Failed replacement left temporary ciphertext");
     store.Delete();
     Check(!store.Exists, "Revocation left persisted state");
 
     var ledger = new ProtectedJsonFile(Path.Combine(directory, "notifications"));
+    var longDirectory = Path.Combine(directory, new string('a', 100), new string('b', 100));
+    Directory.CreateDirectory(longDirectory);
+    var longStore = new ProtectedJsonFile(Path.Combine(longDirectory, "notifications.dat"));
+    await longStore.WriteAsync(new { value = "long-path" });
+    Check((await longStore.ReadAsync<JsonElement>()).GetProperty("value").GetString() == "long-path", "Long protected path failed");
     var notificationIds = new HashSet<Guid> { Guid.NewGuid(), Guid.NewGuid() };
     await ledger.WriteAsync(notificationIds);
     Check((await ledger.ReadAsync<HashSet<Guid>>())!.SetEquals(notificationIds), "Receipt ledger changed");
@@ -94,6 +106,7 @@ try
     WebViewProfileRecoveryTests.Run(Check, directory);
     WebViewLifecycleTests.Run(Check);
     DailyClosePasswordTests.Run(Check);
+    WindowsShutdownAccessTests.Run(Check);
 }
 finally
 {
