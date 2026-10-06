@@ -22,8 +22,8 @@ try {
     $familySupported = @('Professional', 'Enterprise', 'Education') | Where-Object { $edition.StartsWith($_, [StringComparison]::Ordinal) }
     $reasons = @()
     if ($architecture -ne 'AMD64') { $reasons += 'Requer Windows x64 (AMD64).' }
-    if ($build -lt 26100) { $reasons += 'Atualize o Windows 11 para 24H2 ou posterior (build 26100+).' }
-    if ($installationType -ne 'Client' -or -not $familySupported) { $reasons += 'Requer Windows 11 Pro, Enterprise ou Education.' }
+    if ($build -ne 19045 -and $build -lt 26100) { $reasons += 'Requer Windows 10 22H2 (build 19045) ou Windows 11 24H2 ou posterior (build 26100+).' }
+    if ($installationType -ne 'Client' -or -not $familySupported) { $reasons += 'Requer Windows cliente Pro, Enterprise ou Education.' }
     if (-not $webviewPresent) { $reasons += 'Instale o Microsoft Edge WebView2 Evergreen por maquina.' }
     $result = [pscustomobject][ordered]@{
         Edition = $edition; WindowsVersion = [string]$os.GetValue('DisplayVersion'); Build = $build

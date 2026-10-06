@@ -313,8 +313,17 @@ internal static class ServiceReliabilityChecks
 
     private static void CheckOwnershipAndSupport()
     {
-        Assert(WindowsSupport.IsSupported(true, 26100, "Client", "Professional"), "supported Windows preflight");
-        Assert(!WindowsSupport.IsSupported(true, 26099, "Client", "Professional") &&
+        Assert(WindowsSupport.IsSupported(true, 19045, "Client", "Professional") &&
+            WindowsSupport.IsSupported(true, 19045, "Client", "Enterprise") &&
+            WindowsSupport.IsSupported(true, 19045, "Client", "Education") &&
+            WindowsSupport.IsSupported(true, 26100, "Client", "Professional") &&
+            WindowsSupport.IsSupported(true, 26200, "Client", "Enterprise"), "supported Windows 10/11 preflight");
+        Assert(!WindowsSupport.IsSupported(true, 19044, "Client", "Professional") &&
+            !WindowsSupport.IsSupported(true, 22000, "Client", "Professional") &&
+            !WindowsSupport.IsSupported(true, 26099, "Client", "Professional") &&
+            !WindowsSupport.IsSupported(true, 19045, "Client", "Core") &&
+            !WindowsSupport.IsSupported(true, 19045, "Server", "Enterprise") &&
+            !WindowsSupport.IsSupported(false, 19045, "Client", "Professional") &&
             !WindowsSupport.IsSupported(true, 26100, "Client", "Core") && !WindowsSupport.IsSupported(true, 26100, "Server", "Enterprise") &&
             !WindowsSupport.IsSupported(false, 26100, "Client", "Professional"), "unsupported build/edition/server/architecture fails preflight");
         Assert(InstalledLayout.FromServiceImage("\"D:\\CEP Pilot\\control\\CepHoras.Control.exe\" --service") == "D:\\CEP Pilot",

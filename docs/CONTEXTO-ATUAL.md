@@ -1,5 +1,11 @@
 # Contexto atual do CEP-FRONT
 
+Na branch `codex/windows10-compat`, o candidato MSI 0.4.14 aceita Windows 10
+22H2 x64 Pro/Enterprise/Education, preservando os recursos do beta 0.4.13 e o
+suporte Windows 11 24H2+. A [entrega Windows 10](windows10-msi-0.4.14.md)
+identifica validação e limites. A página `/download` continua ligada à release
+beta 0.4.13 publicada; candidato local não muda a distribuição pública.
+
 Preparação beta 0.4.13 em 06/10/2026: [pacote e distribuição](beta-msi-0.4.13.md)
 consolidam interface main `18aa262` e auditoria Windows `32983a5`. Esta branch
 mantém senha 6–200 e a UI atual; `/download` aponta ao MSI beta 0.4.13 no GitHub.

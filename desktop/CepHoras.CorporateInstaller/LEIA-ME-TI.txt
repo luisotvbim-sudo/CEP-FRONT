@@ -1,6 +1,6 @@
 CEP HORAS 0.4 - INSTALACAO CORPORATIVA PELA TI
 
-PACOTE 0.4.13 BETA
+PACOTE 0.4.14 - CANDIDATO WINDOWS 10
 Inclui Minha jornada, recuperacao da interface e atualizador MSI.
 O servico grava a intencao de energia antes de agendar no Windows. Apos crash,
 nao repete nem cancela automaticamente a acao anterior: o aplicativo identifica
@@ -48,7 +48,8 @@ HOMOLOGACAO
 1. Instale primeiro em VM ou computador piloto com trabalho salvo.
    Antes, execute Verificar-Windows.ps1: informa edicao, versao, build e WebView2,
    sem administrador, sem mudar configuracoes e sem coletar dados pessoais.
-2. Requer Windows 11 x64 Pro/Enterprise/Education 24H2+ (build >=26100) e
+2. Requer Windows 10 22H2 x64 (build 19045) ou Windows 11 24H2+ x64
+   (build >=26100), nas edicoes Pro/Enterprise/Education, e
    WebView2 Evergreen por maquina. Instalacao inicial exige administrador;
    .NET esta incluido no pacote self-contained.
 3. Ao migrar da versao antiga, salve o trabalho e saia/entre no Windows uma vez.
@@ -86,7 +87,7 @@ ATUALIZACAO MSI
   GitHub, chave privada ou senha administrativa e instalado nos clientes.
 - Atualizar agora inicia somente um MSI aprovado do canal fixo; Depois adia.
   A manutencao do update preserva as politicas e nao usa o fechamento diario.
-- Homologar a versao instalada para 0.4.13 com conta comum em VM/PC piloto
+- Homologar a versao instalada para 0.4.14 com conta comum em VM/PC piloto
   antes de publicar no canal estavel para a equipe.
 - Build sem manifesto e assinatura validos nao pertence ao canal automatico.
 - Publicacao, backup portatil da chave e recuperacao sao responsabilidades da TI.
