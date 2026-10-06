@@ -4,6 +4,7 @@ import { type AdminApi, type Assignment, type Person, type Team } from '../admin
 import { today } from '../admin/format'
 import { Empty, Loading, QueryError } from '../admin/ui'
 import { HistoryView } from './HistoryView'
+
 export function TeamHistory({ api, team, people }: { api: AdminApi; team: Team; people: Person[] }) {
   const assignments = useQuery(() => api.assignments(team.id!, false, today()), [api, team.id])
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -65,4 +66,3 @@ export function TeamHistory({ api, team, people }: { api: AdminApi; team: Team; 
     </>
   )
 }
-
