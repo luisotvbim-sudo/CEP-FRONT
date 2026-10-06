@@ -1,5 +1,7 @@
 # Contexto atual do CEP-FRONT
 
+Ambiente desktop portátil isolado: [guia TESTE](desktop-ambiente-teste.md), branch `codex/desktop-test-environment`. API Docker local, sessão/perfil próprios e energia simulada; não representa instalação MSI ou homologação das fontes.
+
 Sincronização normal: botão “Atualizar sprint”, janela móvel de 17 dias incluindo hoje, dependente da API com essa política. O nome do botão não muda os períodos oficiais de análise da sprint (1–14/15–fim do mês); reprocessamento administrativo permanece até 90 dias.
 
 Detalhe de registro Monday: somente Início/Fim, origem informada Manual/Cronômetro e link da atividade quando disponível. Título, duração e estado continuam fora do detalhe; VR mostra apenas horários conhecidos/batidas informadas, link e origem explícita, sem metadados complementares nem pareamento inferido. Ausência de flags de origem não permite inferir cronômetro. Ver [histórico diário](historico-diario.md).

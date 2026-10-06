@@ -79,3 +79,7 @@ Consultar [PowerBridgeHandler](../desktop/CepHoras.Desktop/PowerBridgeHandler.cs
 Para uma mudança funcional, verificar testes de cliente/allowlist/bridge, casos PIN e tempo de servidor, HTTP versus transporte, idempotência/cancelamento e executores falsos. Esses testes não executam as três ações reais. Homologação Windows é acompanhada na [Issue #7](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/7): conta comum, instalação/políticas, PIN/expiração, decisão normal, três ações, cancelamento e contingência real. Não testar desligamento numa máquina de trabalho sem preparar esse piloto.
 
 Esta revisão conferiu documentação com o código; não executou novos builds, testes de energia, provisionamento ou implantação.
+
+## Ambiente portátil TESTE
+
+Na branch `codex/desktop-test-environment`, o [launcher isolado](desktop-ambiente-teste.md) mantém a revalidação API e substitui apenas o executor por broker em memória, sem IPC ou ações Windows. Ativação exclusiva Debug, com identificação visível; não incorpora políticas/instalação MSI e não homologa execução real.

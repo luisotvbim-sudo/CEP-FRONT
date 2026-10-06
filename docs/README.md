@@ -41,3 +41,5 @@ Conteúdo necessário foi absorvido nas fontes correntes; a narrativa histórica
 `contexto-atualizador-msi.md`, nas branches em que existia, foi absorvido por contexto do instalador/guia do atualizador; a branch documental correspondente conserva a rastreabilidade no Git.
 
 Prompts de programação e matrizes antigas contraditórias foram retirados dos documentos correntes. IDs e requisitos de produto ainda úteis foram conservados, com status explícito. Um teste relatado no passado não é um teste executado agora; cada entrega registra base, comando e resultado efetivos.
+
+- [Desktop local TESTE](desktop-ambiente-teste.md): launcher isolado, base conferida, energia simulada e limites de validação.
