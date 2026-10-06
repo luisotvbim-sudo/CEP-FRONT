@@ -4,11 +4,9 @@ import logo from '../assets/conceito-logo.png'
 import icon from '../assets/conceito-icon.png'
 import './download.css'
 
-export const desktopRelease = {
+const desktopRelease = {
   version: '0.2.0.1',
-  url: 'https://github.com/luisotvbim-sudo/CEP-FRONT/releases/tag/desktop-v0.2.0.1-test',
   download: 'https://github.com/luisotvbim-sudo/CEP-FRONT/releases/download/desktop-v0.2.0.1-test/CEP-Horas-Windows.zip',
-  checksum: 'https://github.com/luisotvbim-sudo/CEP-FRONT/releases/download/desktop-v0.2.0.1-test/SHA256SUMS.txt',
 }
 
 export function DownloadPage() {

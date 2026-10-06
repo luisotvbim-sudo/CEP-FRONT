@@ -14,7 +14,7 @@ export type Assignment = Schema['TeamAssignmentResponse']
 export type TimeRecord = Schema['WorkforceTimeRecordResponse']
 export type Invitation = Schema['InvitationResponse']
 export type User = Schema['UserResponse']
-export type AuditEvent = Schema['AuditEventResponse']
+type AuditEvent = Schema['AuditEventResponse']
 export type History = Schema['WorkforceAdminHistoryResponse']
 
 const root = '/organization/time-control'

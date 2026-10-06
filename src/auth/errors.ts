@@ -12,7 +12,7 @@ export class AuthError extends Error {
   }
 }
 
-export type ApiProblem = { code?: string; correlationId?: string }
+type ApiProblem = { code?: string; correlationId?: string }
 
 export function apiFailure(status: number, value: unknown, retryAfter?: string | null): AuthError {
   const raw = value && typeof value === 'object' ? (value as Record<string, unknown>) : {}

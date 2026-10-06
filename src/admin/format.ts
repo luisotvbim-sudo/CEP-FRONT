@@ -1,6 +1,6 @@
 import type { Invitation, Person } from './api'
 
-export const zone = 'America/Sao_Paulo'
+const zone = 'America/Sao_Paulo'
 export const today = () =>
   new Intl.DateTimeFormat('en-CA', {
     timeZone: zone,
