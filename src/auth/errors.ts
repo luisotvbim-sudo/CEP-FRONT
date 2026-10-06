@@ -48,7 +48,7 @@ const messages: Record<string, string> = {
     'O PIN administrativo ainda não foi configurado. Procure o responsável.',
   invalid_invitation:
     'Convite inválido, expirado ou já utilizado. Confira o código mais recente ou solicite um novo ao administrador.',
-  invalid_password: 'A senha não atende aos requisitos. Use entre 12 e 200 caracteres.',
+  invalid_password: 'A senha não atende aos requisitos. Use entre 6 e 200 caracteres.',
   email_already_exists:
     'Este e-mail já possui uma conta. Volte para entrar ou recuperar sua senha.',
   organization_inactive: 'A organização está indisponível. Procure o administrador.',

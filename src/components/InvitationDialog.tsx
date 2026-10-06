@@ -113,14 +113,14 @@ export function InvitationDialog({
                 onChange={(e) => setCode(e.target.value)}
               />
             </div>
-            <label htmlFor="activation-password">Crie sua senha (mínimo 12 caracteres)</label>
+            <label htmlFor="activation-password">Crie sua senha (mínimo 6 caracteres)</label>
             <div className="input-wrap">
               <input
                 id="activation-password"
                 type="password"
                 autoComplete="new-password"
                 required
-                minLength={12}
+                minLength={6}
                 maxLength={200}
                 disabled={pending}
                 value={password}
@@ -134,7 +134,7 @@ export function InvitationDialog({
                 type="password"
                 autoComplete="new-password"
                 required
-                minLength={12}
+                minLength={6}
                 maxLength={200}
                 disabled={pending}
                 value={confirmation}

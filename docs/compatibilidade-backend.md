@@ -1,5 +1,7 @@
 # Compatibilidade CEP-FRONT × CEP-API
 
+Alteração de senha em 05/10/2026: ativação e recuperação permitem de 6 a 200 caracteres. Publicar primeiro a API com RequiredLength=6 e contratos atualizados; depois web/cliente Windows. Não muda rotas, payloads, tipos nem allowlist. Snapshots foram regenerados da API local da entrega: o gerador atual não publica limites de senha nos schemas desses records. Homologação com PostgreSQL e versão instalada permanece necessária.
+
 Revisão documental de 04/10/2026. Front auditado: `main` `eb63dbdc7f7bf83d0a4b51ee5567ed5aa80c138c`. API de referência: `main` `b36c6e149b42253b44860d98c6ffe44f98c53dd6`. Código publicado, CI aprovada e SHA implantado não são o mesmo estado.
 
 ## Contrato disponível e consumido

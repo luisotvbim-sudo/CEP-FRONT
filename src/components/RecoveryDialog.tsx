@@ -132,9 +132,9 @@ export function RecoveryDialog({
                     type="password"
                     autoComplete="new-password"
                     required
-                    minLength={12}
+                    minLength={6}
                     maxLength={200}
-                    placeholder="Pelo menos 12 caracteres"
+                    placeholder="Pelo menos 6 caracteres"
                     value={newPassword}
                     onChange={(event) => setNewPassword(event.target.value)}
                     disabled={pending}
@@ -147,7 +147,7 @@ export function RecoveryDialog({
                     type="password"
                     autoComplete="new-password"
                     required
-                    minLength={12}
+                    minLength={6}
                     maxLength={200}
                     value={confirmation}
                     onChange={(event) => setConfirmation(event.target.value)}
