@@ -1,5 +1,8 @@
 # Instalador corporativo do CEP Horas
 
+Referência Windows conferida em 06/10/2026: [contexto do instalador](CONTEXTO-INSTALADOR.md) e [auditoria 0.4.12](AUDITORIA-INSTALADOR-2026-10-06.md). As matrizes datadas de 04/10 abaixo são históricas; a auditoria separa código, draft, checks e homologação pendente.
+
+
 Reconciliado em 04/10/2026. Este guia descreve o MSI por máquina, serviço e políticas. Use o [contexto do instalador](CONTEXTO-INSTALADOR.md) para identificar a branch antes de construir ou distribuir.
 
 ## Qual base usar

@@ -1,5 +1,8 @@
 # Menu de energia: contrato e execução
 
+Referência Windows conferida em 06/10/2026: [contexto do instalador](CONTEXTO-INSTALADOR.md) e [auditoria 0.4.12](AUDITORIA-INSTALADOR-2026-10-06.md). As matrizes datadas de 04/10 abaixo são históricas; a auditoria separa código, draft, checks e homologação pendente.
+
+
 Reconciliado em 04/10/2026. O contrato pessoal foi conferido na CEP API `main` `b36c6e149b42253b44860d98c6ffe44f98c53dd6`; interface e bridge estão presentes no CEP-FRONT `main` `eb63dbdc7f7bf83d0a4b51ee5567ed5aa80c138c`. As branches integrada e do atualizador preservam esse fluxo. A [matriz do instalador](CONTEXTO-INSTALADOR.md) separa funcionalidades por base.
 
 ## Interface e decisão

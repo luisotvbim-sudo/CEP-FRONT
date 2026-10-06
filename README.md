@@ -1,5 +1,8 @@
 # CEP Horas — web, Windows e instalador
 
+Referência Windows conferida em 06/10/2026: [contexto do instalador](docs/CONTEXTO-INSTALADOR.md) e [auditoria 0.4.12](docs/AUDITORIA-INSTALADOR-2026-10-06.md). As matrizes datadas de 04/10 abaixo são históricas; a auditoria separa código, draft, checks e homologação pendente.
+
+
 CEP-FRONT contém a interface React/TypeScript do CEP Horas, o host Windows WPF/WebView2, o serviço de controle e os scripts de empacotamento. A CEP API autentica, autoriza, consulta Monday/VR Mais, calcula horas e determina destinatários e decisões de energia.
 
 ## Contexto para começar ou retomar

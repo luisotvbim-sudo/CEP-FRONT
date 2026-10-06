@@ -1,5 +1,8 @@
 # Documentação atual do CEP-FRONT
 
+Referência Windows conferida em 06/10/2026: [contexto do instalador](CONTEXTO-INSTALADOR.md) e [auditoria 0.4.12](AUDITORIA-INSTALADOR-2026-10-06.md). As matrizes datadas de 04/10 abaixo são históricas; a auditoria separa código, draft, checks e homologação pendente.
+
+
 Contexto reescrito em 04/10/2026 após revisão do código. Comece por [CONTEXTO-ATUAL](CONTEXTO-ATUAL.md), [especificação funcional](produto/especificacao-funcional.md) e [compatibilidade](compatibilidade-backend.md). README/AGENTS na raiz definem execução e limites de trabalho; a [fila central](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues) conserva objetivos e dependências.
 
 ## Fontes correntes

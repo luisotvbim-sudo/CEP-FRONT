@@ -1,6 +1,6 @@
 # Atualizador MSI: implementação e publicação
 
-Reconciliado em 04/10/2026. Este guia descreve **somente** a implementação de `codex/msi-auto-updater`, base `95fbf5c4ff982916edacba5406d4b569d8007be8`, do [PR #9](https://github.com/luisotvbim-sudo/CEP-FRONT/pull/9). O código não está na `main` `eb63dbdc` nem na base integrada `dc58bde`. Este documento pode estar nessas branches para consulta; não significa que os comandos/funcionalidades já existam nelas.
+Referência atual conferida em 06/10/2026: MSI 0.4.12, base `b467c0a2571fdb8324f99d181934e21f6d785cfa`, [PR #16](https://github.com/luisotvbim-sudo/CEP-FRONT/pull/16), ainda draft. O atualizador originado no PR #9 está incorporado nessa base. A tabela abaixo conserva o histórico de 04/10; consulte [contexto corrente](CONTEXTO-INSTALADOR.md) e [auditoria](AUDITORIA-INSTALADOR-2026-10-06.md) para correções e limites de validação.
 
 O objetivo é atualizar o MSI corporativo em aproximadamente 40 computadores com contas comuns, após um bootstrap instalado por administrador. WPF apresenta **Atualizar agora/Depois**; serviço confirma e instala a versão aprovada sem pedir credenciais administrativas ao funcionário. Instalação sem clique permanece uma mudança funcional não aprovada. API, deploy web, PostgreSQL e MSIX são ciclos separados; não há endpoint da CEP API nem token GitHub no cliente para essa função.
 

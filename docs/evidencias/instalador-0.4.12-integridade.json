@@ -1,0 +1,137 @@
+{
+  "schema": 1,
+  "inspectedOn": "2026-10-06",
+  "sourceCommit": "b467c0a2571fdb8324f99d181934e21f6d785cfa",
+  "releaseTag": "installer-v0.4.12",
+  "releaseDraft": true,
+  "msiSha256": "d50ab5284fa5558d328c6997929b87e6e673c4ac2214f8b714b078fad9489d16",
+  "kitSha256": "2618ec713a5831f06d831f38481680f69df43379c34064fca5d1c8085fbab5df",
+  "msiFiles": 895,
+  "kitRecoveryFilesCompared": 402,
+  "kitRecoveryMismatches": 0,
+  "embeddedPublicKeyMatchesSource": true,
+  "rsaPssSignatureValid": true,
+  "authenticode": "NotSigned",
+  "components": [
+    {
+      "path": "CepHoras.Control.Protocol.dll",
+      "bytes": 19456,
+      "sha256": "bf5730a1eed34f38f121caa9db306de92e81628d873af68b0444f167f59c4513"
+    },
+    {
+      "path": "CepHoras.deps.json",
+      "bytes": 39722,
+      "sha256": "677cc6e3ddefb35ba470f20eb1fb1a0b847b07cffe3abf68cffbd945447f50c5"
+    },
+    {
+      "path": "CepHoras.dll",
+      "bytes": 156672,
+      "sha256": "7d30dbba31c2b3db5324b56bab2a2bb8d5f8fb9f5ba25d7cd7a364c6b5b532d7"
+    },
+    {
+      "path": "CepHoras.exe",
+      "bytes": 162304,
+      "sha256": "58045ec70ec919784bb1add07cdc43e13a5a077f16f522bd7c0a69449f891ea2"
+    },
+    {
+      "path": "CepHoras.runtimeconfig.json",
+      "bytes": 527,
+      "sha256": "9a69d58d5a2eb42e3ebc8042a8e7a714876f568dd62da97c3937e2bd49167a1f"
+    },
+    {
+      "path": "CepHoras.Updates.dll",
+      "bytes": 41472,
+      "sha256": "3a07deab5cf3cfeed69ebcd0dec5bbc7968f04fc523fc254a8b3b62ee9978d0e"
+    },
+    {
+      "path": "control/CepHoras.Control.deps.json",
+      "bytes": 37367,
+      "sha256": "6874b7089551933ecbe1151b0ff37cc693ea6b8217859e8e68b37039351e41a1"
+    },
+    {
+      "path": "control/CepHoras.Control.dll",
+      "bytes": 132608,
+      "sha256": "c48a6ecade1012ea6f940ccbbcd2c5536e7c835a6975bd90ed17ecc24574f899"
+    },
+    {
+      "path": "control/CepHoras.Control.exe",
+      "bytes": 162304,
+      "sha256": "d0f78d52ffcc3c9db252a843b9693a5b5e18cee69b6f7ee5eb73ce7b47c7c2a4"
+    },
+    {
+      "path": "control/CepHoras.Control.Protocol.dll",
+      "bytes": 19456,
+      "sha256": "bf5730a1eed34f38f121caa9db306de92e81628d873af68b0444f167f59c4513"
+    },
+    {
+      "path": "control/CepHoras.Control.runtimeconfig.json",
+      "bytes": 527,
+      "sha256": "9a69d58d5a2eb42e3ebc8042a8e7a714876f568dd62da97c3937e2bd49167a1f"
+    },
+    {
+      "path": "control/CepHoras.Updates.dll",
+      "bytes": 41472,
+      "sha256": "3a07deab5cf3cfeed69ebcd0dec5bbc7968f04fc523fc254a8b3b62ee9978d0e"
+    },
+    {
+      "path": "managed-install.marker",
+      "bytes": 30,
+      "sha256": "1e76704c5b54c29d5b3f0e701af210ef5ce6107ad61b7258c7238f49ab4db890"
+    },
+    {
+      "path": "wwwroot/assets/conceito-icon-nV7wI1Mf.png",
+      "bytes": 87942,
+      "sha256": "c0131e2de05a43fbd3b7230d545e9477ac7fe5d8b09dfd7ffae7740d1322032e"
+    },
+    {
+      "path": "wwwroot/assets/conceito-logo-Drszt9Cu.png",
+      "bytes": 32287,
+      "sha256": "7133d380dbc20913dc08f77f1de9c0f734fb5470eac4a1be4c7900eae046bb48"
+    },
+    {
+      "path": "wwwroot/assets/index-B1JX8YA8.css",
+      "bytes": 40133,
+      "sha256": "c41bab95e98119f4f21fa8f0c0969d63b2a307e096ddb5c71f83555079d027a9"
+    },
+    {
+      "path": "wwwroot/assets/index-BH3ZYFCj.js",
+      "bytes": 385013,
+      "sha256": "cad4b456f685528c176a71363e6a63f8ebcca6749cceb13997905b076a22b744"
+    },
+    {
+      "path": "wwwroot/assets/manrope-cyrillic-wght-normal-Dvxsihut.woff2",
+      "bytes": 14500,
+      "sha256": "c268b459a9329e59fecf39a17618efd44c71735532048d60b12aab76a8c14914"
+    },
+    {
+      "path": "wwwroot/assets/manrope-greek-wght-normal-DL7QRZyv.woff2",
+      "bytes": 9444,
+      "sha256": "2fb2e8cbfd52ae46179a8b6024eb162f1f9c6de3d22d6e3a30d8f395de7220be"
+    },
+    {
+      "path": "wwwroot/assets/manrope-latin-ext-wght-normal-Ch3YOpNY.woff2",
+      "bytes": 15120,
+      "sha256": "3911b66d9f2e005a4b989223405d0e5032619c668597ba467cc76a23c8fffcfb"
+    },
+    {
+      "path": "wwwroot/assets/manrope-latin-wght-normal-DHIcAJRg.woff2",
+      "bytes": 24836,
+      "sha256": "a30ddcd349703aff7464c34bef3fffdff405ee50c113440d7c8693c02d210972"
+    },
+    {
+      "path": "wwwroot/assets/manrope-vietnamese-wght-normal-usUDDRr7.woff2",
+      "bytes": 8520,
+      "sha256": "6bbb044ab420e07edb0a3042d2eb314b85e83a0182e945a15ab3b9092668dfd5"
+    },
+    {
+      "path": "wwwroot/index.html",
+      "bytes": 979,
+      "sha256": "2f4f31325675fe6e52a4a411460bbc01b0a98b123bc6a91ac08324bbf2560e2c"
+    }
+  ],
+  "limits": [
+    "MSI/CAB/ZIP inspected read-only; no installation or custom action executed",
+    "ProductVersion declares source SHA; no bit-for-bit reproducible-build claim",
+    "No elevated policy, real power action or SYSTEM update runner executed"
+  ]
+}
