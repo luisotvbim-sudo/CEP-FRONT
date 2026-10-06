@@ -9,6 +9,7 @@ Contexto reescrito em 04/10/2026 após revisão do código. Comece por [CONTEXTO
 | [Contexto atual](CONTEXTO-ATUAL.md) | Funcionamento, arquitetura, sessão, escopos, bases e pendências para retomar |
 | [Mapa e limpeza do Front](mapa-front-limpeza.md) | Auditoria de código e consumidores na base de testes, mudanças isoladas e candidatos preservados |
 | [Refatoração estrutural do Front](refatoracao-front.md) | Separação de responsabilidades, commits selecionáveis, checks e imagem aplicada somente nos Docker de teste |
+| [Revisão para publicação web](publicacao-web-2026-10-06.md) | Integração do PR #18, revisão de segurança/deploy e distinção entre preparação e publicação efetiva |
 | [Especificação](produto/especificacao-funcional.md) | Intenção de produto, estado implementado/planejado e IDs RN/RF/CA/D |
 | [Compatibilidade](compatibilidade-backend.md) | API de referência e processo de alinhamento do contrato |
 | [OpenAPI real](openapi-backend-current.json) / [consumido](openapi.json) | Contrato técnico, incluindo o acompanhamento pessoal aditivo |
