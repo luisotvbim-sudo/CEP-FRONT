@@ -34,6 +34,32 @@ internal static class SessionTests
     {
         string DirectoryFor(string name) => Path.Combine(root, name);
 
+        // Exercise the actual default handler, not an injected handler that bypasses
+        // redirect behavior. No API or account is used; all traffic is loopback.
+        using (var redirectServer = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0))
+        {
+            redirectServer.Start();
+            var redirectApi = new Uri($"http://127.0.0.1:{((IPEndPoint)redirectServer.LocalEndpoint).Port}");
+            using var fixtureTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var fixture = Task.Run(async () =>
+            {
+                for (var i = 0; i < 2; i++)
+                {
+                    using var connection = await redirectServer.AcceptTcpClientAsync(fixtureTimeout.Token);
+                    await using var stream = connection.GetStream();
+                    var bytes = new byte[8192];
+                    _ = await stream.ReadAsync(bytes, fixtureTimeout.Token);
+                    await stream.WriteAsync(System.Text.Encoding.ASCII.GetBytes(
+                        "HTTP/1.1 307 Temporary Redirect\r\nLocation: http://127.0.0.1:1/unreachable\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"), fixtureTimeout.Token);
+                }
+            });
+            using var redirectSession = new ApiSession(redirectApi, null, DirectoryFor("redirect-boundary"));
+            check(!await redirectSession.IsApiUnreachable(), "Received redirect was mistaken for API offline");
+            var redirectFailure = await Failure(redirectSession.Execute("login", Login));
+            check(redirectFailure.Status == 307 && !redirectFailure.TransportFailure, "Auth followed a redirect instead of preserving the API response");
+            await fixture.WaitAsync(fixtureTimeout.Token);
+        }
+
         var overviewReads = 0;
         using (var session = new ApiSession(Api, new Handler(request =>
         {
@@ -84,10 +110,14 @@ internal static class SessionTests
 
         var failedDirectory = DirectoryFor("lost-refresh");
         refreshes = 0;
-        using (var session = new ApiSession(Api, new Handler(request =>
+        using (var session = new ApiSession(Api, new Handler(async request =>
         {
-            if (request.RequestUri!.AbsolutePath == "/api/v1/auth/login") return Task.FromResult(Tokens(10));
-            if (request.RequestUri.AbsolutePath == "/api/v1/me") return Task.FromResult(Ok(User));
+            if (request.RequestUri!.AbsolutePath == "/api/v1/auth/login") return Tokens(10);
+            if (request.RequestUri.AbsolutePath == "/api/v1/me") return Ok(User);
+            var persisted = Directory.EnumerateFiles(failedDirectory, "*.dat").Single();
+            var entropy = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(Api.GetLeftPart(UriPartial.Authority)));
+            var tombstone = await new ProtectedJsonFile(persisted, entropy).ReadAsync<JsonElement>();
+            check(tombstone.ValueKind == JsonValueKind.Null, "Refresh was sent before the durable token tombstone");
             Interlocked.Increment(ref refreshes);
             throw new HttpRequestException("Disposable lost response");
         }), failedDirectory))

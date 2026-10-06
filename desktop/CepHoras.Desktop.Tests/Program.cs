@@ -77,6 +77,13 @@ try
     catch (CryptographicException) { checks++; }
     await store.WriteAsync(new { token = "replacement", expiresAt = token.expiresAt });
     Check((await store.ReadAsync<JsonElement>()).GetProperty("token").GetString() == "replacement", "Token rotation failed");
+    using (var held = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+    {
+        try { await store.WriteAsync(new { token = "must-not-publish" }); throw new InvalidOperationException("Locked replacement succeeded"); }
+        catch (IOException) { checks++; }
+    }
+    Check((await store.ReadAsync<JsonElement>()).GetProperty("token").GetString() == "replacement", "Failed replacement damaged the previous ciphertext");
+    Check(!Directory.EnumerateFiles(directory, "*.tmp").Any(), "Failed replacement left temporary ciphertext");
     store.Delete();
     Check(!store.Exists, "Revocation left persisted state");
 
