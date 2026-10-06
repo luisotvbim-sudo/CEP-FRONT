@@ -9,6 +9,7 @@ Na branch de [refatoração estrutural](refatoracao-front.md), `HistoryFields` t
 ## Comportamento existente
 
 - Cada data com registros aparece inicialmente fechada, com Monday, VR e diferença Monday − VR retornados pela API, sinal e descrição.
+- A descrição da diferença usa o VR Mais como referência: delta positivo aparece como “Sobrando no Monday”, negativo como “Faltando no Monday”, zero como “Sem diferença” e nulo como “Diferença indisponível”. A tabela conserva o sinal do valor retornado; o Front não recalcula totais.
 - Expandir mostra registros das fontes, atividades/durações/estados. No detalhe Monday, mostrar somente Início, Fim, origem Manual/Cronômetro e link HTTPS quando disponível; origem desconhecida permanece indisponível. `manual: true` informa lançamento manual; `manual: false` explícito ou `running: true` informa cronômetro. O detalhe VR mostra somente horários de início/fim quando fornecidos, batidas informadas na ordem recebida, link quando disponível e origem manual somente se explicitamente informada. Sem horários/batidas, informa indisponibilidade. Não mostra importação/referência externa nem infere pareamento ou cronômetro. Campo não fornecido permanece indisponível.
 - Filtro de fonte restringe detalhes e dias encontrados; resumo do dia usa ambas as identidades para evitar diferença artificial pelo filtro.
 - Alterar pessoa, período ou fonte invalida consulta/resultados/expansão anteriores. Resposta atrasada de um contexto anterior é descartada.

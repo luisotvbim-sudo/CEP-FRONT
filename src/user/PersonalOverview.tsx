@@ -1,10 +1,11 @@
-import type { AuthClient } from '../auth/auth-client'
-import { date, duration, timestamp } from '../admin/format'
+import type { AuthClient, AuthError } from '../auth/auth-client'
+import type { AdminApi } from '../admin/api'
+import { date, duration, mondayDifference, timestamp } from '../admin/format'
 import { Loading, PageHeading } from '../admin/ui'
-import { AnalysisDetails } from '../notifications/AnalysisDetails'
 import { periodLabels } from '../notifications/api'
 import { overviewApi, type OverviewPeriod, type OverviewStatus } from './overview-api'
 import { useOverview } from './useOverview'
+import { PersonalPeriodHistory } from './PersonalPeriodHistory'
 import './overview.css'
 
 const messages: Record<OverviewStatus, { title: string; detail: string }> = {
@@ -35,17 +36,25 @@ const messages: Record<OverviewStatus, { title: string; detail: string }> = {
 
 export function PersonalOverview({
   client,
-  onHistory,
-  onNotifications,
+  historyApi,
+  personId,
+  associationPending,
+  associationError,
+  retryAssociation,
 }: {
   client: AuthClient
-  onHistory(): void
-  onNotifications(): void
+  historyApi: AdminApi
+  personId?: string | null
+  associationPending: boolean
+  associationError: AuthError | null
+  retryAssociation(): void
 }) {
   const query = useOverview(overviewApi(client))
-  const value = query.data
+  const value = query.data?.period === query.period ? query.data : undefined
   const message = value && messages[value.status]
   const analysis = value?.analysis
+  const difference = mondayDifference(analysis?.deltaSeconds)
+  const selectedPeriod = value?.periods?.find((item) => item.period === query.period)
   return (
     <>
       <PageHeading
@@ -124,100 +133,35 @@ export function PersonalOverview({
               </p>
             </div>
             {analysis && (
-              <>
-                <dl className="overview-metrics">
-                  <div>
-                    <dt>Horas no VR Mais</dt>
-                    <dd>{duration(analysis.vrSeconds)}</dd>
-                  </div>
-                  <div>
-                    <dt>Horas no Monday</dt>
-                    <dd>{duration(analysis.mondaySeconds)}</dd>
-                  </div>
-                  <div>
-                    <dt>Diferença Monday − VR</dt>
-                    <dd>{duration(analysis.deltaSeconds)}</dd>
-                  </div>
-                </dl>
-                <p className="muted">
-                  Diferença negativa: menos horas no Monday. Positiva: mais horas no Monday. O saldo
-                  não substitui a revisão de cada dia.
-                </p>
-                {value.attentionDays!.length > 0 && (
-                  <section aria-label="Dias para conferir">
-                    <h3>Dias que merecem atenção</h3>
-                    <ul className="overview-attention">
-                      {value.attentionDays!.map((day) => (
-                        <li key={day.day}>
-                          <strong>{date(day.day)}</strong> ·{' '}
-                          {day.status === 'difference'
-                            ? 'Diferença acima da tolerância'
-                            : 'Informações insuficientes'}
-                          {day.partial && ' · Dia parcial'}
-                          <span>
-                            Confira os registros de ponto e atividades na origem; se precisar,
-                            procure o coordenador.
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                )}
-                <details className="overview-details">
-                  <summary>Ver detalhes e qualidade das fontes</summary>
-                  <AnalysisDetails value={analysis} />
-                  {value.status === 'incomplete' && (
-                    <>
-                      <h3>Valores disponíveis por fonte</h3>
-                      <p>
-                        Leituras individuais no mesmo corte. Estes valores não substituem os totais
-                        completos do período.
-                      </p>
-                      <div
-                        className="table-scroll"
-                        role="region"
-                        aria-label="Valores por fonte"
-                        tabIndex={0}
-                      >
-                        <table>
-                          <thead>
-                            <tr>
-                              <th>Dia</th>
-                              <th>VR Mais</th>
-                              <th>Monday</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {value.availableSourceDays!.map((day) => (
-                              <tr key={day.day}>
-                                <td>{date(day.day)}</td>
-                                <td>{duration(day.vrSeconds)}</td>
-                                <td>{duration(day.mondaySeconds)}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </>
-                  )}
-                </details>
-              </>
+              <dl className="overview-metrics">
+                <div>
+                  <dt>Horas no VR Mais</dt>
+                  <dd>{duration(analysis.vrSeconds)}</dd>
+                </div>
+                <div>
+                  <dt>Horas no Monday</dt>
+                  <dd>{duration(analysis.mondaySeconds)}</dd>
+                </div>
+                <div>
+                  <dt>{difference.label}</dt>
+                  <dd>{difference.duration}</dd>
+                </div>
+              </dl>
             )}
           </>
         )}
-        <div className="overview-links">
-          <button className="secondary-button" onClick={onHistory}>
-            Consultar meu histórico
-          </button>
-          <button className="secondary-button" onClick={onNotifications}>
-            Ver meus avisos
-          </button>
-        </div>
-        <p className="muted">
-          Conferir agora lê as fontes. Atualizar histórico importa registros. Relatórios e avisos
-          anteriores conservam o corte original; ler um aviso não resolve uma ocorrência.
-        </p>
       </section>
+      {selectedPeriod?.from && selectedPeriod.to && (
+        <PersonalPeriodHistory
+          api={historyApi}
+          personId={personId}
+          associationPending={associationPending}
+          associationError={associationError}
+          retryAssociation={retryAssociation}
+          from={selectedPeriod.from}
+          to={selectedPeriod.to}
+        />
+      )}
     </>
   )
 }

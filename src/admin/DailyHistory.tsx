@@ -2,7 +2,7 @@ import { groupHistory } from './history-data'
 import { Fragment, useId, useMemo, useState } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import type { History, Source } from './api'
-import { date, duration, sourceLabel } from './format'
+import { date, duration, mondayDifference, sourceLabel } from './format'
 import { RecordDetails } from './RecordDetails'
 import { Badge } from './ui'
 
@@ -21,9 +21,10 @@ const issues: Record<string, string> = {
 }
 
 function dailyDifference(seconds?: number | null) {
-  if (seconds == null || !Number.isFinite(seconds)) return 'Indisponível'
-  if (seconds === 0) return '00:00 · Totais iguais'
-  return `${seconds > 0 ? '+' : '−'}${duration(Math.abs(seconds))} · ${seconds > 0 ? 'a mais' : 'a menos'} no Monday`
+  const difference = mondayDifference(seconds)
+  return difference.known
+    ? `${difference.signedDuration} · ${difference.label}`
+    : difference.label
 }
 
 export function DailyHistory({

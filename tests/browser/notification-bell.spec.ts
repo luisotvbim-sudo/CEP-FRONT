@@ -52,7 +52,7 @@ for (const leader of [false, true]) {
     await page.keyboard.press('Escape')
     await expect(bell).toBeFocused()
     await expect(bell).toHaveAttribute('aria-expanded', 'false')
-    await page.getByRole('button', { name: 'Ver meus avisos' }).click()
+    await bell.click()
     await expect(panel).toBeVisible()
     await panel.getByText('Ver análise anexada').click()
     await panel.getByRole('button', { name: 'Marcar como lida' }).click()

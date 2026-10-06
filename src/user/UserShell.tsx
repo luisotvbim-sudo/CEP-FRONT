@@ -138,8 +138,11 @@ export function UserShell({
           {activePage === 'mine' && (
             <PersonalOverview
               client={client}
-              onHistory={() => setPage('history')}
-              onNotifications={() => setNotificationsOpen(true)}
+              historyApi={api}
+              personId={self?.id}
+              associationPending={people.pending}
+              associationError={people.error}
+              retryAssociation={people.reload}
             />
           )}
           {activePage === 'history' && (
