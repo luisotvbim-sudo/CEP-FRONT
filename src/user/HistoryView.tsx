@@ -98,7 +98,7 @@ export function HistoryView({
             </div>
           </fieldset>
           <p className="muted">
-            Até 90 dias inclusivos. A atualização normal recarrega somente os últimos 7 dias.
+            Até 90 dias inclusivos. A atualização normal recarrega somente os últimos 17 dias.
           </p>
           <FormNotice error={validation || action.error} />
         </form>

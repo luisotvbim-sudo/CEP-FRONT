@@ -22,7 +22,7 @@ A auditoria não encontrou release MSI estável nem comprovação de homologaç�
 - [Acompanhamento pessoal](docs/acompanhamento-pessoal.md) com consulta automática, situação/corte, dias de atenção e detalhe progressivo; requer o contrato aditivo da API.
 
 - Login web/nativo, retomada, refresh rotativo, logout, recuperação/redefinição de senha e [ativação de convite sem emissão de sessão](docs/contrato-ativacao-convite.md).
-- Pessoas, associação por IDs Monday/VR, convite e [reenvio administrativo](docs/contrato-reenvio-convite.md), diretórios paginados e sincronização normal de 7 dias ou administrativa de até 90 dias.
+- Pessoas, associação por IDs Monday/VR, convite e [reenvio administrativo](docs/contrato-reenvio-convite.md), diretórios paginados e sincronização normal de 17 dias ou administrativa de até 90 dias.
 - Administração de organizações, usuários, times, vínculos com vigência e auditoria; Membro/Líder recebem respostas autorizadas pela API.
 - [Histórico diário](docs/historico-diario.md) com detalhes de origem e totais retornados pelo servidor; valores desconhecidos permanecem nulos.
 - [Configurações/agendas globais, envio manual, central pessoal e análises persistidas](docs/notificacoes-implementacao.md). Consultar uma análise não executa nova leitura das fontes.

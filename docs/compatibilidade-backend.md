@@ -1,5 +1,7 @@
 # Compatibilidade CEP-FRONT × CEP-API
 
+A janela normal de 17 dias e o botão “Atualizar sprint” requerem a API com `ManualSyncDays = 17`. A mudança não altera rotas/DTOs nem os períodos oficiais de análise; confirmar a imagem API de testes antes de aplicar este Front.
+
 Alteração de senha em 05/10/2026: ativação e recuperação permitem de 6 a 200 caracteres. Publicar primeiro a API com RequiredLength=6 e contratos atualizados; depois web/cliente Windows. Não muda rotas, payloads, tipos nem allowlist. Snapshots foram regenerados da API local da entrega: o gerador atual não publica limites de senha nos schemas desses records. Homologação com PostgreSQL e versão instalada permanece necessária.
 
 Revisão documental de 04/10/2026. Front auditado: `main` `eb63dbdc7f7bf83d0a4b51ee5567ed5aa80c138c`. API de referência: `main` `b36c6e149b42253b44860d98c6ffe44f98c53dd6`. Código publicado, CI aprovada e SHA implantado não são o mesmo estado.
@@ -15,7 +17,7 @@ Revisão documental de 04/10/2026. Front auditado: `main` `eb63dbdc7f7bf83d0a4b5
 | Ativação de convite | `/auth/invitations/activate`, 204 sem sessão; formulário público web/nativo |
 | Pessoas/associação/convites | IDs Monday/VR, fila de e-mail, reenvio administrativo; enfileirar não prova entrega |
 | Times/usuários/auditoria | Telas administrativas; Líder/Membro recebem consultas autorizadas |
-| Sincronização/histórico | Normal 7 dias, full administrativo até 90; registros e resumos diários calculados na API |
+| Sincronização/histórico | Normal 17 dias, full administrativo até 90; registros e resumos diários calculados na API |
 | Análises/notificações | Configurações/agendas globais, prévia/envio, caixa pessoal, leitura/recebimento, histórico e snapshots de análise |
 | Acompanhamento pessoal | GET autenticado próprio, períodos oficiais, situação, corte e valores/limites das fontes; [contrato do consumidor](acompanhamento-pessoal.md) |
 | Energia | Decisão pessoal, verificação/status e liberação PIN temporária; execução local requer MSI corporativo compatível |

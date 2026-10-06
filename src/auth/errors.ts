@@ -88,7 +88,7 @@ const messages: Record<string, string> = {
   sync_scope_empty:
     'Não há pessoas no seu escopo com identidades ativas nas duas fontes. Peça ao coordenador para conferir vínculos e associações.',
   full_sync_forbidden:
-    'A carga completa é restrita à coordenação. Use a atualização dos últimos 7 dias.',
+    'A carga completa é restrita à coordenação. Use a atualização dos últimos 17 dias.',
   monday_responsible_column_unavailable:
     'A coluna de responsável do Monday não está disponível. Peça ao coordenador para revisar a configuração da fonte.',
   monday_multiple_responsibles:

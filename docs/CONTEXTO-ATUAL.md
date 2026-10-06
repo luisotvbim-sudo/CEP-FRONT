@@ -1,5 +1,7 @@
 # Contexto atual do CEP-FRONT
 
+Sincronização normal: botão “Atualizar sprint”, janela móvel de 17 dias incluindo hoje, dependente da API com essa política. O nome do botão não muda os períodos oficiais de análise da sprint (1–14/15–fim do mês); reprocessamento administrativo permanece até 90 dias.
+
 Detalhe de registro Monday: somente Início/Fim, origem informada Manual/Cronômetro e link da atividade quando disponível. Título, duração e estado continuam fora do detalhe; VR mostra apenas horários conhecidos/batidas informadas, link e origem explícita, sem metadados complementares nem pareamento inferido. Ausência de flags de origem não permite inferir cronômetro. Ver [histórico diário](historico-diario.md).
 
 Política de senha em 05/10/2026: formulários de ativação e recuperação e mensagens permitem mínimo de 6 e máximo de 200 caracteres. Requer API com a regra atualizada antes da publicação do cliente; sem mudanças nas rotas/allowlist. Código e builds não comprovam publicação web ou versão Windows instalada.
@@ -44,7 +46,7 @@ Desde a entrega em branch de 05/10/2026, Minha jornada usa [acompanhamento pesso
 
 Diretórios Monday/VR são paginados no backend; a interface escolhe IDs internos ativos e ainda não associados. Correspondência por e-mail exato/único é sugestão, exige confirmação humana. Nomes iguais não criam associação automática. Associar/convidar enfileira e-mail, sem provar entrega.
 
-Atualização normal reavalia hoje e os seis dias anteriores; reprocessamento completo/carga inicial administrativa cobre até 90 dias. Não é delta puro por cursor. Fontes apresentam tentativa, resultado, contagens/cobertura e falhas independentes; última tentativa não significa último sucesso. Membro/Líder não recebem a opção de reprocessamento administrativo, e sua última tentativa é a que solicitaram.
+Atualização normal reavalia hoje e os 16 dias anteriores; reprocessamento completo/carga inicial administrativa cobre até 90 dias. Não é delta puro por cursor. Fontes apresentam tentativa, resultado, contagens/cobertura e falhas independentes; última tentativa não significa último sucesso. Membro/Líder não recebem a opção de reprocessamento administrativo, e sua última tentativa é a que solicitaram.
 
 `GET /organization/time-control/history` aceita até 90 dias inclusivos e retorna registros mais resumos diários da API. `DailyHistory`/`history-data.ts` agrupam/apresentam, sem calcular totais. Filtro de fonte restringe detalhes/dias encontrados; resumo de cada dia usa ambas as identidades. Datas civis preservam o dia da API; instantes usam São Paulo e durações mantêm segundos/sinal, inclusive acima de 24h.
 

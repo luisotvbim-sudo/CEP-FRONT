@@ -139,9 +139,8 @@ export function SyncPage({ api, allowFull = true }: { api: AdminApi; allowFull?:
               />
               <span>Reprocessar até 90 dias e diretórios (carga administrativa)</span>
             </label>
-          ) : (
-            <p className="muted">A atualização normal reavalia os últimos 7 dias da sua pessoa e das pessoas dos times que você lidera, quando houver.</p>
-          )}
+          ) : null}
+          {(!allowFull || !full) && <p className="muted">Atualiza os últimos 17 dias, incluindo hoje.</p>}
         </div>
         <button
           className="primary-button compact"
@@ -149,7 +148,7 @@ export function SyncPage({ api, allowFull = true }: { api: AdminApi; allowFull?:
           onClick={() => void start()}
         >
           <RefreshCw size={17} className={running ? 'spin' : ''} />
-          {running ? 'Coleta em andamento…' : allowFull && full ? 'Reprocessar até 90 dias' : 'Atualizar últimos 7 dias'}
+          {running ? 'Coleta em andamento…' : allowFull && full ? 'Reprocessar até 90 dias' : 'Atualizar sprint'}
         </button>
       </div>
       <FormNotice error={error} />
