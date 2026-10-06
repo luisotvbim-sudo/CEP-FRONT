@@ -1,6 +1,8 @@
-import { useAction, useQuery } from '../hooks/async'
+import { useQuery } from '../hooks/async'
+import { useLogout } from '../auth/useLogout'
+import { AccountControls } from '../components/AccountControls'
 import { useCallback, useMemo, useState } from 'react'
-import { History, LogOut, UsersRound } from 'lucide-react'
+import { History, UsersRound } from 'lucide-react'
 import logo from '../assets/conceito-logo.png'
 import { type AuthClient, type AuthSession } from '../auth/auth-client'
 import { FormNotice } from '../components/FormNotice'
@@ -106,7 +108,7 @@ export function UserShell({
   })
   const [teamId, setTeamId] = useState<string | null>(null)
   const [historyRevision, setHistoryRevision] = useState(0)
-  const logout = useAction()
+  const logout = useLogout(client, onLogout)
   const self = people.data?.find((person) => person.userId === session.user.id)
   const managed = teams.data ?? []
   const selectedTeam = managed.find((team) => team.id === teamId) ?? null
@@ -164,7 +166,14 @@ export function UserShell({
               </strong>
             </span>
           </div>
-          <div className="admin-account">
+          <AccountControls
+            displayName={session.user.displayName}
+            fallbackName="Membro"
+            fallbackInitial="M"
+            roleLabel={managed.length ? 'Visão pessoal e gestão dos times' : 'Visão pessoal'}
+            pending={logout.pending}
+            onLogout={logout.logout}
+          >
             <NotificationBell
               api={notifications}
               open={notificationsOpen}
@@ -176,28 +185,7 @@ export function UserShell({
                 setPage('notifications')
               }}
             />
-            <span className="avatar">
-              {session.user.displayName?.slice(0, 1).toUpperCase() || 'M'}
-            </span>
-            <div>
-              <strong>{session.user.displayName || 'Membro'}</strong>
-              <span>{managed.length ? 'Visão pessoal e gestão dos times' : 'Visão pessoal'}</span>
-            </div>
-            <button
-              className="icon-button"
-              aria-label="Sair da conta"
-              title="Sair da conta"
-              disabled={logout.pending}
-              onClick={() =>
-                void logout.run(async () => {
-                  await client.logout()
-                  onLogout()
-                })
-              }
-            >
-              <LogOut size={19} />
-            </button>
-          </div>
+          </AccountControls>
         </header>
         <main className="admin-content">
           <FormNotice error={logout.error} />
