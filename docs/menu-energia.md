@@ -83,3 +83,5 @@ Esta revisão conferiu documentação com o código; não executou novos builds,
 ## Ambiente portátil TESTE
 
 Na branch `codex/desktop-test-environment`, o [launcher isolado](desktop-ambiente-teste.md) mantém a revalidação API e substitui apenas o executor por broker em memória, sem IPC ou ações Windows. Ativação exclusiva Debug, com identificação visível; não incorpora políticas/instalação MSI e não homologa execução real.
+
+O [destino TESTE MOCK](desktop-ambiente-mock.md) é fixo em HTTPS localhost:9443 e usa outro perfil/sessão DPAPI. Decisão continua na API e revalidação no host; executor continua exclusivamente simulado em memória.

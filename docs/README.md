@@ -43,3 +43,5 @@ Conteúdo necessário foi absorvido nas fontes correntes; a narrativa histórica
 Prompts de programação e matrizes antigas contraditórias foram retirados dos documentos correntes. IDs e requisitos de produto ainda úteis foram conservados, com status explícito. Um teste relatado no passado não é um teste executado agora; cada entrega registra base, comando e resultado efetivos.
 
 - [Desktop local TESTE](desktop-ambiente-teste.md): launcher isolado, base conferida, energia simulada e limites de validação.
+
+- [Desktop TESTE MOCK](desktop-ambiente-mock.md): HTTPS 9443, sessão própria, notificações e revalidação de energia com fontes controladas.

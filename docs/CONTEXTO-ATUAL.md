@@ -1,6 +1,6 @@
 # Contexto atual do CEP-FRONT
 
-Ambiente desktop portátil isolado: [guia TESTE](desktop-ambiente-teste.md), branch `codex/desktop-test-environment`. API Docker local, sessão/perfil próprios e energia simulada; não representa instalação MSI ou homologação das fontes.
+Ambiente desktop portátil isolado: [guia TESTE](desktop-ambiente-teste.md), branch `codex/desktop-test-environment`. API Docker local ou [mock HTTPS isolado](desktop-ambiente-mock.md), sessão/perfil próprios por destino e energia simulada; não representa instalação MSI ou homologação das fontes.
 
 Sincronização normal: botão “Atualizar sprint”, janela móvel de 17 dias incluindo hoje, dependente da API com essa política. O nome do botão não muda os períodos oficiais de análise da sprint (1–14/15–fim do mês); reprocessamento administrativo permanece até 90 dias.
 

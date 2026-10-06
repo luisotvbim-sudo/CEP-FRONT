@@ -31,3 +31,7 @@ Sem rede na inicialização, o arquivo de sessão é preservado para retomada. R
 Tolerância inicial: 30 minutos nos dois sentidos, limite exato permitido. Automação nasce desativada. Agendas 10h/11h50/17h têm finalidade explícita, excluem sábado/domingo; relatório diário continua. Feriados/férias/escalas não têm calendário completo. O worker recupera slots do mesmo dia, com corte original; não recompõe dias passados nunca enfileirados.
 
 O [contrato](contrato-analises-notificacoes.md) detalha períodos, integridade e limites. Testes existentes de browser/contrato/nativo usam dados fictícios e API descartável. Para alteração funcional, verificar versão/conflito global, escopo, idempotência/resposta incerta, valores nulos, leitura explícita, todas as páginas antes de ACK, reinício e isolamento DPAPI. Homologação exige Monday/VR reais, perfis autorizados e políticas de notificação/instalação em Windows. CI não substitui essa evidência.
+
+## Teste portátil com fontes controladas
+
+O [desktop TESTE MOCK](desktop-ambiente-mock.md) permite verificar polling/recebimento/retomada/leitura com contas fictícias no clone HTTPS 9443. Ledger DPAPI separado do ambiente 8080; leitura continua explícita, e popups têm identificação TESTE. Esse fluxo não homologa fontes reais ou política Windows da frota.

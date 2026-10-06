@@ -1,6 +1,6 @@
 # Desktop local TESTE
 
-Ambiente portátil de desenvolvimento em `codex/desktop-test-environment`. Não instalar MSI, serviço ou políticas para este fluxo. VM/upgrade MSI constituem etapa futura. A API e os volumes existentes do Compose `CEP-ORQUESTRADOR/.local/test-stack/compose.yaml` são preservados.
+Ambiente portátil de desenvolvimento em `codex/desktop-test-environment`. O [destino mock HTTPS](desktop-ambiente-mock.md) tem sessão/perfil próprios e guia complementar. Não instalar MSI, serviço ou políticas para este fluxo. VM/upgrade MSI constituem etapa futura. A API e os volumes existentes do Compose `CEP-ORQUESTRADOR/.local/test-stack/compose.yaml` são preservados.
 
 ## Base conferida
 
@@ -29,7 +29,7 @@ Energia usa `PowerBridgeHandler` e a revalidação real da API, porém o sender 
 
 ## Isolamento
 
-Sessão/recebimentos/diagnósticos em `%LOCALAPPDATA%\Conceito\CepHoras-Test\Sessions`; WebView2 em `%LOCALAPPDATA%\Conceito\CepHoras-Test\WebView2`. Mutex derivado do diretório de sessão. Refresh protegido por DPAPI CurrentUser; access token no host; renderer recebe somente metadados/resultados. O perfil de produção `%LOCALAPPDATA%\Conceito\CepHoras` não é usado. TESTE exige Debug, API exatamente `http://127.0.0.1:8080`, pastas fixas e ausência de marker gerenciado; a variável de ativação não habilita TESTE em Release.
+Sessão/recebimentos/diagnósticos em `%LOCALAPPDATA%\Conceito\CepHoras-Test\Sessions`; WebView2 em `%LOCALAPPDATA%\Conceito\CepHoras-Test\WebView2`. Mutex derivado do diretório de sessão. Refresh protegido por DPAPI CurrentUser; access token no host; renderer recebe somente metadados/resultados. O perfil de produção `%LOCALAPPDATA%\Conceito\CepHoras` não é usado. TESTE exige Debug, destino fixo `Real` (`http://127.0.0.1:8080`) ou `Mock` (`https://localhost:9443`), pastas correspondentes fixas e ausência de marker gerenciado; a variável de ativação não habilita TESTE em Release.
 
 O launcher remove argumentos herdados de depuração WebView2. O driver de fixtures usa perfis descartáveis próprios e porta CDP loopback temporária; não habilitar CDP na janela operacional TESTE.
 
