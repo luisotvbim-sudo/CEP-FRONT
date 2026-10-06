@@ -23,7 +23,7 @@ for (const leader of [false, true]) {
     await page.getByRole('button', { name: 'Reprocessar dados do Monday', exact: true }).click()
     await expect(page.getByRole('button', { name: 'Reprocessando dados…' })).toBeDisabled()
     await expect.poll(() => calls.filter(c => c.path.includes('/time-control/history?')).length).toBe(before + 1)
-    await expect(page.getByRole('status')).toContainText('Atualização parcial')
+    await expect(page.getByRole('main').getByRole('status')).toContainText('Atualização parcial')
     expect(posts).toBe(1)
     expect(calls.filter(c => c.path.includes('/time-control/history?')).at(-1)?.path).toContain('source=monday')
     await expect(page.getByLabel('Fonte', { exact: true })).toHaveValue('monday')
