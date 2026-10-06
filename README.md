@@ -2,6 +2,8 @@
 
 O código da página pública `/download` aponta à prerelease MSI 0.4.16 para Windows 10 22H2 e Windows 11 24H2+ x64. O convite da API permanece apontando à página; CI, integração e implantação web são verificadas separadamente. [Entrega da página](docs/download-msi-0.4.16.md).
 
+A publicação web de 06/10/2026 do histórico pessoal está registrada com SHA implantado, CI, saúde pública e limite da conferência autenticada em [publicação do histórico](docs/publicacao-web-historico-2026-10-06.md).
+
 Referência Windows conferida em 06/10/2026: [contexto do instalador](docs/CONTEXTO-INSTALADOR.md) e [auditoria 0.4.12](docs/AUDITORIA-INSTALADOR-2026-10-06.md). As matrizes datadas de 04/10 abaixo são históricas; a auditoria separa código, draft, checks e homologação pendente.
 
 
