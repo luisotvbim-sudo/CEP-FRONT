@@ -1,5 +1,10 @@
 # CEP Horas — web, Windows e instalador
 
+Na branch `codex/windows10-compat`, o candidato MSI 0.4.14 amplia a matriz para
+Windows 10 22H2 x64 Pro/Enterprise/Education e preserva Windows 11 24H2+.
+Consulte [a entrega candidata](docs/windows10-msi-0.4.14.md); os estados
+publicados abaixo permanecem registrados com seus commits e datas.
+
 Referência Windows conferida em 06/10/2026: [contexto do instalador](docs/CONTEXTO-INSTALADOR.md) e [auditoria 0.4.12](docs/AUDITORIA-INSTALADOR-2026-10-06.md). As matrizes datadas de 04/10 abaixo são históricas; a auditoria separa código, draft, checks e homologação pendente.
 
 

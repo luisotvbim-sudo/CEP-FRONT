@@ -1,5 +1,11 @@
 # Contexto atual do instalador e aplicativo corporativo
 
+Na branch `codex/windows10-compat`, o candidato MSI 0.4.14 amplia o preflight
+para Windows 10 22H2 x64 Pro/Enterprise/Education e preserva Windows 11 24H2+.
+Ver [compatibilidade 0.4.14](windows10-msi-0.4.14.md) para escopo, verificações
+e homologação pendente. A release beta 0.4.13 publicada mantém seu próprio
+requisito e artefatos imutáveis.
+
 Preparação em 06/10/2026: [beta MSI 0.4.13](beta-msi-0.4.13.md), branch
 `codex/beta-msi-convite`, consolida a web main `18aa262` e a auditoria `32983a5`.
 Beta é atualização manual pela TI, prerelease no GitHub com `latest=false`.

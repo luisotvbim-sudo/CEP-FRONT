@@ -157,7 +157,7 @@ Instalar bootstrap com administrador em VM Windows compatível, depois em PC pil
 
 O banner **O atualizador precisa de revisão da TI** corresponde a indisponibilidade de inicialização local e exige diagnóstico próprio. Não afirmar correção por a descoberta deixar de usar REST ou por haver recarga do WebView2. Preservar somente versão, fase, código de saída e diagnóstico técnico; não copiar sessão, senha diária, PIN, chave, perfil ou dados pessoais.
 
-Depois de VM/PC piloto, ampliar para duas ou três máquinas antes das demais. A frota precisa cumprir build ≥26100/edições corporativas conforme [instalador](instalador-corporativo.md). Esta reconciliação não executou instalação, publicação, teste de chave ou rollout.
+Depois de VM/PC piloto, ampliar para duas ou três máquinas antes das demais. A matriz original deste guia exigia build ≥26100/edições corporativas; o [candidato 0.4.14](windows10-msi-0.4.14.md) também admite Windows 10 22H2 x64 Pro/Enterprise/Education, ainda sujeito ao piloto. Esta reconciliação histórica não executou instalação, publicação, teste de chave ou rollout.
 
 ## Código e verificações por entrega
 

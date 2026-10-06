@@ -3,7 +3,7 @@
 Referência Windows conferida em 06/10/2026: [contexto do instalador](CONTEXTO-INSTALADOR.md) e [auditoria 0.4.12](AUDITORIA-INSTALADOR-2026-10-06.md). As matrizes datadas de 04/10 abaixo são históricas; a auditoria separa código, draft, checks e homologação pendente.
 
 
-Revisão de 04/10/2026, com base `main` Front `eb63dbd` e API `b36c6e1`. WPF/WebView2 compartilha telas React com web e assume sessão, bridge, bandeja, popup e integração com serviço local. Instalação e publicação têm ciclos próprios; [instalador](instalador-corporativo.md) e [menu de energia](menu-energia.md) definem políticas/contratos.
+Revisão de 04/10/2026, com base `main` Front `eb63dbd` e API `b36c6e1`. WPF/WebView2 compartilha telas React com web e assume sessão, bridge, bandeja, popup e integração com serviço local. Instalação e publicação têm ciclos próprios; [instalador](instalador-corporativo.md) e [menu de energia](menu-energia.md) definem políticas/contratos. O [candidato MSI 0.4.14](windows10-msi-0.4.14.md) acrescenta Windows 10 22H2 x64 ao preflight, com homologação real pendente.
 
 ## Bases e capacidades
 
