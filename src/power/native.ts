@@ -73,7 +73,7 @@ export class NativePowerBridge implements NativePower {
           throw new AuthError(
             messages[error.failure.code ?? ''] ??
               'O aplicativo não confirmou a operação de energia.',
-            error.failure.correlationId,
+            error.failure.correlationId ?? undefined,
             error.failure.code ?? 'native_power_failed',
           )
         }

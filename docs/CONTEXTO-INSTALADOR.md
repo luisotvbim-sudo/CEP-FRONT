@@ -1,6 +1,8 @@
 # Contexto atual do instalador e aplicativo corporativo
 
-Na branch `codex/windows10-compat`, o candidato MSI 0.4.14 amplia o preflight
+Na branch `codex/power-pin-bridge-error`, o candidato MSI 0.4.15 conserva a
+matriz 0.4.14 e corrige o [envelope de erro do bridge](pin-admin-bridge-0.4.15.md).
+Na branch anterior `codex/windows10-compat`, o candidato MSI 0.4.14 amplia o preflight
 para Windows 10 22H2 x64 Pro/Enterprise/Education e preserva Windows 11 24H2+.
 Ver [compatibilidade 0.4.14](windows10-msi-0.4.14.md) para escopo, verificações
 e homologação pendente. A release beta 0.4.13 publicada mantém seu próprio

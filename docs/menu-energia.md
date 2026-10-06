@@ -1,5 +1,11 @@
 # Menu de energia: contrato e execução
 
+O candidato MSI 0.4.15 corrige no cliente Windows a interpretação de campos
+opcionais nulos do erro HTTP devolvido pelo bridge. A mensagem genérica
+“O aplicativo retornou uma resposta inválida” no 0.4.14 pode ter ocultado
+`invalid_admin_pin`, limite de tentativas, PIN não configurado ou outro erro;
+ela não comprova a causa da recusa. Ver [entrega 0.4.15](pin-admin-bridge-0.4.15.md).
+
 Referência Windows conferida em 06/10/2026: [contexto do instalador](CONTEXTO-INSTALADOR.md) e [auditoria 0.4.12](AUDITORIA-INSTALADOR-2026-10-06.md). As matrizes datadas de 04/10 abaixo são históricas; a auditoria separa código, draft, checks e homologação pendente.
 
 

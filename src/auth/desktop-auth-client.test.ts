@@ -29,6 +29,38 @@ function bridgeFixture() {
 afterEach(() => vi.useRealTimers())
 
 describe('desktop bridge lifecycle', () => {
+  it.each([
+    [403, 'invalid_admin_pin', 'PIN administrativo inválido'],
+    [429, 'power_unlock_rate_limited', 'Limite de liberações atingido'],
+    [503, 'power_pin_not_configured', 'O PIN administrativo ainda não foi configurado'],
+  ])('preserves native HTTP %i errors with nullable envelope fields', async (status, code, message) => {
+    const f = bridgeFixture()
+    const pending = f.client.request('POST', '/me/time-control/power-action-unlock', {
+      pin: '012345',
+    })
+    const assertion = expect(pending).rejects.toMatchObject({
+      status,
+      code,
+      message: expect.stringContaining(message),
+    })
+    f.reply({
+      id: f.sent[0].id,
+      ok: false,
+      error: { status, code, correlationId: null, transportFailure: false, retryAfterSeconds: null },
+    })
+    await assertion
+  })
+  it('preserves an unknown HTTP error with a null native code', async () => {
+    const f = bridgeFixture()
+    const pending = f.client.request('GET', '/me')
+    const assertion = expect(pending).rejects.toMatchObject({ status: 500 })
+    f.reply({
+      id: f.sent[0].id,
+      ok: false,
+      error: { status: 500, code: null, correlationId: null, transportFailure: false, retryAfterSeconds: null },
+    })
+    await assertion
+  })
   it('distinguishes native transport failure from an HTTP 503 response', async () => {
     for (const transportFailure of [false, true]) {
       const f = bridgeFixture()

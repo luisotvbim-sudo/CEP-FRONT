@@ -1,10 +1,10 @@
 export type BridgeFailure = {
   status?: number
-  code?: string
-  correlationId?: string
+  code?: string | null
+  correlationId?: string | null
   transportFailure?: boolean
-  requestId?: string
-  retryAfterSeconds?: number
+  requestId?: string | null
+  retryAfterSeconds?: number | null
 }
 type BridgeEvent = {
   data: { id?: string; ok?: boolean; result?: unknown; error?: BridgeFailure }
@@ -41,12 +41,15 @@ function validFailure(value: unknown): value is BridgeFailure {
         Number.isInteger(value.status) &&
         value.status >= 0 &&
         value.status <= 599)) &&
-    (value.code === undefined || (typeof value.code === 'string' && value.code.length <= 100)) &&
+    (value.code === undefined ||
+      value.code === null ||
+      (typeof value.code === 'string' && value.code.length <= 100)) &&
     (value.correlationId === undefined ||
       value.correlationId === null ||
       (typeof value.correlationId === 'string' && value.correlationId.length <= 200)) &&
     (value.transportFailure === undefined || typeof value.transportFailure === 'boolean') &&
     (value.retryAfterSeconds === undefined ||
+      value.retryAfterSeconds === null ||
       (typeof value.retryAfterSeconds === 'number' &&
         Number.isFinite(value.retryAfterSeconds) && value.retryAfterSeconds >= 0)) &&
     (value.requestId === undefined ||
