@@ -58,7 +58,7 @@ internal sealed class UpdateStore
 
     internal static void ValidatePrivate(FileSystemInfo item)
     {
-        RejectReparseAncestors(item is DirectoryInfo ? item.FullName : item.DirectoryName()!);
+        RejectReparseAncestors(item is DirectoryInfo ? item.FullName : Path.GetDirectoryName(item.FullName)!);
         if (!item.Exists || (item.Attributes & FileAttributes.ReparsePoint) != 0)
             throw new IOException("Arquivo de atualização inexistente ou link.");
         FileSystemSecurity security = item is DirectoryInfo directory ? directory.GetAccessControl() : ((FileInfo)item).GetAccessControl();
@@ -235,9 +235,4 @@ internal sealed class UpdateStore
 internal static class UpdateExclusiveLock
 {
     internal static FileStream Open(string path) => new(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
-}
-
-internal static class UpdateFileInfoExtensions
-{
-    internal static string? DirectoryName(this FileSystemInfo info) => (info as FileInfo)?.DirectoryName;
 }
