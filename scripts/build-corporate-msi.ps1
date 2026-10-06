@@ -1,6 +1,6 @@
 #Requires -Version 7.0
 param(
-    [string]$Version = '0.4.11',
+    [string]$Version = '0.4.13',
     [string]$UpdateSigningKeyPath
 )
 $ErrorActionPreference = 'Stop'
@@ -50,7 +50,7 @@ try {
     }
     $unexpected = Get-ChildItem -LiteralPath $publish -File -Recurse | Where-Object {
         $_.Extension -in @('.pfx', '.p12', '.pem', '.key', '.dat', '.notifications') -or
-        $_.Name -like '.env*' -or $_.Name -in @('policy.json', 'restore-journal.json', 'power-journal.json', 'publisher.key')
+        $_.Name -like '.env*' -or $_.Name -in @('policy.json', 'restore-journal.json', 'policy-upgrade-journal.json', 'power-journal.json', 'publisher.key')
     }
     if ($unexpected) { throw 'Payload contém configuração privada ou credenciais.' }
     $payload = Join-Path $output 'Payload.wxs'

@@ -1,5 +1,11 @@
 # Contexto atual do CEP-FRONT
 
+Preparação beta 0.4.13 em 06/10/2026: [pacote e distribuição](beta-msi-0.4.13.md)
+consolidam interface main `18aa262` e auditoria Windows `32983a5`. Esta branch
+mantém senha 6–200 e a UI atual; `/download` aponta ao MSI beta 0.4.13 no GitHub.
+Publicar o draft deve preceder a implantação desse link. Piloto Windows e
+distribuição a 40 usuários são etapas distintas da geração do pacote.
+
 Mapa de manutenção e auditoria da base de testes: [limpeza do Front](mapa-front-limpeza.md). A fixture de acompanhamento pessoal fica em `tests/fixtures/overview.ts`; não é um módulo de execução do produto. Matrizes datadas abaixo são evidências históricas, e a auditoria identifica separadamente main, web de teste e desktop mock.
 
 Na branch de refatoração web, `AccountControls` apresenta a conta e `useLogout` controla a saída; `TeamHistory` mantém o histórico selecionado dentro da navegação de membro/líder. `HistoryFields` compartilha os campos de período/fonte; `useSynchronization` controla submissão e acompanhamento, enquanto `SyncPage` apresenta os modos pessoal/administrativo. `AdminApi` e `NotificationApi` dependem somente de `request`. Comportamento, contratos e estado de aplicação nos testes estão na [entrega da refatoração](refatoracao-front.md); essa estrutura não comprova integração à main ou ao desktop.
@@ -13,6 +19,10 @@ Sincronização normal: botão administrativo “Atualizar sprint” e botão pe
 Detalhe de registro Monday: somente Início/Fim, origem informada Manual/Cronômetro e link da atividade quando disponível. Título, duração e estado continuam fora do detalhe; VR mostra apenas horários conhecidos/batidas informadas, link e origem explícita, sem metadados complementares nem pareamento inferido. Ausência de flags de origem não permite inferir cronômetro. Ver [histórico diário](historico-diario.md).
 
 Política de senha em 05/10/2026: formulários de ativação e recuperação e mensagens permitem mínimo de 6 e máximo de 200 caracteres. Requer API com a regra atualizada antes da publicação do cliente; sem mudanças nas rotas/allowlist. Código e builds não comprovam publicação web ou versão Windows instalada.
+Referência Windows conferida em 06/10/2026: [contexto do instalador](CONTEXTO-INSTALADOR.md) e [auditoria 0.4.12](AUDITORIA-INSTALADOR-2026-10-06.md). As matrizes datadas de 04/10 abaixo são históricas; a auditoria separa código, draft, checks e homologação pendente.
+
+
+Correção em 05/10/2026 na branch `codex/liberacao-energia-ao-fechar`, base main `72941ad`: [0.4.12](liberacao-energia-0.4.12.md) preserva direitos de logon para restaurar controles ao fechar com senha diária, por escolha explícita do usuário. Não substitui a evidência do pacote 0.4.11 já instalado; consultar resultado de build/instalação no registro central da Issue #19.
 
 Continuidade em 05/10/2026: acompanhamento pessoal integrado à main `53d8e5be438e18b2c67e7bcff82f8806330ada8e`, API/main `ba07f772f3ed9914a80ef9dfa4543385a742ecea`. A branch `codex/instalador-pronto` integra essas mudanças ao serviço/atualizador e ao [pacote 0.4.11](instalador-0.4.11.md), com recuperação durável de energia. Matrizes antigas abaixo conservam a auditoria datada; conferir o registro desta entrega antes de assumir versão publicada ou instalada.
 
@@ -30,7 +40,7 @@ O instalador CEP Horas está neste repositório. O projeto separado CEP Hub/01-C
 
 | Área | Comportamento atual |
 |---|---|
-| Pública | Login, recuperação/redefinição, ativação de convite; `/download` apresenta o ZIP de teste sem autenticar/consultar a API |
+| Pública | Login, recuperação/redefinição, ativação de convite; `/download` apresenta o MSI beta 0.4.13 sem autenticar/consultar a API |
 | Coordenador (`organizationAdmin`) | Pessoas, associação/convite, sincronização, times/vínculos, histórico, usuários, auditoria, central própria, análises/erros, envio e configurações globais |
 | Membro (`user`) | Minha jornada, Meu histórico com botão de reprocessamento, sino/central pessoal e análises próprias |
 | Líder (`user` com vínculo `manager`) | Visão pessoal mais times geridos, histórico das pessoas visíveis e análises dos times |
@@ -103,4 +113,4 @@ Pendências de produto conservadas em RN/RF/CA/D: calendário e exceções, sobr
 
 Inspeção de código/contratos e consistência documental. Nenhum build, instalação, envio de e-mail/aviso, operação autenticada de produção ou ação de energia foi executado por esta limpeza. CI e testes históricos devem ser consultados no commit correspondente, sem reapresentá-los como resultados atuais.
 
-/download mantém somente título e card de download, sem seções de requisitos/passos/FAQ ou descrições complementares. O destino continua o ZIP de teste 0.2.0.1; simplificar a página não publica MSI nem atualizador.
+/download mantém somente título e card de download, sem seções de passos/FAQ. O card identifica MSI beta 0.4.13 e Windows 11 x64 Pro/Enterprise/Education 24H2+. Alterar o destino na branch não publica o MSI nem ativa canal do atualizador.

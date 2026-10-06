@@ -7,31 +7,20 @@ namespace CepHoras.Control;
 
 internal sealed class WindowsPower : ISystemPower, IDisposable
 {
-    private readonly object gate = new();
-    private CancellationTokenSource? hibernate;
+    private readonly DelayedPowerAction hibernate = new(
+        () =>
+        {
+            if (!SetSuspendState(true, false, false)) throw new Win32Exception(Marshal.GetLastWin32Error());
+        },
+        error => PolicyStore.Audit("hibernate-failed:" + error.GetType().Name, "SYSTEM"));
 
     public void Schedule(string action, int delaySeconds)
     {
         if (action == "hibernate")
         {
             if (!IsPwrHibernateAllowed()) throw new InvalidOperationException("A hibernação não está disponível neste computador.");
-            lock (gate)
-            {
-                hibernate?.Cancel();
-                hibernate?.Dispose();
-                hibernate = new CancellationTokenSource();
-                var token = hibernate.Token;
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        await Task.Delay(TimeSpan.FromSeconds(delaySeconds), token);
-                        if (!SetSuspendState(true, false, false))
-                            PolicyStore.Audit("hibernate-failed:" + Marshal.GetLastWin32Error(), "SYSTEM");
-                    }
-                    catch (OperationCanceledException) { }
-                });
-            }
+            EnablePrivilege();
+            _ = hibernate.Schedule(TimeSpan.FromSeconds(delaySeconds));
             return;
         }
         if (action is not ("shutdown" or "restart")) throw new InvalidOperationException("Ação inválida.");
@@ -50,12 +39,7 @@ internal sealed class WindowsPower : ISystemPower, IDisposable
     {
         if (action == "hibernate")
         {
-            lock (gate)
-            {
-                hibernate?.Cancel();
-                hibernate?.Dispose();
-                hibernate = null;
-            }
+            if (!hibernate.Cancel()) throw new InvalidOperationException("A hibernação já iniciou; o cancelamento não pode ser confirmado.");
             return;
         }
         EnablePrivilege();
@@ -81,15 +65,7 @@ internal sealed class WindowsPower : ISystemPower, IDisposable
         }
     }
 
-    public void Dispose()
-    {
-        lock (gate)
-        {
-            hibernate?.Cancel();
-            hibernate?.Dispose();
-            hibernate = null;
-        }
-    }
+    public void Dispose() => hibernate.Dispose();
 
     [StructLayout(LayoutKind.Sequential)] private struct Luid { internal uint Low; internal int High; }
     [StructLayout(LayoutKind.Sequential)] private struct TokenPrivileges { internal uint Count; internal Luid Luid; internal uint Attributes; }

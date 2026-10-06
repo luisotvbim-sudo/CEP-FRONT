@@ -70,7 +70,10 @@ internal sealed class ApiSession : IDisposable
 
     internal ApiSession(Uri api, HttpMessageHandler? handler, string directory)
     {
-        http = handler is null ? new HttpClient() : new HttpClient(handler);
+        // Observe the API's first HTTP response. Auto-following a redirect could
+        // forward an auth body elsewhere or turn a received HTTP response into an
+        // apparent transport outage when its destination is unreachable.
+        http = new HttpClient(handler ?? new HttpClientHandler { AllowAutoRedirect = false });
         http.BaseAddress = api;
         http.Timeout = Timeout.InfiniteTimeSpan;
         var entropy = SHA256.HashData(Encoding.UTF8.GetBytes(api.GetLeftPart(UriPartial.Authority)));
@@ -158,12 +161,12 @@ internal sealed class ApiSession : IDisposable
     {
         var token = refreshToken;
         refreshToken = null;
-        // Remove the old persisted token before rotating. After a lost response or
-        // process interruption, require login instead of replaying an old token.
-        storedSession.Delete();
         try
         {
             if (token is null) throw new ApiFailure(401, "session_expired");
+            // Flush an encrypted tombstone before rotation. An ordinary unlink is
+            // not a durable barrier against replay after power loss/crash.
+            await storedSession.WriteAsync<object?>(null);
             await Accept(await Send("POST", "/auth/refresh", new { refreshToken = token }));
         }
         catch (Exception exception)

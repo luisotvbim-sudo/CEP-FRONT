@@ -46,6 +46,8 @@ Assert(audits.All(value => !value.Contains("password", StringComparison.OrdinalI
 
 configuration = new(2, true, "active", original);
 var inMaintenance = false;
+using (var unreadableUpdater = new MsiUpdateCoordinator(CancellationToken.None))
+    Assert(unreadableUpdater.InMaintenance, "uninitialized updater cannot reopen energy or supervision before reading maintenance state");
 var updatePower = new FakePower();
 var guardedAuthority = new PowerAuthority(() => configuration, () => true, updatePower, (_, _) => { }, () => now, () => inMaintenance);
 var beforeUpdateId = Guid.NewGuid().ToString();
@@ -218,7 +220,9 @@ using (var client = new NamedPipeClientStream(".", fixturePipe, PipeDirection.In
 Console.WriteLine("PASS: fixed power actions, ten-second scheduling, idempotency, cancellation, policy fail-closed, rollback and bounded IPC. No system action executed.");
 Console.WriteLine("PASS: update owner/version/expiry, recovery, maintenance power cancellation and status projection. Privileged MSI/ACL/StopServices validation remains deferred to a SYSTEM pilot.");
 await ServiceReliabilityChecks.Run();
+await DelayedPowerChecks.Run();
 PowerRecoveryChecks.Run();
+PolicyProfileChecks.Run();
 
 static void Assert(bool value, string message)
 {

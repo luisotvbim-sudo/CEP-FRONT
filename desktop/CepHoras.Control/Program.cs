@@ -36,6 +36,9 @@ internal static class Program
             switch (args.SingleOrDefault())
             {
                 case "--apply-policy": PolicyStore.ApplyForInstallation(); break;
+                case "--upgrade-policy": PolicyStore.PreparePolicyUpgrade(); break;
+                case "--rollback-policy-upgrade": PolicyStore.RollbackPolicyUpgrade(); break;
+                case "--finish-policy-upgrade": PolicyStore.FinishPolicyUpgrade(); break;
                 case "--restore-policy": AdministrativeRecovery.Installed().Restore(); break;
                 case "--uninstall-restore": PolicyStore.Restore(true); break;
                 case "--rollback-restore": PolicyStore.RollbackRestore(); break;

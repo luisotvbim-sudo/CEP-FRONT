@@ -1,77 +1,108 @@
 # Contexto atual do instalador e aplicativo corporativo
 
-Atualização de 05/10/2026: a branch `codex/instalador-pronto` integra Front/main `53d8e5be438e18b2c67e7bcff82f8806330ada8e` e a evolução do piloto 0.4.10. O contrato corrente e o aceite do novo pacote estão em [instalador 0.4.11](instalador-0.4.11.md). As bases e limites da matriz abaixo descrevem a auditoria anterior, não os recursos deste novo build. A frota foi esclarecida pelo usuário como Windows 11; edição/build das demais máquinas ainda serão conferidos pelo verificador somente leitura.
+Preparação em 06/10/2026: [beta MSI 0.4.13](beta-msi-0.4.13.md), branch
+`codex/beta-msi-convite`, consolida a web main `18aa262` e a auditoria `32983a5`.
+Beta é atualização manual pela TI, prerelease no GitHub com `latest=false`.
+As referências 0.4.12 abaixo conservam o pacote anterior. Candidato gerado
+não comprova piloto instalado ou distribuição homologada à frota.
 
-Reconciliado em 04/10/2026 por leitura dos commits abaixo. Este é o ponto de entrada para energia, serviço Windows, MSI, recuperação e atualização do CEP Horas. O instalador pertence ao CEP-FRONT; o repositório `01-CEP-INSTALADOR` contém um protótipo CEP Hub e não é a implementação deste pacote.
+Base corrente conferida em 06/10/2026: PR #16 e draft `installer-v0.4.12`, ambos
+em `b467c0a2571fdb8324f99d181934e21f6d785cfa`. A auditoria e as correções em
+`codex/installer-deep-cleanup` estão em
+[AUDITORIA-INSTALADOR-2026-10-06](AUDITORIA-INSTALADOR-2026-10-06.md).
+Draft, código, versão instalada, CI e homologação Windows são evidências distintas.
+A main web `18aa262` não é a origem desse MSI.
 
-## Bases e disponibilidade
+O instalador pertence ao CEP-FRONT. `01-CEP-INSTALADOR` é um protótipo CEP Hub
+separado. A fila e o contexto transversal ficam no
+[CEP-ORQUESTRADOR](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues).
 
-| Base analisada | Versão do build MSI | Capacidades presentes no código |
-|---|---|---|
-| `main` — `eb63dbdc7f7bf83d0a4b51ee5567ed5aa80c138c` | Padrão `0.4.3` | PIN pessoal da API, serviço/políticas de energia, instância única e recuperação do WebView2. Não contém o fechamento diário nem o atualizador MSI. |
-| `codex/installer-integrado` — `dc58bde1617e6e1af6b61bea87c87fb5da9366a9` | Padrão `0.4.6` | Acrescenta fechamento local protegido, restauração de políticas e suspensão/retomada da supervisão. Não contém o atualizador MSI. |
-| `codex/msi-auto-updater` — `95fbf5c4ff982916edacba5406d4b569d8007be8` | Padrão `0.4.7`; piloto proposto `0.4.7 → 0.4.8`; recuperação adicional `0.4.9` | Acrescenta atualização MSI assinada via serviço e, na evolução 0.4.9, carregamento/recarga nativos e detecção de conteúdo vazio. Entrega do [PR #9](https://github.com/luisotvbim-sudo/CEP-FRONT/pull/9), fora da `main` analisada. |
+## Leitura para continuar
 
-Um número passado ao script de build não incorpora funcionalidades de outra branch. Para gerar 0.4.9 com essas mudanças, partir do código do atualizador, não renomear um pacote produzido pela main. A documentação pode estar disponível nas três bases; a matriz delimita o que cada uma realmente implementa.
+1. [Contexto do Front](CONTEXTO-ATUAL.md), [especificação](produto/especificacao-funcional.md)
+   e [compatibilidade](compatibilidade-backend.md): produto, API e limites.
+2. [Auditoria corrente](AUDITORIA-INSTALADOR-2026-10-06.md): origem/payload,
+   achados, correções, verificações e ensaios pendentes.
+3. [Windows](aplicativo-windows.md), [energia](menu-energia.md),
+   [MSI corporativo](instalador-corporativo.md) e [atualizador](atualizador-msi.md):
+   contratos e procedimentos, observando o perfil de política e a base.
+4. [Entrega 0.4.11](instalador-0.4.11.md): recuperação durável de energia;
+   conserva a evidência anterior, sem representar o perfil de direitos v3 da 0.4.12.
 
-O contrato de backend analisado é `CEP-API/main` `b36c6e149b42253b44860d98c6ffe44f98c53dd6`. Há relatos de implantação em 01/10, mas a revisão documental não confirmou SHA/imagem, migrations, PIN configurado ou versões instaladas atualmente. CI e leitura do banco MSI não comprovam instalação, políticas efetivas, ações de energia ou atualização real.
+## Bases de compatibilidade
 
-## Ordem de leitura
-
-1. [Especificação do produto](produto/especificacao-funcional.md) e [contexto do Front](CONTEXTO-ATUAL.md): escopo funcional e limites com a API.
-2. [Menu de energia](menu-energia.md): endpoints, liberação pessoal, decisão, contingência e bridge.
-3. [Instalador corporativo](instalador-corporativo.md): políticas, componentes, instalação e recuperação.
-4. [Atualizador MSI](atualizador-msi.md): guia específico da implementação na branch do atualizador, confiança, publicação e piloto.
-5. [Orquestrador](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR): bases correntes, decisões e Issues que registram as entregas.
-
-Os antigos contextos de energia/instalador e de atualizador foram substituídos por estes documentos. Histórico de prompts, propostas e resultados anteriores permanece no Git; não deve ser usado como estado atual.
-
-## Responsabilidades e confiança
-
-| Componente | Responsabilidade |
+| Base | Comportamento |
 |---|---|
-| CEP API | Autenticação e organização; análise pessoal; tolerância; PIN administrativo dedicado; prazo de cinco minutos; limites de tentativa; auditoria. |
-| React | Apresentar a resposta e pedir operações permitidas. Não calcula autorização nem recebe tokens de sessão do host. |
-| WPF/WebView2 | Guardar sessão com DPAPI `CurrentUser`, validar origem e allowlist, repetir a consulta autenticada e conversar pelo protocolo fixo. |
-| Serviço `CepHorasControl` | Rodar como `LocalSystem`, aplicar/verificar políticas, supervisionar host instalado e agendar/cancelar ações fixas. Na branch do atualizador, confirmar release, validar pacote e coordenar manutenção. |
-| MSI/publicador | Instalar por máquina com administrador; conservar a identidade do produto; produzir e assinar a distribuição. A privada de publicação permanece fora dos clientes. |
+| Main histórica `eb63dbd`, 0.4.3 | Controle corporativo, sem fechamento diário ou atualização MSI. |
+| Integrado `dc58bde`, 0.4.6 | Fechamento protegido e restauração/retomada de políticas. |
+| PR #9, `95fbf5c`, 0.4.7–0.4.9 | Atualizador MSI assinado e evolução da recuperação WebView2. |
+| 0.4.11 | Integra acompanhamento pessoal e recuperação durável de intenção de energia. |
+| PR #16, `b467c0a`, 0.4.12 | Perfil v3 preserva direitos LSA originais; checkpoint de migração/rollback e mensagem sobre renovação de tokens antigos. |
+| `codex/installer-deep-cleanup` | Correções da auditoria 06/10: redirects da API, durabilidade DPAPI/refresh, hibernação/cancelamento e manutenção desconhecida; separação WPF e fixtures compatíveis. |
 
-O named pipe verifica identidade interativa e caminho do processo `CepHoras.exe` instalado. Não aceita URL, arquivo ou linha de comando arbitrários. PIN, senha de login e token da API não são enviados ao serviço. Administradores/SYSTEM continuam sendo recuperação; o mecanismo não tenta resistir a quem administra a máquina.
+MSIX e instalação por perfil continuam canais distintos. Seus códigos e
+comandos administrativos/migrações não são removidos por não aparecerem na UI
+MSI. Um parâmetro Version não incorpora código de outra branch.
 
-## Decisões que devem ser preservadas
+## Responsabilidades e segurança
 
-- A API decide Desligar/Reiniciar/Hibernar para a conta autenticada; o WPF revalida antes de agendar.
-- Liberação por PIN é pessoal, de cinco minutos do servidor, e não dispensa a revalidação. O PIN e sua configuração não pertencem à documentação, ao MSI ou aos logs.
-- Somente falha de transporte confirmada pelo host permite contingência. Qualquer resposta HTTP, inclusive 503, significa API alcançável.
-- A ação usa dez segundos e cancelamento; navegador, Debug e pacote portátil não executam energia local.
-- A senha diária de fechamento local existe apenas nas branches que a incluem. É independente do PIN da API. Suspender a supervisão tem efeitos distintos de liberar uma ação ou manter uma atualização.
-- O atualizador requer confirmação **Atualizar agora/Depois**. Instalação sem clique é uma mudança funcional pendente de decisão.
-- Atualização MSI mantém políticas de energia e usa manutenção própria. Não reutiliza o fechamento protegido que restaura políticas.
-- Web, API, MSI e MSIX possuem ciclos próprios. O atualizador MSI consulta o GitHub público, sem token no cliente e sem novo endpoint na API.
+API autentica/autoriza, calcula horas e decide energia para a conta atual.
+React apresenta os resultados. WPF guarda tokens com DPAPI CurrentUser,
+valida origem/documento/allowlist e reconsulta a decisão. Serviço SYSTEM executa
+somente ações/protocolo fixos, supervisiona o aplicativo e coordena atualização.
+MSI instala por máquina; publicador mantém a privada fora dos clientes.
 
-## Plataforma e recuperação
+- Qualquer HTTP da API impede tratar transporte como offline, inclusive redirects.
+  O cliente nativo corrigido observa a primeira resposta sem segui-la.
+- Access/refresh não chegam ao renderer ou ao serviço. Refresh incerto exige login;
+  a invalidação persistida precede a rotação. Organização continua imposta pela API.
+- Energia usa dez segundos. Pedido herdado/incerto não é repetido ou cancelado por
+  startup/recuperação/manutenção: exige cancelamento explícito com titular/origem.
+- Cancelamento de hibernação só é confirmado antes da reserva do efeito nativo.
+  Depois dessa fronteira, o estado não é convertido em sucesso de cancelamento.
+- Fechamento local protegido restaura snapshot e suspende supervisão da sessão;
+  recusa restauração global com outra sessão ativa e revalida antes de concluir.
+  A verificação diária não é o PIN da API nem uma credencial de alta segurança.
+- Manutenção MSI conserva políticas, bloqueia energia e relançamento e usa seu
+  próprio journal. Estado de manutenção desconhecido permanece bloqueado para TI.
+- Atualização exige clique humano, manifesto RSA-PSS, hash/tamanho/identidade MSI,
+  ACLs privadas, owner de processo e executor independente da troca de arquivos.
+  Draft não é canal latest; assinatura destacada não é Authenticode.
 
-O controle corporativo exige cliente Windows x64 com build ≥26100 e edição Professional, Enterprise ou Education: Windows 11 24H2 ou posterior dentro dessas famílias. Windows 10, Home e Server não são suportados pelo controle analisado. A frota de aproximadamente 40 máquinas precisa ser conferida antes do rollout; alterar esse requisito exige entrega própria.
+## Política v3 e limites Windows
 
-Direitos de desligamento ficam restritos a Administradores/SYSTEM; opções nativas são ocultadas; botão curto de energia/sono e tampa recebem política de não fazer nada. Pressão prolongada, corte de energia, firmware, GPO de domínio e operações críticas do Windows ficam fora da garantia. A instalação precisa ser homologada com conta comum e meios de recuperação administrativos disponíveis.
+0.4.12 preserva as atribuições originais de SeShutdownPrivilege e
+SeRemoteShutdownPrivilege. Mantém restrições de interface, desligamento sem
+login e botões físicos curtos/tampa. WPF veta encerramento não autorizado da
+conta comum. Não descrever v3 como remoção de direitos LSA para usuários comuns:
+essa era a política v2. Tokens criados pela versão antiga podem exigir novo
+logon para refletir direitos restaurados; broadcast do shell não recria tokens.
 
-Recuperação de interface não encerra o serviço nem executa energia. A recuperação completa disponível desde 0.4.3 preserva o perfil antigo e cria outro. A recarga da evolução 0.4.9 preserva perfil/sessão e só recria o navegador quando necessário. A detecção de falha não prova a causa original da tela branca.
+Comandos externos de desligamento são possíveis conforme a escolha humana
+registrada em [liberação 0.4.12](liberacao-energia-0.4.12.md), Issue #19.
+Garantia contra encerramento forçado, GPO, administrador,
+reinício crítico, firmware, corte de energia e botão prolongado não foi
+certificada. Aceite do desenho v3 exige piloto específico; não retornar à política
+anterior por inferência. As restrições de registro têm escopo de máquina.
 
-## Fontes de código para continuar
+Controle suportado: Windows cliente x64, build 26100+, famílias Professional,
+Enterprise/Education e WebView2 por máquina. `check-corporate-windows.ps1` apenas
+lê configuração. Não inventariar dados pessoais nem instalar nesta estação.
 
-As fontes comuns estão em [PowerBridgeHandler](../desktop/CepHoras.Desktop/PowerBridgeHandler.cs), [ApiSession](../desktop/CepHoras.Desktop/ApiSession.cs), [ApiRoutePolicy](../desktop/CepHoras.Desktop/ApiRoutePolicy.cs), [ControlService](../desktop/CepHoras.Control/ControlService.cs), [PowerAuthority](../desktop/CepHoras.Control/PowerAuthority.cs), [PolicyStore](../desktop/CepHoras.Control/PolicyStore.cs), [protocolo](../desktop/CepHoras.Control.Protocol/Protocol.cs), [Package.wxs](../desktop/CepHoras.CorporateInstaller/Package.wxs) e [build MSI](../scripts/build-corporate-msi.ps1).
+## Entrega e pendências
 
-Para fechamento protegido, consultar [DesktopLifecycleController na base integrada](https://github.com/luisotvbim-sudo/CEP-FRONT/blob/dc58bde1617e6e1af6b61bea87c87fb5da9366a9/desktop/CepHoras.Control/DesktopLifecycleController.cs). Para atualização/recarga, usar as referências fixadas no [guia do atualizador](atualizador-msi.md), pois esses arquivos não existem em todas as bases.
+Correções e integridade do pacote constam da auditoria versionada, que separa
+checks com fixtures de homologação elevada. Revalidar checkout, branch, SHA,
+AGENTS e estado local antes de editar. Build não prova versão instalada.
 
-Antes de uma entrega, conferir `git status`, branch e SHA; ler o `AGENTS.md` local; escolher objetivo e aceite na fila. Não tratar a documentação de outra branch como prova de que o checkout já contém aquele comportamento.
+- [#6](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/6): upgrade real,
+  rollback/reboot/3010, canal e recuperação externa da chave.
+- [#7](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/7): política v3,
+  tokens/sessões, ações/cancelamento e uninstall/restauração em VM.
+- [#11](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/11): compatibilidade
+  real da frota nas edições/builds suportados.
+- [#12](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/12): recuperação
+  instalada, sem confundir falha React/WebView2 com indisponibilidade de update.
 
-## Pendências de aceite
-
-| Fila | Evidência necessária |
-|---|---|
-| [#6 — atualizador](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/6) | Troca real 0.4.7 → 0.4.8 com conta comum, falha/rollback/reboot, diagnóstico de indisponibilidade, canal e recuperação externa da chave. |
-| [#7 — energia](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/7) | Políticas efetivas, três ações/cancelamento, fechamento/retomada, troca de sessão e desinstalação/restauração. |
-| [#11 — Windows](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/11) | Inventário da frota, decisão sobre Windows 10/Home e homologação nas edições suportadas. |
-| [#12 — WebView2](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/12) | Recuperação 0.4.9 no pacote instalado e evidência do incidente original; não confundir tela branca com banner do atualizador. |
-
-Esta limpeza e reescrita documental foi solicitada pelo usuário e é registrada na [Issue #13](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/13). Não publica release, não instala pacote, não executa política/ação de energia e não substitui as evidências operacionais acima.
+Nenhum merge, release estável/latest, instalação elevada, ação real de energia
+ou implantação web/API integra esta auditoria.

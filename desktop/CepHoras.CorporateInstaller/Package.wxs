@@ -25,11 +25,17 @@
     <CustomAction Id="ApplyPolicy" FileRef="ControlExe" ExeCommand="--apply-policy" Execute="deferred" Impersonate="no" Return="check" />
     <CustomAction Id="RollbackPolicyRestore" FileRef="ControlExe" ExeCommand="--rollback-restore" Execute="rollback" Impersonate="no" Return="check" />
     <CustomAction Id="RestorePolicy" FileRef="ControlExe" ExeCommand="--uninstall-restore" Execute="deferred" Impersonate="no" Return="check" />
+    <CustomAction Id="RollbackPolicyUpgrade" FileRef="ControlExe" ExeCommand="--rollback-policy-upgrade" Execute="rollback" Impersonate="no" Return="check" />
+    <CustomAction Id="UpgradePolicy" FileRef="ControlExe" ExeCommand="--upgrade-policy" Execute="deferred" Impersonate="no" Return="check" />
+    <CustomAction Id="FinishPolicyUpgrade" FileRef="ControlExe" ExeCommand="--finish-policy-upgrade" Execute="commit" Impersonate="no" Return="check" />
     <InstallExecuteSequence>
       <Custom Action="RollbackApplyPolicy" Before="ApplyPolicy" Condition="NOT Installed AND NOT WIX_UPGRADE_DETECTED" />
       <Custom Action="ApplyPolicy" After="InstallFiles" Condition="NOT Installed AND NOT WIX_UPGRADE_DETECTED" />
       <Custom Action="RollbackPolicyRestore" Before="RestorePolicy" Condition="REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE" />
       <Custom Action="RestorePolicy" After="StopServices" Condition="REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE" />
+      <Custom Action="RollbackPolicyUpgrade" Before="UpgradePolicy" Condition="NOT Installed AND WIX_UPGRADE_DETECTED" />
+      <Custom Action="UpgradePolicy" After="InstallFiles" Condition="NOT Installed AND WIX_UPGRADE_DETECTED" />
+      <Custom Action="FinishPolicyUpgrade" After="UpgradePolicy" Condition="NOT Installed AND WIX_UPGRADE_DETECTED" />
     </InstallExecuteSequence>
 
     <StandardDirectory Id="ProgramFiles64Folder">

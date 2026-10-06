@@ -14,6 +14,7 @@
     <Compile Include="../CepHoras.Desktop/ProtectedJsonFile.cs" Link="ProtectedJsonFile.cs" />
     <Compile Include="../CepHoras.Desktop/PowerBridgeHandler.cs" Link="PowerBridgeHandler.cs" />
     <Compile Include="../CepHoras.Desktop/SingleInstanceCoordinator.cs" Link="SingleInstanceCoordinator.cs" />
+    <Compile Include="../CepHoras.Desktop/WindowsShutdownAccess.cs" Link="WindowsShutdownAccess.cs" />
     <Compile Include="../CepHoras.Desktop/WebViewProfileRecovery.cs" Link="WebViewProfileRecovery.cs" />
     <Compile Include="../CepHoras.Desktop/WebViewLifecycle.cs" Link="WebViewLifecycle.cs" />
     <Compile Include="../CepHoras.Desktop/WebViewProcessOwnership.cs" Link="WebViewProcessOwnership.cs" />

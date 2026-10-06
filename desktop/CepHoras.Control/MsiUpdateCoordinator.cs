@@ -13,7 +13,6 @@ internal sealed class MsiUpdateCoordinator(CancellationToken stopping) : IDispos
     private readonly CancellationTokenSource lifetime = CancellationTokenSource.CreateLinkedTokenSource(stopping);
     private MsiRelease? available;
     private string phase = "idle";
-    private string? diagnostic;
     private bool busy;
     private bool initialized;
     private bool disposed;
@@ -33,7 +32,9 @@ internal sealed class MsiUpdateCoordinator(CancellationToken stopping) : IDispos
     {
         get
         {
-            if (!initialized) return false;
+            // Failed initialization can mean an unreadable maintenance journal.
+            // Absence of a successfully read state is not proof that MSI is idle.
+            if (!initialized) return true;
             lock (gate)
             {
                 try { return RefreshState()?.InMaintenance == true; }
@@ -58,7 +59,6 @@ internal sealed class MsiUpdateCoordinator(CancellationToken stopping) : IDispos
                     busy = true;
                     phase = "checking";
                     preferCachedStatus = true;
-                    diagnostic = null;
                     _ = Task.Run(CheckAsync);
                 }
                 return Response(state, preferCached: true);
@@ -74,7 +74,6 @@ internal sealed class MsiUpdateCoordinator(CancellationToken stopping) : IDispos
                 busy = true;
                 phase = "downloading";
                 preferCachedStatus = true;
-                diagnostic = null;
                 var approved = request.ApprovedVersion!;
                 _ = Task.Run(() => DownloadAsync(approved, client));
                 return Response(null, "update_started", preferCached: true);
@@ -135,12 +134,11 @@ internal sealed class MsiUpdateCoordinator(CancellationToken stopping) : IDispos
                 if (disposed) return;
                 available = release;
                 phase = release is null ? "idle" : "available";
-                diagnostic = null;
             }
         }
         catch (Exception error)
         {
-            lock (gate) { if (!disposed) { phase = "failed"; available = null; diagnostic = "update_check_failed"; } }
+            lock (gate) { if (!disposed) { phase = "failed"; available = null; } }
             PolicyStore.Audit("update-check-failed:" + error.GetType().Name, "SYSTEM");
         }
         finally { lock (gate) busy = false; }
@@ -200,10 +198,9 @@ internal sealed class MsiUpdateCoordinator(CancellationToken stopping) : IDispos
             lock (gate)
             {
                 phase = "failed";
-                diagnostic = "update_download_failed";
                 preferCachedStatus = false;
                 UpdateLease.ReleaseAfterFailure(
-                    () => { if (!disposed && state is not null) store.Save(state with { Phase = "failed", Diagnostic = diagnostic }); },
+                    () => { if (!disposed && state is not null) store.Save(state with { Phase = "failed", Diagnostic = "update_download_failed" }); },
                     () => { lease?.Dispose(); lease = null; });
             }
             PolicyStore.Audit("update-download-failed:" + error.GetType().Name, "SYSTEM");
@@ -235,7 +232,6 @@ internal sealed class MsiUpdateCoordinator(CancellationToken stopping) : IDispos
             lease?.Dispose(); lease = null;
             phase = recovered.Phase;
             preferCachedStatus = false;
-            diagnostic = recovered.Diagnostic;
             PolicyStore.Audit("update-recovered:" + recovered.Phase, "SYSTEM");
         }
         return recovered;
@@ -256,7 +252,6 @@ internal sealed class MsiUpdateCoordinator(CancellationToken stopping) : IDispos
                 "success" => "Atualização concluída.", "failed" => "A atualização não foi concluída. O aplicativo pode ser usado; tente novamente ou solicite suporte à TI.",
                 _ => "O CEP Horas está atualizado."
             };
-        _ = diagnostic; // Diagnostics remain local and do not expose executable paths.
         return new(restart ? "update_restart_required" : code, message,
             UpdateVersion: cached ? available?.Version.ToString(3) : state?.TargetVersion ?? available?.Version.ToString(3),
             UpdatePhase: shownPhase, InstalledVersion: installed);

@@ -7,7 +7,7 @@ internal static class PolicyValidation
 {
     internal static void Configuration(ControlConfiguration? config)
     {
-        if (config is null || config.Version != 2 ||
+        if (config is null || config.Version is not (2 or PolicyProfile.CurrentVersion) ||
             config.Phase is not ("applying" or "active" or "restored") ||
             config.Active != (config.Phase == "active"))
             throw new InvalidDataException("Configuração incompatível.");
@@ -47,4 +47,12 @@ internal static class PolicyValidation
     internal static bool Equal(PolicySnapshot first, PolicySnapshot second) =>
         first.Registry.SequenceEqual(second.Registry) && NativePolicy.Rights.All(right =>
             first.Rights[right].Order(StringComparer.Ordinal).SequenceEqual(second.Rights[right].Order(StringComparer.Ordinal)));
+
+    internal static void UpgradeJournal(PolicyUpgradeJournal? journal)
+    {
+        if (journal is null || journal.Schema != 1) throw new InvalidDataException("Journal de atualização de política incompatível.");
+        Configuration(journal.Configuration);
+        if (journal.Configuration.Phase == "applying") throw new InvalidDataException("Atualização iniciou com política incompleta.");
+        Snapshot(journal.BeforeUpgrade, PolicyStore.Settings.Length);
+    }
 }

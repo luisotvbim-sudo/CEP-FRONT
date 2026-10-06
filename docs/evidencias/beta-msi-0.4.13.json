@@ -1,0 +1,89 @@
+{
+  "schema": 1,
+  "inspectedOn": "2026-10-06",
+  "version": "0.4.13",
+  "sourceCommit": "aa5d05d46aa1fbc5fbfd1a742a9b20738d3f6d79",
+  "integratedWebMain": "18aa262947d25f505d79501aa79aaa3f6680aa7b",
+  "integratedInstallerAudit": "32983a50414560a891f0adfa90d05c4d89e0faae",
+  "releaseTag": "installer-v0.4.13",
+  "plannedReleasePrerelease": true,
+  "plannedReleaseLatest": false,
+  "issue": "https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/23",
+  "assets": [
+    {
+      "name": "CEP-Horas-Windows-win-x64.msi",
+      "bytes": 99315505,
+      "sha256": "a61e38ecb0b154f097f382bbcd929280b7599e1b730ac7e05a11a01c9a599742"
+    },
+    {
+      "name": "CEP-Horas-Windows-0.4.13-TI.zip",
+      "bytes": 163622451,
+      "sha256": "370cdc4695c6b9af84e13872608048ba7136a771a99964512e0524cba83fff92"
+    },
+    {
+      "name": "CEP-Horas-Windows-win-x64.manifest.json",
+      "bytes": 183,
+      "sha256": "cc3ebbb6270b65447f17f659f26ff3f4ff46f75cf5f4e1ab0e7243876743eb33"
+    },
+    {
+      "name": "CEP-Horas-Windows-win-x64.manifest.sig",
+      "bytes": 384,
+      "sha256": "6f2d0307c69367e18939df2e02108394aef94541a293927ed766b5f008076b9c"
+    },
+    {
+      "name": "SHA256SUMS.txt",
+      "bytes": 96,
+      "sha256": "678e1d96b784eef02944b75e45b37e82fd7d72131eac0ff3722be10cbae64e2f"
+    }
+  ],
+  "properties": {
+    "ProductName": "CEP Horas",
+    "ProductVersion": "0.4.13",
+    "Manufacturer": "Conceito",
+    "UpgradeCode": "{8D0D0DC8-E744-42E7-A57A-20F489145ED8}",
+    "ALLUSERS": "1"
+  },
+  "publishedDesktopVersion": "0.4.13+aa5d05d46aa1fbc5fbfd1a742a9b20738d3f6d79",
+  "publishedServiceVersion": "0.4.13+aa5d05d46aa1fbc5fbfd1a742a9b20738d3f6d79",
+  "msiFilesCompared": 895,
+  "msiPayloadMismatches": 0,
+  "bundledWebFilesCompared": 10,
+  "kitEntries": 408,
+  "kitRecoveryFilesCompared": 402,
+  "kitMismatches": 0,
+  "rsaPssSignatureValid": true,
+  "previous0412SignatureMatchesSameIdentity": true,
+  "embeddedPublicKeyMatchesSource": true,
+  "authenticode": "NotSigned",
+  "checks": {
+    "lint": "PASS",
+    "webUnit": 100,
+    "browser": 220,
+    "desktopSecurity": 312,
+    "serviceReliability": 108,
+    "serviceDurableRecovery": 41,
+    "policyMigration": 23,
+    "delayedHibernation": "PASS",
+    "updater": 16,
+    "msiUpdater": 80,
+    "buildPreflight": 4,
+    "webBuild": "PASS",
+    "desktopDebugBuild": "PASS",
+    "desktopReleasePublish": "PASS",
+    "controlReleasePublish": "PASS",
+    "corporateMsiBuild": "PASS",
+    "structuralMsi": "PASS",
+    "wpfDriver": "PASS",
+    "wpfInitializationFailure": "PASS"
+  },
+  "wpfFixture": ".local/desktop-test/run-1791286274655",
+  "wpfInitializationFailureFixture": ".local/desktop-init-failure/run-51b3e621-1f7e-41c7-9c4c-3b7b41b213ea/evidence.json",
+  "limits": [
+    "MSI/CAB/ZIP inspected read-only; no installation or custom action executed",
+    "ProductVersion declares source SHA; no reproducible-build claim",
+    "No Windows policy, service installation, real power, logoff or reboot performed",
+    "No production API/SMTP or source integration validated",
+    "Windows pilot, SYSTEM updater and key backup recovery still pending",
+    "Beta distribution uses manual TI updates; updater/latest unchanged"
+  ]
+}

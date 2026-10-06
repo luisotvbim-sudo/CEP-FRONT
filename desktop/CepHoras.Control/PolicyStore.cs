@@ -13,6 +13,7 @@ internal sealed record PolicySnapshot(Dictionary<string, string[]> Rights, Saved
 internal sealed record ControlConfiguration(int Version, bool Active, string Phase, PolicySnapshot Original);
 internal sealed record LegacyControlConfiguration(int Version, bool Active, string Phase, byte[] Salt, byte[] Hash, PolicySnapshot Original);
 internal sealed record UninstallJournal(ControlConfiguration Configuration, PolicySnapshot BeforeRestore, int Schema = 1);
+internal sealed record PolicyUpgradeJournal(ControlConfiguration Configuration, PolicySnapshot BeforeUpgrade, int Schema = 1);
 
 internal static class PolicyStore
 {
@@ -21,6 +22,7 @@ internal static class PolicyStore
         "Conceito.CepHoras.Control");
     private static readonly string FilePath = Path.Combine(Root, "policy.json");
     private static readonly string RestoreJournal = Path.Combine(Root, "restore-journal.json");
+    private static readonly string UpgradeJournal = Path.Combine(Root, "policy-upgrade-journal.json");
     private static readonly object AuditGate = new();
     internal static readonly RegistrySetting[] Settings =
     [
@@ -146,15 +148,71 @@ internal static class PolicyStore
         return new(true, (int)value);
     }
 
-    internal static bool MatchesExpected() =>
-        NativePolicy.Rights.All(x => NativePolicy.ReadRight(x).Order().SequenceEqual(NativePolicy.Allowed.Order())) &&
-        Settings.All(x => ReadRegistry(x) == new SavedRegistry(true, x.Value));
+    internal static bool MatchesExpected() => Read() is { } config && MatchesExpected(config);
+
+    private static bool MatchesExpected(ControlConfiguration config) =>
+        PolicyValidation.Equal(Capture(), PolicyProfile.Expected(config));
 
     internal static void Apply()
         => Apply(completePreviousRestore: false);
 
     internal static void ApplyForInstallation()
         => Apply(completePreviousRestore: true);
+
+    // MSI schedules rollback before this operation and commits the checkpoint only
+    // after the complete installation succeeds. Older binaries receive their exact
+    // configuration/schema again if a later MSI action fails.
+    internal static void PreparePolicyUpgrade()
+    {
+        RequireAdmin();
+        WindowsSupport.RequireSupported();
+        SecureDirectory();
+        using (LockOperation())
+        {
+            if (File.Exists(UpgradeJournal) || File.Exists(RestoreJournal))
+                throw new InvalidOperationException("Existe uma recuperação de política pendente. Preserve os journals para a TI.");
+            var previous = Read() ?? throw new InvalidOperationException("Falta a configuração da versão instalada.");
+            if (previous.Phase == "applying" || (previous.Active && !MatchesExpected(previous)))
+                throw new InvalidOperationException("A política anterior exige recuperação antes de atualizar.");
+            var journal = new PolicyUpgradeJournal(previous, Capture());
+            PolicyValidation.UpgradeJournal(journal);
+            AtomicWrite(UpgradeJournal, journal);
+        }
+        ApplyForInstallation();
+    }
+
+    internal static void RollbackPolicyUpgrade()
+    {
+        RequireAdmin();
+        if (!File.Exists(UpgradeJournal)) return;
+        SecureDirectory();
+        using var operation = LockOperation();
+        var journal = ReadPrivate<PolicyUpgradeJournal>(UpgradeJournal);
+        PolicyValidation.UpgradeJournal(journal);
+        PolicyTransaction.Restore(() => { },
+            () => RestoreSnapshot(journal.BeforeUpgrade),
+            () => PolicyValidation.Equal(Capture(), journal.BeforeUpgrade),
+            () => Save(journal.Configuration));
+        File.Delete(UpgradeJournal);
+        NotifyPolicyChanged();
+        Audit("policy-upgrade-rolled-back", "installer");
+    }
+
+    internal static void FinishPolicyUpgrade()
+    {
+        RequireAdmin();
+        if (!File.Exists(UpgradeJournal)) return;
+        SecureDirectory();
+        using var operation = LockOperation();
+        var journal = ReadPrivate<PolicyUpgradeJournal>(UpgradeJournal);
+        PolicyValidation.UpgradeJournal(journal);
+        var config = Read();
+        var original = journal.Configuration.Active ? journal.Configuration.Original : journal.BeforeUpgrade;
+        if (config is null || config.Version != PolicyProfile.CurrentVersion || !config.Active || !MatchesExpected(config) ||
+            !PolicyValidation.Equal(config.Original, original))
+            throw new InvalidOperationException("A atualização de política não foi verificada. Preserve o journal para a TI.");
+        File.Delete(UpgradeJournal);
+    }
 
     private static void Apply(bool completePreviousRestore)
     {
@@ -178,15 +236,24 @@ internal static class PolicyStore
         {
             if (!MatchesExpected())
                 throw new InvalidOperationException("A política ativa foi alterada externamente. A TI precisa revisar.");
+            if (previous.Version != PolicyProfile.CurrentVersion)
+            {
+                // Restore the original LSA assignments once. Removing these rights
+                // creates logon tokens that cannot be repaired by a shell broadcast.
+                // Registry restrictions remain applied throughout the migration.
+                PolicyProfile.MigrateActive(previous, Save, RestoreSnapshot, Capture);
+                NotifyPolicyChanged();
+                Audit("policy-migrated-preserving-logon-rights", "installer");
+            }
             return;
         }
         if (previous?.Phase == "applying")
             throw new InvalidOperationException("Existe uma ativação incompleta que precisa de recuperação.");
-        var config = new ControlConfiguration(2, false, "applying", Capture());
+        var config = new ControlConfiguration(PolicyProfile.CurrentVersion, false, "applying", Capture());
         PolicyTransaction.Apply(
             () => Save(config),
-            ApplyExpected,
-            MatchesExpected,
+            () => RestoreSnapshot(PolicyProfile.Expected(config)),
+            () => MatchesExpected(config),
             () => RestoreSnapshot(config.Original),
             () => Save(config with { Active = true, Phase = "active" }),
             () => Save(config with { Active = false, Phase = "restored" }));
@@ -218,16 +285,6 @@ internal static class PolicyStore
         }
         Save(new ControlConfiguration(2, false, "restored", Capture()));
         Audit("policy-v1-migrated", "installer");
-    }
-
-    internal static void ApplyExpected()
-    {
-        foreach (var right in NativePolicy.Rights) NativePolicy.WriteRight(right, NativePolicy.Allowed);
-        foreach (var setting in Settings)
-        {
-            using var key = Registry.LocalMachine.CreateSubKey(setting.Key);
-            key.SetValue(setting.Name, setting.Value, RegistryValueKind.DWord);
-        }
     }
 
     private static void RestoreSnapshot(PolicySnapshot snapshot)
