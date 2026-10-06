@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 
-test('public Windows download works without a session and explains the test package', async ({
+test('public Windows download keeps only the title and download card without a session', async ({
   page,
 }) => {
   const apiCalls: string[] = []
@@ -19,14 +19,14 @@ test('public Windows download works without a session and explains the test pack
     'href',
     'https://github.com/luisotvbim-sudo/CEP-FRONT/releases/download/desktop-v0.2.0.1-test/CEP-Horas-Windows.zip',
   )
-  await expect(page.getByText('Versão de teste · 0.2.0.1')).toBeVisible()
+  await expect(page.getByText('Versão de teste · 0.2.0.1 · ZIP', { exact: true })).toBeVisible()
   await expect(
     page.getByText(/não tem assinatura digital nem atualização automática/),
-  ).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Baixar .NET Desktop Runtime' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Baixar WebView2 Runtime' })).toBeVisible()
-  await page.getByText('O que acontece quando fecho a janela?').click()
-  await expect(page.getByText('O CEP Horas continua na bandeja', { exact: false })).toBeVisible()
+  ).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'Baixar .NET Desktop Runtime' })).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'Baixar WebView2 Runtime' })).toHaveCount(0)
+  await expect(page.locator('main section')).toHaveCount(1)
+  await expect(page.locator('main details')).toHaveCount(0)
   expect(apiCalls).toEqual([])
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
