@@ -1,0 +1,7 @@
+# Página pública de download do MSI 0.4.16
+
+Em 06/10/2026, o usuário observou que `/download` ainda mostrava 0.4.13 e que o convite baixava esse pacote. A leitura pública do bundle confirmou o link da release 0.4.13 e o requisito antigo de apenas Windows 11. O botão de download do convite na API aponta para `https://plugincep.com.br/download`; seu template e configuração não precisam mudar.
+
+Esta branch, criada de `origin/main`, atualiza somente o card público e sua verificação de navegador. O botão aponta ao [MSI 0.4.16 publicado](https://github.com/luisotvbim-sudo/CEP-FRONT/releases/download/installer-v0.4.16/CEP-Horas-Windows-win-x64.msi). O card informa Windows 10 22H2 e Windows 11 24H2+ x64 nas edições Pro, Enterprise e Education. A [release 0.4.16](https://github.com/luisotvbim-sudo/CEP-FRONT/releases/tag/installer-v0.4.16) é uma prerelease de teste com digest MSI `6ef2b8cc5b7b6291ba55a267f2a4a64a602a45a4375c38752860e74637a3abb8`; este trabalho não a promove para `releases/latest` e não ativa o atualizador MSI.
+
+Critério de publicação: o teste de navegador deve conferir o destino e os requisitos sem chamadas autenticadas; lint/build/CI devem passar no commit exato; a implantação web deve identificar checkout, imagem, saúde e resposta pública. Por fim, ler o bundle servido em `/download` e confirmar a URL 0.4.16. Uma mudança no código, isoladamente, não altera o botão para os usuários.
