@@ -1,5 +1,7 @@
 # Contexto atual do CEP-FRONT
 
+Mapa de manutenção e auditoria da base de testes: [limpeza do Front](mapa-front-limpeza.md). A fixture de acompanhamento pessoal fica em `tests/fixtures/overview.ts`; não é um módulo de execução do produto. Matrizes datadas abaixo são evidências históricas, e a auditoria identifica separadamente main, web de teste e desktop mock.
+
 Membro/Líder acessam avisos pessoais pelo sino no cabeçalho, com contagem de não lidas e dropdown paginado. “Ver meus avisos” abre o dropdown; a central completa e o destino nativo continuam disponíveis. Abrir/expandir não marca leitura nem recebimento. Administração conserva sua navegação atual. Ver [notificações](notificacoes-implementacao.md).
 
 Membro/Líder usam o botão “Reprocessar dados do Monday” em Meu histórico, com a orientação “Use este botão sempre que editar registros no Monday para atualizar os dados no CEP.” O bloco pessoal mostra somente o botão, a orientação e feedback acessível de andamento, conclusão/resultado parcial ou erro, sem painéis técnicos por fonte. A operação normal continua consultando Monday e VR Mais por 17 dias; o rótulo não restringe a API ao Monday. Sucesso total ou parcial recarrega o histórico com os filtros atuais, sem repetir a submissão. Coordenador conserva a tela administrativa e opção de até 90 dias.
@@ -28,7 +30,7 @@ O instalador CEP Horas está neste repositório. O projeto separado CEP Hub/01-C
 |---|---|
 | Pública | Login, recuperação/redefinição, ativação de convite; `/download` apresenta o ZIP de teste sem autenticar/consultar a API |
 | Coordenador (`organizationAdmin`) | Pessoas, associação/convite, sincronização, times/vínculos, histórico, usuários, auditoria, central própria, análises/erros, envio e configurações globais |
-| Membro (`user`) | Minha jornada/histórico, atualização normal, central pessoal e análises próprias |
+| Membro (`user`) | Minha jornada, Meu histórico com botão de reprocessamento, sino/central pessoal e análises próprias |
 | Líder (`user` com vínculo `manager`) | Visão pessoal mais times geridos, histórico das pessoas visíveis e análises dos times |
 | Administrador técnico (`systemAdmin`) | Organizações, configurações globais e central própria; seleciona organização para operações de pessoas/envio/histórico/administração |
 
