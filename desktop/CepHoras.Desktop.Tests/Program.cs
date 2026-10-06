@@ -105,3 +105,41 @@ finally
     Directory.Delete(resolved, recursive: true);
 }
 Console.WriteLine($"Desktop security/storage: {checks} checks passed.");
+
+var simulation = new SimulatedPowerBroker();
+var broker = await simulation.Send(new CepHoras.Control.Protocol.ControlRequest("status"));
+Check(broker.Active && Guid.TryParse(broker.BrokerInstanceId, out _), "Simulation broker identity missing");
+foreach (var action in new[] { "shutdown", "restart", "hibernate" })
+{
+    var requestId = Guid.NewGuid().ToString();
+    var scheduled = await simulation.Send(new CepHoras.Control.Protocol.ControlRequest("schedule", requestId, action, 10));
+    Check(scheduled.Code == "scheduled" && scheduled.RequestId == requestId && scheduled.Action == action, "Simulation did not schedule");
+    var cancelled = await simulation.Send(new CepHoras.Control.Protocol.ControlRequest("cancel", requestId));
+    Check(cancelled.Cancelled && cancelled.BrokerInstanceId == broker.BrokerInstanceId, "Simulation cancellation not confirmed");
+    var status = await simulation.Send(new CepHoras.Control.Protocol.ControlRequest("power-status", requestId));
+    Check(status.Code == "not_pending", "Cancelled simulation remained pending");
+}
+Check((await simulation.Send(new CepHoras.Control.Protocol.ControlRequest("desktop-resume"))).Code == "unsupported_operation", "Simulation permits privileged lifecycle");
+Check((await simulation.Send(new CepHoras.Control.Protocol.ControlRequest("schedule", Action: "arbitrary", DelaySeconds: 10))).Code == "unsupported_operation", "Simulation permits arbitrary action");
+Console.WriteLine("Local TESTE broker checks passed (no native energy effects).");
+
+var oldTestFlag = Environment.GetEnvironmentVariable("CEP_DESKTOP_LOCAL_TEST");
+var oldApi = Environment.GetEnvironmentVariable("CEP_API_URL");
+try
+{
+    Environment.SetEnvironmentVariable("CEP_DESKTOP_LOCAL_TEST", "1");
+    Environment.SetEnvironmentVariable("CEP_API_URL", "https://api.cep.lat");
+#if DEBUG
+    var refusedProduction = false;
+    try { DesktopTestEnvironment.Validate(); } catch (InvalidOperationException) { refusedProduction = true; }
+    Check(refusedProduction, "TESTE accepted production API");
+#else
+    Check(!DesktopTestEnvironment.Enabled, "Release activated TESTE by environment variable");
+#endif
+}
+finally
+{
+    Environment.SetEnvironmentVariable("CEP_DESKTOP_LOCAL_TEST", oldTestFlag);
+    Environment.SetEnvironmentVariable("CEP_API_URL", oldApi);
+}
+Console.WriteLine("Local TESTE isolation guard passed.");

@@ -8,6 +8,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../CepHoras.Desktop/DesktopTestEnvironment.cs" Link="DesktopTestEnvironment.cs" />
     <Compile Include="../CepHoras.Desktop/ApiSession.cs" Link="ApiSession.cs" />
     <Compile Include="../CepHoras.Desktop/ApiRoutePolicy.cs" Link="ApiRoutePolicy.cs" />
     <Compile Include="../CepHoras.Desktop/DailyClosePassword.cs" Link="DailyClosePassword.cs" />

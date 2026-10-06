@@ -21,6 +21,7 @@ public partial class App : System.Windows.Application
         splash.Show();
         try
         {
+            DesktopTestEnvironment.Validate();
             await WebViewProfileRecovery.WaitForPreviousProcessAsync(e.Args, TimeSpan.FromSeconds(15));
             var instanceName = "Conceito.CepHoras.Desktop";
 #if DEBUG

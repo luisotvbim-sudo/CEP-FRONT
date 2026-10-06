@@ -53,6 +53,7 @@ public partial class MainWindow : Window
     {
         this.forceVisibleAfterRecovery = forceVisibleAfterRecovery;
         InitializeComponent();
+        if (DesktopTestEnvironment.Enabled) { Title = "CEP Horas · TESTE · energia simulada"; ReloadInterfaceButton.Content = "TESTE · API local · energia simulada · Recarregar interface"; }
         Loaded += Initialize;
         SystemEvents.PowerModeChanged += OnPowerModeChanged;
         System.Windows.Application.Current.SessionEnding += OnSessionEnding;
@@ -117,7 +118,7 @@ public partial class MainWindow : Window
             if (api.Scheme != "https" && !(api.Scheme == "http" && api.IsLoopback))
                 throw new InvalidOperationException("HTTPS is required outside loopback.");
             session = new ApiSession(api);
-            power = managedInstallation ? new PowerBridgeHandler(session) : null;
+            power = DesktopTestEnvironment.Enabled ? new PowerBridgeHandler(session, new SimulatedPowerBroker().Send) : managedInstallation ? new PowerBridgeHandler(session) : null;
             notifications = new NotificationDelivery(session);
             ConfigureTray();
             if (managedInstallation) _ = ResumeDesktopSupervision();
@@ -244,7 +245,7 @@ public partial class MainWindow : Window
     {
         tray = new System.Windows.Forms.NotifyIcon
         {
-            Text = "CEP Horas",
+            Text = DesktopTestEnvironment.Enabled ? "CEP Horas TESTE" : "CEP Horas",
             Icon = System.Drawing.SystemIcons.Information,
             Visible = true,
             ContextMenuStrip = new System.Windows.Forms.ContextMenuStrip()

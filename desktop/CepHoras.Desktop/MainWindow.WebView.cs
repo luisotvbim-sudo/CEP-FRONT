@@ -86,7 +86,7 @@ public partial class MainWindow
         core.Settings.AreBrowserAcceleratorKeysEnabled = false;
 #endif
         core.SetVirtualHostNameToFolderMapping("app.cephoras.local", Path.Combine(AppContext.BaseDirectory, "wwwroot"), CoreWebView2HostResourceAccessKind.DenyCors);
-        await core.AddScriptToExecuteOnDocumentCreatedAsync((managedInstallation
+        await core.AddScriptToExecuteOnDocumentCreatedAsync((power is not null
             ? "window.__CEP_DESKTOP__=true;window.__CEP_POWER_VERSION__=1;"
             : "window.__CEP_DESKTOP__=true;") + """
             window.__CEP_DOCUMENT_ID__=crypto.randomUUID();
