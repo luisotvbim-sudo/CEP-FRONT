@@ -143,3 +143,42 @@ finally
     Environment.SetEnvironmentVariable("CEP_API_URL", oldApi);
 }
 Console.WriteLine("Local TESTE isolation guard passed.");
+
+var mockTarget = DesktopTestEnvironment.ResolveTarget("mock");
+var realTarget = DesktopTestEnvironment.ResolveTarget("real");
+Check(mockTarget.Api == "https://localhost:9443" && mockTarget.StateDirectory != realTarget.StateDirectory, "Mock target shares API/profile with original TESTE");
+foreach (var invalidTarget in new[] { "https://api.cep.lat", "https://localhost:9444", "MOCK", "" })
+{
+    var refused = false;
+    try { DesktopTestEnvironment.ResolveTarget(invalidTarget); } catch (InvalidOperationException) { refused = true; }
+    Check(refused, "Arbitrary TESTE target accepted");
+}
+#if DEBUG
+var savedVariables = new[] { "CEP_DESKTOP_LOCAL_TEST", "CEP_DESKTOP_TEST_TARGET", "CEP_API_URL", "CEP_DESKTOP_TESTING", "CEP_SESSION_DIR", "WEBVIEW2_USER_DATA_FOLDER" }
+    .ToDictionary(key => key, Environment.GetEnvironmentVariable);
+try
+{
+    Environment.SetEnvironmentVariable("CEP_DESKTOP_LOCAL_TEST", "1");
+    Environment.SetEnvironmentVariable("CEP_DESKTOP_TESTING", "1");
+    var stateRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Conceito");
+    foreach (var targetName in new[] { "real", "mock" })
+    {
+        var target = DesktopTestEnvironment.ResolveTarget(targetName);
+        Environment.SetEnvironmentVariable("CEP_DESKTOP_TEST_TARGET", targetName);
+        Environment.SetEnvironmentVariable("CEP_API_URL", target.Api);
+        Environment.SetEnvironmentVariable("CEP_SESSION_DIR", Path.Combine(stateRoot, target.StateDirectory, "Sessions"));
+        Environment.SetEnvironmentVariable("WEBVIEW2_USER_DATA_FOLDER", Path.Combine(stateRoot, target.StateDirectory, "WebView2"));
+        DesktopTestEnvironment.Validate();
+    }
+    Environment.SetEnvironmentVariable("CEP_SESSION_DIR", Path.Combine(stateRoot, realTarget.StateDirectory, "Sessions"));
+    var refusedSharedSession = false;
+    try { DesktopTestEnvironment.Validate(); } catch (InvalidOperationException) { refusedSharedSession = true; }
+    Check(refusedSharedSession, "Mock accepted original TESTE session directory");
+    Environment.SetEnvironmentVariable("CEP_API_URL", realTarget.Api);
+    var refusedMismatchedApi = false;
+    try { DesktopTestEnvironment.Validate(); } catch (InvalidOperationException) { refusedMismatchedApi = true; }
+    Check(refusedMismatchedApi, "Mock accepted original TESTE API");
+}
+finally { foreach (var pair in savedVariables) Environment.SetEnvironmentVariable(pair.Key, pair.Value); }
+#endif
+Console.WriteLine("Fixed mock target and environment separation checks passed.");

@@ -1,15 +1,26 @@
-param([switch]$Build, [switch]$CheckOnly)
+param([ValidateSet('Real', 'Mock')][string]$Environment = 'Real', [switch]$Build, [switch]$CheckOnly)
 $ErrorActionPreference = 'Stop'
 $workspace = Split-Path $PSScriptRoot -Parent
-$privateDir = Join-Path $workspace '.local/desktop-environment'
-$stateRoot = Join-Path $env:LOCALAPPDATA 'Conceito/CepHoras-Test'
-$api = 'http://127.0.0.1:8080'
+$mock = $Environment -eq 'Mock'
+$privateDir = Join-Path $workspace $(if ($mock) { '.local/desktop-mock-environment' } else { '.local/desktop-environment' })
+$stateRoot = Join-Path $env:LOCALAPPDATA $(if ($mock) { 'Conceito/CepHoras-Mock-Test' } else { 'Conceito/CepHoras-Test' })
+$api = if ($mock) { 'https://localhost:9443' } else { 'http://127.0.0.1:8080' }
 New-Item -ItemType Directory -Force $privateDir | Out-Null
 @{ api = $api; stateRoot = $stateRoot; configuration = 'Debug'; energy = 'simulated' } |
     ConvertTo-Json | Set-Content (Join-Path $privateDir 'config.private.json')
-$health = Invoke-WebRequest "$api/health/ready" -TimeoutSec 10
-if ($health.StatusCode -ne 200) { throw 'API de testes indisponível.' }
+if ($mock) {
+    # This proxy forwards /api/ only. /health/ready would return the Front HTML.
+    # Use normal certificate validation and prove the protected API is reached.
+    $probe = Invoke-WebRequest "$api/api/v1/me" -SkipHttpErrorCheck -TimeoutSec 10
+    if ($probe.StatusCode -ne 401 -or $probe.Headers['WWW-Authenticate'] -notcontains 'Bearer') {
+        throw 'API mock não confirmou o endpoint protegido esperado.'
+    }
+} else {
+    $health = Invoke-WebRequest "$api/health/ready" -TimeoutSec 10
+    if ($health.StatusCode -ne 200) { throw 'API de testes indisponível.' }
+}
 $env:CEP_API_URL = $api
+$env:CEP_DESKTOP_TEST_TARGET = if ($mock) { 'mock' } else { 'real' }
 $env:CEP_DESKTOP_LOCAL_TEST = '1'
 $env:CEP_DESKTOP_TESTING = '1'
 $env:CEP_SESSION_DIR = Join-Path $stateRoot 'Sessions'

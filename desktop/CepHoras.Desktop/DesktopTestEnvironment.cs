@@ -5,6 +5,17 @@ namespace CepHoras.Desktop;
 
 internal static class DesktopTestEnvironment
 {
+    internal sealed record Target(string Api, string StateDirectory, string Label);
+
+    internal static Target ResolveTarget(string? target) => target switch
+    {
+        null or "real" => new("http://127.0.0.1:8080", "CepHoras-Test", "TESTE · API local 8080"),
+        "mock" => new("https://localhost:9443", "CepHoras-Mock-Test", "TESTE MOCK · https://localhost:9443"),
+        _ => throw new InvalidOperationException("Destino TESTE não permitido.")
+    };
+
+    internal static Target CurrentTarget => ResolveTarget(Environment.GetEnvironmentVariable("CEP_DESKTOP_TEST_TARGET"));
+
     internal static bool Enabled
     {
         get
@@ -20,8 +31,9 @@ internal static class DesktopTestEnvironment
     internal static void Validate()
     {
         if (!Enabled) return;
-        var root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Conceito", "CepHoras-Test");
-        if (Environment.GetEnvironmentVariable("CEP_API_URL") != "http://127.0.0.1:8080" ||
+        var target = CurrentTarget;
+        var root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Conceito", target.StateDirectory);
+        if (Environment.GetEnvironmentVariable("CEP_API_URL") != target.Api ||
             Environment.GetEnvironmentVariable("CEP_DESKTOP_TESTING") != "1" ||
             !WebViewProfileRecovery.SamePath(Environment.GetEnvironmentVariable("CEP_SESSION_DIR") ?? "", Path.Combine(root, "Sessions")) ||
             !WebViewProfileRecovery.SamePath(WebViewProfileRecovery.GetProfilePath(), Path.Combine(root, "WebView2")) ||

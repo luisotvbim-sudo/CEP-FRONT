@@ -53,7 +53,11 @@ public partial class MainWindow : Window
     {
         this.forceVisibleAfterRecovery = forceVisibleAfterRecovery;
         InitializeComponent();
-        if (DesktopTestEnvironment.Enabled) { Title = "CEP Horas · TESTE · energia simulada"; ReloadInterfaceButton.Content = "TESTE · API local · energia simulada · Recarregar interface"; }
+        if (DesktopTestEnvironment.Enabled)
+        {
+            Title = $"CEP Horas · {DesktopTestEnvironment.CurrentTarget.Label} · energia simulada";
+            ReloadInterfaceButton.Content = $"{DesktopTestEnvironment.CurrentTarget.Label} · energia simulada · Recarregar interface";
+        }
         Loaded += Initialize;
         SystemEvents.PowerModeChanged += OnPowerModeChanged;
         System.Windows.Application.Current.SessionEnding += OnSessionEnding;
@@ -245,7 +249,7 @@ public partial class MainWindow : Window
     {
         tray = new System.Windows.Forms.NotifyIcon
         {
-            Text = DesktopTestEnvironment.Enabled ? "CEP Horas TESTE" : "CEP Horas",
+            Text = DesktopTestEnvironment.Enabled ? "CEP Horas " + DesktopTestEnvironment.CurrentTarget.Label : "CEP Horas",
             Icon = System.Drawing.SystemIcons.Information,
             Visible = true,
             ContextMenuStrip = new System.Windows.Forms.ContextMenuStrip()
@@ -373,7 +377,8 @@ public partial class MainWindow : Window
         if (closed || tray is null) return;
         updatePopup = false;
         testPopup = false;
-        tray?.ShowBalloonTip(10_000, "CEP Horas", $"Você tem {count} nova(s) notificação(ões). Abra a central para conferir as mensagens e seus horários originais.", System.Windows.Forms.ToolTipIcon.Info);
+        var title = DesktopTestEnvironment.Enabled ? "CEP Horas · " + DesktopTestEnvironment.CurrentTarget.Label : "CEP Horas";
+        tray?.ShowBalloonTip(10_000, title, $"Você tem {count} nova(s) notificação(ões). Abra a central para conferir as mensagens e seus horários originais.", System.Windows.Forms.ToolTipIcon.Info);
         RecordNativeEvent("notification-summary-requested");
     }
 
