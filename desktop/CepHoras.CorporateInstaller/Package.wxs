@@ -20,6 +20,8 @@
     <Launch Condition="Installed OR ((CEP_WINDOWS_BUILD = 19045 OR CEP_WINDOWS_BUILD &gt;= 26100) AND CEP_WINDOWS_TYPE = &quot;Client&quot; AND (CEP_WINDOWS_EDITION &lt;&lt; &quot;Professional&quot; OR CEP_WINDOWS_EDITION &lt;&lt; &quot;Enterprise&quot; OR CEP_WINDOWS_EDITION &lt;&lt; &quot;Education&quot;))" Message="Requer Windows 10 22H2 ou Windows 11 24H2 ou superior, x64 Pro, Enterprise ou Education. Home e Server não são suportados pelo controle corporativo." />
     <Launch Condition="Installed OR (CEP_WEBVIEW2_MACHINE AND CEP_WEBVIEW2_MACHINE &lt;&gt; &quot;0.0.0.0&quot;)" Message="Instale o Microsoft Edge WebView2 Evergreen Runtime por máquina antes de instalar o CEP Horas. O Runtime somente no perfil do administrador não atende os outros usuários." />
     <Property Id="ARPCOMMENTS" Value="Instalação corporativa do CEP Horas. As ações de energia são autorizadas pela CEP API e executadas pelo serviço local." />
+    <Icon Id="CepHoras.ico" SourceFile="../CepHoras.Desktop/Assets/Conceito.ico" />
+    <Property Id="ARPPRODUCTICON" Value="CepHoras.ico" />
 
     <CustomAction Id="RollbackApplyPolicy" FileRef="ControlExe" ExeCommand="--rollback-apply" Execute="rollback" Impersonate="no" Return="check" />
     <CustomAction Id="ApplyPolicy" FileRef="ControlExe" ExeCommand="--apply-policy" Execute="deferred" Impersonate="no" Return="check" />
@@ -42,6 +44,7 @@
       <Directory Id="INSTALLFOLDER" Name="Conceito CEP Horas" />
     </StandardDirectory>
     <StandardDirectory Id="ProgramMenuFolder" />
+    <StandardDirectory Id="DesktopFolder" />
     <DirectoryRef Id="INSTALLFOLDER">
       <Component Id="CorporateAutoStart" Guid="76184352-3515-4E5D-AC7D-769A3223C7BB">
         <CreateFolder>

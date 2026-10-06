@@ -1,11 +1,11 @@
 # CEP Horas — web, Windows e instalador
 
-Na branch `codex/power-pin-bridge-error`, o candidato MSI 0.4.15 corrige a
-leitura dos erros de API no aplicativo Windows, mantendo a matriz Windows 10
-22H2 x64 Pro/Enterprise/Education e Windows 11 24H2+. Consulte a
-[correção do bridge](docs/pin-admin-bridge-0.4.15.md) e a
-[entrega Windows 10 anterior](docs/windows10-msi-0.4.14.md); os estados
-publicados abaixo permanecem registrados com seus commits e datas.
+Na branch `codex/app-icon-windows`, o candidato MSI 0.4.16 aplica a logomarca
+reduzida ao executável, barra de tarefas, bandeja e atalhos Windows. Mantém a
+correção do [bridge 0.4.15](docs/pin-admin-bridge-0.4.15.md) e a matriz
+[Windows 10/11 0.4.14](docs/windows10-msi-0.4.14.md). Consulte a
+[entrega do ícone](docs/icone-windows-0.4.16.md); os estados publicados
+abaixo permanecem registrados com seus commits e datas.
 
 Referência Windows conferida em 06/10/2026: [contexto do instalador](docs/CONTEXTO-INSTALADOR.md) e [auditoria 0.4.12](docs/AUDITORIA-INSTALADOR-2026-10-06.md). As matrizes datadas de 04/10 abaixo são históricas; a auditoria separa código, draft, checks e homologação pendente.
 

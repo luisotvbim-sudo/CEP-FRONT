@@ -1,5 +1,9 @@
 # Instalador corporativo do CEP Horas
 
+O [candidato 0.4.16](icone-windows-0.4.16.md) adiciona o ícone da marca ao
+executável e aos atalhos do menu Iniciar e da área de trabalho, mantendo as
+políticas e a identidade de upgrade do MSI.
+
 Referência Windows conferida em 06/10/2026: [contexto do instalador](CONTEXTO-INSTALADOR.md) e [auditoria 0.4.12](AUDITORIA-INSTALADOR-2026-10-06.md). As matrizes datadas de 04/10 abaixo são históricas; a auditoria separa código, draft, checks e homologação pendente.
 
 Na branch `codex/windows10-compat`, o candidato 0.4.14 aceita também Windows 10

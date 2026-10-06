@@ -11,10 +11,14 @@ public partial class MainWindow
 {
     private void ConfigureTray()
     {
+        trayIconStream = System.Windows.Application.GetResourceStream(
+            new Uri("pack://application:,,,/Assets/Conceito.ico"))?.Stream
+            ?? throw new InvalidOperationException("Ícone do CEP Horas ausente do aplicativo.");
+        trayIcon = new System.Drawing.Icon(trayIconStream, 16, 16);
         tray = new System.Windows.Forms.NotifyIcon
         {
             Text = "CEP Horas",
-            Icon = System.Drawing.SystemIcons.Information,
+            Icon = trayIcon,
             Visible = true,
             ContextMenuStrip = new System.Windows.Forms.ContextMenuStrip()
         };

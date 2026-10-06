@@ -13,6 +13,7 @@ Contexto reescrito em 04/10/2026 após revisão do código. Comece por [CONTEXTO
 | [Beta MSI 0.4.13](beta-msi-0.4.13.md) | Integração web/auditoria, pacote, GitHub sem latest, dependência do convite e aceite do piloto Windows |
 | [Candidato MSI 0.4.14 para Windows 10](windows10-msi-0.4.14.md) | Escopo 22H2 x64, preservação do instalador, verificações e piloto Windows pendente |
 | [Correção PIN/bridge MSI 0.4.15](pin-admin-bridge-0.4.15.md) | Campos opcionais nulos do erro nativo, mensagem correta ao usuário e diagnóstico pendente da resposta real da API |
+| [Ícone nativo Windows MSI 0.4.16](icone-windows-0.4.16.md) | Marca no executável, janela/barra de tarefas, bandeja e atalhos do MSI |
 | [Mapa e limpeza do Front](mapa-front-limpeza.md) | Auditoria de código e consumidores na base de testes, mudanças isoladas e candidatos preservados |
 | [Refatoração estrutural do Front](refatoracao-front.md) | Separação de responsabilidades, commits selecionáveis, checks e imagem aplicada somente nos Docker de teste |
 | [Revisão para publicação web](publicacao-web-2026-10-06.md) | Integração do PR #18, revisão de segurança/deploy e distinção entre preparação e publicação efetiva |

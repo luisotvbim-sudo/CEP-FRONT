@@ -1,6 +1,9 @@
 # Contexto atual do CEP-FRONT
 
-Na branch `codex/power-pin-bridge-error`, o candidato MSI 0.4.15 corrige o
+Na branch `codex/app-icon-windows`, o candidato MSI 0.4.16 aplica a marca ao
+[ícone nativo, bandeja e atalhos](icone-windows-0.4.16.md), preservando a
+correção 0.4.15 e a matriz Windows 10/11. Na branch anterior
+`codex/power-pin-bridge-error`, o candidato MSI 0.4.15 corrige o
 mascaramento de erros HTTP no bridge nativo. Ver
 [correção do PIN/bridge](pin-admin-bridge-0.4.15.md). O pacote conserva a
 compatibilidade Windows 10 22H2 x64 Pro/Enterprise/Education e Windows 11

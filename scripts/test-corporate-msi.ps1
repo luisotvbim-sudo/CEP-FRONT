@@ -65,4 +65,14 @@ $locks = Read-Rows 'SELECT `SDDLText` FROM `MsiLockPermissionsEx`' 1
 if (-not ($locks | Where-Object { $_.Values[0] -eq 'D:PAI(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;OICI;0x1200a9;;;BU)' })) { throw 'ACL protegida de Program Files ausente.' }
 $filesTable = Read-Rows 'SELECT `File` FROM `File`' 1
 if (-not ($filesTable | Where-Object { $_.Values[0] -eq 'ControlExe' }) -or -not ($filesTable | Where-Object { $_.Values[0] -eq 'AppExe' })) { throw 'Payload incompleto.' }
-Write-Output 'PASS: MSI único por máquina, preflight Windows/WebView2, política com rollback, serviço LocalSystem parado/aguardado antes de restaurar/remover, ACL e payload. Nenhuma instalação executada.'
+$icons = Read-Rows 'SELECT `Name` FROM `Icon`' 1
+if (-not ($icons | Where-Object { $_.Values[0] -eq 'CepHoras.ico' })) { throw 'Ícone corporativo ausente do MSI.' }
+$shortcuts = Read-Rows 'SELECT `Shortcut`, `Directory_`, `Icon_` FROM `Shortcut`' 3
+foreach ($expected in @(@('StartMenuShortcut', 'ProgramMenuFolder'), @('DesktopShortcut', 'DesktopFolder'))) {
+    if (-not ($shortcuts | Where-Object { $_.Values[0] -eq $expected[0] -and $_.Values[1] -eq $expected[1] -and $_.Values[2] -eq 'CepHoras.ico' })) {
+        throw "Atalho com ícone corporativo ausente: $($expected[0])"
+    }
+}
+$arpIcon = Read-Rows 'SELECT `Value` FROM `Property` WHERE `Property` = ''ARPPRODUCTICON''' 1
+if ($arpIcon.Count -ne 1 -or $arpIcon[0].Values[0] -ne 'CepHoras.ico') { throw 'Ícone do aplicativo instalado ausente.' }
+Write-Output 'PASS: MSI único por máquina, ícones/atalhos, preflight Windows/WebView2, política com rollback, serviço LocalSystem parado/aguardado antes de restaurar/remover, ACL e payload. Nenhuma instalação executada.'
