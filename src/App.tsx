@@ -164,8 +164,8 @@ export function App({ client }: { client: AuthClient }) {
                 <strong>{session.user.email}</strong>
               </div>
               <p className="small-copy">
-                A área de membro e líder ainda não está disponível nesta versão. A área de
-                coordenação exige o papel Coordenador da organização.
+                Sua conta não possui um perfil ou vínculo de organização compatível com esta
+                área. Peça ao coordenador para conferir seu acesso.
               </p>
               <FormNotice error={error} />
               <button className="primary-button" onClick={logout} disabled={pending}>
