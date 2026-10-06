@@ -44,6 +44,8 @@ O agendador do servidor recupera slots do mesmo dia com corte original; dias pas
 
 ## Integração e aceite
 
+Na área de Membro/Líder, sino/dropdown e central completa consomem a mesma caixa pessoal paginada. Indicador usa o total não lido da API, sem inferir total pela página. Abrir o dropdown ou a análise não confirma recebimento nem leitura; somente “Marcar como lida” executa o contrato de leitura. Conteúdo longo, filtros e paginação permanecem acessíveis por teclado e em tela estreita.
+
 Utilizar rotas/DTOs publicados em [OpenAPI](openapi-backend-current.json), não nomes imaginados por este texto. Configuração, versões, autorização e isolamento são revalidados no servidor. Fixtures só em prévia/testes identificados. HTTP 202 confirma pedido persistido, não recebimento; salvar agenda não comprova disparo.
 
 Verificar fronteiras de semana/sprint/mês/ano, corte único, sinais, limite exato, lacunas, batidas abertas/fechadas, timer atravessando dia, soma de sessões, idempotência/concorrência, mudança/exclusão de agenda, acesso revogado, reconexão e todas as páginas pendentes. Homologação real de fontes e recepção Windows exige prova própria, além de CI.

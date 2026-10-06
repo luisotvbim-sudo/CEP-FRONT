@@ -48,6 +48,8 @@ test('daily history groups sources, expands with keyboard, preserves seconds and
                 workDate: '2026-09-01',
                 source: 'monday',
                 title: 'Projeto A',
+                detailsJson: '{"manual":true}',
+                url: 'https://example.test/activity',
                 durationSeconds: 14400,
                 state: 'closed',
               },
@@ -56,6 +58,7 @@ test('daily history groups sources, expands with keyboard, preserves seconds and
                 workDate: '2026-09-01',
                 source: 'monday',
                 title: 'Projeto B',
+                detailsJson: '{"manual":false}',
                 durationSeconds: 17401,
                 state: 'closed',
               },
@@ -100,9 +103,22 @@ test('daily history groups sources, expands with keyboard, preserves seconds and
   await page.keyboard.press('Enter')
   await expect(page.getByText('Projeto A', { exact: true })).toBeVisible()
   await expect(page.getByText('Projeto B', { exact: true })).toBeVisible()
+  const monday = page.getByRole('region', { name: 'Monday em 01/09/2026', exact: true })
+  await monday.getByText('Detalhes do registro').nth(0).click()
+  await monday.getByText('Detalhes do registro').nth(1).click()
+  await expect(monday.getByText('Manual', { exact: true })).toBeVisible()
+  await expect(monday.getByText('Cronômetro', { exact: true })).toBeVisible()
+  await expect(monday.getByRole('link', { name: 'Abrir atividade' })).toHaveAttribute('href', 'https://example.test/activity')
+  await expect(monday.getByText('Importado em', { exact: true })).toHaveCount(0)
+  await expect(monday.getByText('Referência externa', { exact: true })).toHaveCount(0)
   const vr = page.getByRole('region', { name: 'VR Mais em 01/09/2026', exact: true })
   await vr.getByText('Detalhes do registro').click()
   await expect(vr.getByText('Batidas informadas: 08:00 · 12:00 · 13:00 · 18:03')).toBeVisible()
+  await expect(vr.getByText('Importado em', { exact: true })).toHaveCount(0)
+  await expect(vr.getByText('Referência externa', { exact: true })).toHaveCount(0)
+  await expect(vr.getByText('Início', { exact: true })).toHaveCount(0)
+  await expect(vr.getByText('Fim', { exact: true })).toHaveCount(0)
+  await expect(vr.getByText('Cronômetro', { exact: true })).toHaveCount(0)
   expect(
     (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze())
       .violations,
@@ -156,4 +172,8 @@ test('older API keeps expandable records without locally invented totals', async
   await expect(page.getByRole('status')).toContainText('Resumo diário indisponível')
   await page.getByRole('button', { name: 'Expandir dia 20/09/2026' }).click()
   await expect(page.getByText('Registro antigo', { exact: true })).toBeVisible()
+  await page.getByText('Detalhes do registro').click()
+  const detail = page.locator('.record-details')
+  await expect(detail.getByText('Indisponível', { exact: true })).toHaveCount(3)
+  await expect(detail.getByText('Cronômetro', { exact: true })).toHaveCount(0)
 })

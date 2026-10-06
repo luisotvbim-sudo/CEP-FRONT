@@ -1,4 +1,4 @@
-import type { Overview, OverviewPeriod, OverviewStatus } from './overview-api'
+import type { Overview, OverviewPeriod, OverviewStatus } from '../../src/user/overview-api'
 
 export function personalOverview(
   status: OverviewStatus = 'regular',

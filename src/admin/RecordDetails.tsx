@@ -13,30 +13,41 @@ export function RecordDetails({ record }: { record: TimeRecord }) {
     ? details.timeCards.filter((x): x is string => typeof x === 'string')
     : []
   const url = httpsUrl(record.url)
+  const monday = record.source === 'monday'
   return (
-    <details className="record-details">
+    <details className={monday ? 'record-details monday-record-details' : 'record-details'}>
       <summary>Detalhes do registro</summary>
       <dl>
-        <div>
-          <dt>Início</dt>
-          <dd>{timestamp(record.startedAt)}</dd>
-        </div>
-        <div>
-          <dt>Fim</dt>
-          <dd>{timestamp(record.endedAt)}</dd>
-        </div>
-        <div>
-          <dt>Importado em</dt>
-          <dd>{timestamp(record.lastSyncedAt)}</dd>
-        </div>
-        <div>
-          <dt>Referência externa</dt>
-          <dd>{record.externalKey || 'Indisponível'}</dd>
-        </div>
+        {(monday || record.startedAt) && (
+          <div>
+            <dt>Início</dt>
+            <dd>{timestamp(record.startedAt)}</dd>
+          </div>
+        )}
+        {(monday || record.endedAt) && (
+          <div>
+            <dt>Fim</dt>
+            <dd>{timestamp(record.endedAt)}</dd>
+          </div>
+        )}
+        {monday && (
+          <div>
+            <dt>Origem</dt>
+            <dd>
+              {details.manual === true
+                ? 'Manual'
+                : details.manual === false || details.running === true
+                  ? 'Cronômetro'
+                  : 'Indisponível'}
+            </dd>
+          </div>
+        )}
       </dl>
-      {cards.length > 0 && <p>Batidas informadas: {cards.join(' · ')}</p>}
-      {details.manual && <p>Lançamento manual informado pela fonte.</p>}
-      {details.running && <p>Cronômetro em andamento; duração provisória.</p>}
+      {!monday && cards.length > 0 && <p>Batidas informadas: {cards.join(' · ')}</p>}
+      {!monday && details.manual && <p>Lançamento manual informado pela fonte.</p>}
+      {!monday && !record.startedAt && !record.endedAt && cards.length === 0 && (
+        <p>Horários indisponíveis.</p>
+      )}
       {url && (
         <a href={url} target="_blank" rel="noopener noreferrer">
           Abrir atividade <ExternalLink size={13} />
@@ -45,4 +56,3 @@ export function RecordDetails({ record }: { record: TimeRecord }) {
     </details>
   )
 }
-

@@ -20,7 +20,7 @@ const issues: Record<string, string> = {
   above_tolerance: 'Diferença acima da tolerância',
 }
 
-export function dailyDifference(seconds?: number | null) {
+function dailyDifference(seconds?: number | null) {
   if (seconds == null || !Number.isFinite(seconds)) return 'Indisponível'
   if (seconds === 0) return '00:00 · Totais iguais'
   return `${seconds > 0 ? '+' : '−'}${duration(Math.abs(seconds))} · ${seconds > 0 ? 'a mais' : 'a menos'} no Monday`

@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 import { fixture } from './admin-fixture'
-import { personalOverview } from '../../src/user/overview-fixture'
+import { personalOverview } from '../fixtures/overview'
 
 for (const [status, title] of [
   ['regular', 'Dentro da tolerância neste corte'],

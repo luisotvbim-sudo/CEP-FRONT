@@ -21,7 +21,7 @@ Correções são realizadas nas fontes. CEP Horas lê, normaliza, calcula e apre
 | Autenticação web/nativa, convites, recuperação, revogação e isolamento por organização | Implementado |
 | Organizações, usuários, produtos, times e vínculos temporais de membro/líder | Implementado |
 | Diretórios Monday/VR, associação por IDs, convite e ativação da pessoa | Implementado |
-| Sincronização normal de 7 dias e inicial/full administrativa de 90 dias | Implementado; cobertura real exige homologação |
+| Sincronização normal de 17 dias e inicial/full administrativa de 90 dias | Implementado; cobertura real exige homologação |
 | Histórico bruto e resumo diário importado | Implementado; não certifica cobertura ou atualidade |
 | Motor diário/semanal/sprint, diferença, tolerância e ocorrências de integridade | Implementado |
 | Configurações/agendas globais, relatórios persistidos, envios e caixa individual | Implementado; envio automático nasce desativado |
@@ -103,7 +103,7 @@ Ranking futuro deve priorizar divergência absoluta, com cobertura e quantidade 
 
 ### RN-11 — Atualização e preservação
 
-Sincronização normal reconsulta hoje e seis dias anteriores, limitada ao escopo; inicial/full administrativa cobre 90 dias e diretórios. Não é atualização apenas por cursor. Falha de uma fonte não apaga a última importação válida da outra. Retenção física de registros importados ocorre após sucesso da respectiva fonte. Tentativa recente com erro não prova atualização.
+Sincronização normal reconsulta hoje e 16 dias anteriores, limitada ao escopo; inicial/full administrativa cobre 90 dias e diretórios. Não é atualização apenas por cursor. Falha de uma fonte não apaga a última importação válida da outra. Retenção física de registros importados ocorre após sucesso da respectiva fonte. Tentativa recente com erro não prova atualização.
 
 Relatórios são snapshots imutáveis: GET análises não consulta fontes. Novo processamento gera nova análise. Workflow de antes/depois, preservação de justificativas e reabertura por alteração material é planejado. Idempotência da importação, dos pedidos de envio e da entrega não equivale a esse workflow.
 
@@ -126,7 +126,7 @@ Dia atual é parcial. A API usa corte real também para decisões de energia; `p
 | RF-09 | Caixa individual, avisos automáticos e manuais com análise individual; enfileirada, recebida e lida são estados diferentes. Recuperar todas as páginas pendentes após reconexão; leitura não resolve ocorrência. | Implementado; prazos/escalonamento de casos planejados |
 | RF-10 | Relatórios no escopo e exportação planilha/PDF com período, regra, procedência e ressalvas; membro exporta apenas próprios dados. | Relatórios persistidos implementados; exportações planejadas |
 | RF-11 | Administração de organizações, pessoas, times, integrações, tolerância/agendas globais e auditoria; conflitos de versão não sobrescrevem alteração concorrente. | Implementado; calendário e exceções planejados |
-| RF-12 | Atualização 7/90, estado por fonte e lote, concorrência controlada e reimportação idempotente. Fonte indisponível não certifica resultado. Não há endpoint para cancelar um job de sincronização. | Implementado; cobertura/semântica real requer homologação |
+| RF-12 | Atualização 17/90, estado por fonte e lote, concorrência controlada e reimportação idempotente. Fonte indisponível não certifica resultado. Não há endpoint para cancelar um job de sincronização. | Implementado; cobertura/semântica real requer homologação |
 | RF-13 | Histórico importado, relatórios com versão e auditoria administrativa protegidos pelo escopo atual. Decisões futuras não apagam resposta anterior. | Parcial: dados/auditoria existentes; trilha de casos planejada |
 
 ## 5. Análises, agenda e avisos
@@ -206,7 +206,7 @@ Exemplos usam tolerância inicial de 30 minutos e fontes completas, salvo ressal
 | D-03 | Profissional Monday, herança e deduplicação por chave | Sobreposição entre sessões, categorias/boards e atividade compartilhada |
 | D-04 | Adaptadores/importação existentes | Homologar significados, campos e cobertura com fontes reais |
 | D-05 | Sessão web/nativa, múltiplos vínculos, autorização vigente hoje | Política após transferência e atribuição histórica por time |
-| D-06 | Janela 7/90, corte único e agendas | Prazo de lançamento, atualidade máxima e execução perdida em dias anteriores |
+| D-06 | Janela 17/90, corte único e agendas | Prazo de lançamento, atualidade máxima e execução perdida em dias anteriores |
 | D-07 | Relatórios snapshots, nova análise em novo processamento | Casos, reabertura, competência e preservação/revisão de decisões |
 | D-08 | Sem calendário completo; automático exclui sábado/domingo | Feriados, ausências, escalas e elegibilidade de reuniões/treinamento |
 | D-09 | Agendas iniciais, caixa pessoal e recuperação de pendentes | Prazos, lembretes de casos, delegação/escalonamento e mensagem livre sem análise |

@@ -1,127 +1,28 @@
-import { useAction, useQuery } from '../hooks/async'
-import { useMemo, useState } from 'react'
-import { History, LogOut, RefreshCw, UsersRound } from 'lucide-react'
+import { useQuery } from '../hooks/async'
+import { useLogout } from '../auth/useLogout'
+import { AccountControls } from '../components/AccountControls'
+import { useCallback, useMemo, useState } from 'react'
+import { History, UsersRound } from 'lucide-react'
 import logo from '../assets/conceito-logo.png'
-import { AuthError, type AuthClient, type AuthSession } from '../auth/auth-client'
+import { type AuthClient, type AuthSession } from '../auth/auth-client'
 import { FormNotice } from '../components/FormNotice'
-import { AdminApi, type Assignment, type Person, type Team } from '../admin/api'
+import { AdminApi } from '../admin/api'
 import { HistoryView } from './HistoryView'
+import { TeamHistory } from './TeamHistory'
 import { PersonalOverview } from './PersonalOverview'
 import { SyncPage } from '../admin/SyncPage'
-import { sourceLabel, syncLabels, timestamp, today } from '../admin/format'
-import { Badge, Empty, Loading, PageHeading, QueryError } from '../admin/ui'
+import { today } from '../admin/format'
+import { Empty, Loading, PageHeading, QueryError } from '../admin/ui'
 import '../admin/admin.css'
-import { Analyses, Inbox, useNotificationApi, useOpenInbox } from '../notifications'
+import {
+  Analyses,
+  Inbox,
+  NotificationBell,
+  useNotificationApi,
+  useOpenInbox,
+} from '../notifications'
 
-type Page = 'mine' | 'history' | 'teams' | 'sync' | 'notifications' | 'analyses' | 'teamAnalyses'
-
-function LatestSources({ api }: { api: AdminApi }) {
-  const latest = useQuery(async () => {
-    try {
-      return await api.latest()
-    } catch (failure) {
-      if (failure instanceof AuthError && failure.code === 'sync_not_found') return null
-      throw failure
-    }
-  }, [api])
-  if (latest.pending) return <Loading text="Consultando a última tentativa de atualização…" />
-  if (latest.error) return <QueryError error={latest.error} retry={latest.reload} />
-  if (!latest.data)
-    return (
-      <p className="muted">
-        Você ainda não solicitou uma atualização. Isso não informa a cobertura histórica das fontes.
-      </p>
-    )
-  return (
-    <div className="user-source-status">
-      <p className="muted">
-        Última tentativa solicitada por você: {timestamp(latest.data.startedAt)}. Esta data não é
-        necessariamente o último sucesso de cada fonte.
-      </p>
-      <div className="button-row">
-        {(['monday', 'vrMais'] as const).map((source) => {
-          const item = latest.data?.sources?.find((entry) => entry.source === source)
-          return (
-            <Badge
-              key={source}
-              tone={
-                item?.status === 'succeeded'
-                  ? 'good'
-                  : item?.status === 'failed' || item?.status === 'partiallySucceeded'
-                    ? 'warning'
-                    : 'neutral'
-              }
-            >
-              {sourceLabel(source)}: {syncLabels[item?.status ?? ''] || 'Sem resultado'}
-            </Badge>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-function TeamHistory({ api, team, people }: { api: AdminApi; team: Team; people: Person[] }) {
-  const assignments = useQuery(() => api.assignments(team.id!, false, today()), [api, team.id])
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const visible = (assignments.data ?? []).flatMap((assignment: Assignment) => {
-    const person = people.find((candidate) => candidate.userId === assignment.userId)
-    return person?.id ? [{ assignment, person }] : []
-  })
-  const selected = visible.find(({ person }) => person.id === selectedId)?.person
-  return (
-    <>
-      <div className="admin-panel">
-        <div className="panel-toolbar">
-          <div>
-            <h2>{team.name || 'Time sem nome'}</h2>
-            <p>Vínculos vigentes hoje. O acesso a cada pessoa é conferido novamente pela API.</p>
-          </div>
-          <button className="secondary-button" onClick={assignments.reload}>
-            Atualizar vínculos
-          </button>
-        </div>
-        <QueryError error={assignments.error} retry={assignments.reload} />
-        {assignments.pending ? (
-          <Loading />
-        ) : !assignments.error && visible.length === 0 ? (
-          <Empty title="Nenhuma pessoa associada visível">
-            <p>Um vínculo de time não garante que a conta esteja associada às duas fontes.</p>
-          </Empty>
-        ) : (
-          <div className="user-person-list">
-            {visible.map(({ assignment, person }) => (
-              <button
-                key={assignment.id ?? person.id}
-                className="person-choice"
-                type="button"
-                aria-pressed={selected?.id === person.id}
-                onClick={() => setSelectedId(person.id!)}
-              >
-                <strong>
-                  {person.displayName || assignment.userDisplayName || 'Pessoa sem nome'}
-                </strong>
-                <small>
-                  {person.email || assignment.userEmail || 'E-mail indisponível'} ·{' '}
-                  {assignment.role === 'manager' ? 'Líder' : 'Membro'}
-                </small>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-      {selected && (
-        <HistoryView
-          key={selected.id}
-          api={api}
-          person={selected}
-          title="Histórico da pessoa"
-          nested
-        />
-      )}
-    </>
-  )
-}
+type Page = 'mine' | 'history' | 'teams' | 'notifications' | 'analyses' | 'teamAnalyses'
 
 export function UserShell({
   client,
@@ -137,9 +38,16 @@ export function UserShell({
   const teams = useQuery(() => api.teams(false, today()), [api])
   const [page, setPage] = useState<Page>('mine')
   const notifications = useNotificationApi(client)
-  useOpenInbox(() => setPage('notifications'))
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const closeNotifications = useCallback(() => setNotificationsOpen(false), [])
+  const [notificationRevision, setNotificationRevision] = useState(0)
+  useOpenInbox(() => {
+    setNotificationsOpen(false)
+    setPage('notifications')
+  })
   const [teamId, setTeamId] = useState<string | null>(null)
-  const logout = useAction()
+  const [historyRevision, setHistoryRevision] = useState(0)
+  const logout = useLogout(client, onLogout)
   const self = people.data?.find((person) => person.userId === session.user.id)
   const managed = teams.data ?? []
   const selectedTeam = managed.find((team) => team.id === teamId) ?? null
@@ -147,8 +55,6 @@ export function UserShell({
     { id: 'mine' as const, label: 'Minha jornada', icon: History },
     { id: 'history' as const, label: 'Meu histórico', icon: History },
     ...(managed.length ? [{ id: 'teams' as const, label: 'Meus times', icon: UsersRound }] : []),
-    { id: 'sync' as const, label: 'Atualização', icon: RefreshCw },
-    { id: 'notifications' as const, label: 'Minhas notificações', icon: History },
     { id: 'analyses' as const, label: 'Minha análise', icon: History },
     ...(managed.length
       ? [{ id: 'teamAnalyses' as const, label: 'Análises dos times', icon: UsersRound }]
@@ -192,32 +98,33 @@ export function UserShell({
           <div>
             <span className="breadcrumb">
               CEP Horas <span>/</span>{' '}
-              <strong>{navigation.find((item) => item.id === activePage)?.label}</strong>
+              <strong>
+                {activePage === 'notifications'
+                  ? 'Minhas notificações'
+                  : navigation.find((item) => item.id === activePage)?.label}
+              </strong>
             </span>
           </div>
-          <div className="admin-account">
-            <span className="avatar">
-              {session.user.displayName?.slice(0, 1).toUpperCase() || 'M'}
-            </span>
-            <div>
-              <strong>{session.user.displayName || 'Membro'}</strong>
-              <span>{managed.length ? 'Visão pessoal e gestão dos times' : 'Visão pessoal'}</span>
-            </div>
-            <button
-              className="icon-button"
-              aria-label="Sair da conta"
-              title="Sair da conta"
-              disabled={logout.pending}
-              onClick={() =>
-                void logout.run(async () => {
-                  await client.logout()
-                  onLogout()
-                })
-              }
-            >
-              <LogOut size={19} />
-            </button>
-          </div>
+          <AccountControls
+            displayName={session.user.displayName}
+            fallbackName="Membro"
+            fallbackInitial="M"
+            roleLabel={managed.length ? 'Visão pessoal e gestão dos times' : 'Visão pessoal'}
+            pending={logout.pending}
+            onLogout={logout.logout}
+          >
+            <NotificationBell
+              api={notifications}
+              open={notificationsOpen}
+              revision={notificationRevision}
+              onOpen={() => setNotificationsOpen(true)}
+              onClose={closeNotifications}
+              onAll={() => {
+                setNotificationsOpen(false)
+                setPage('notifications')
+              }}
+            />
+          </AccountControls>
         </header>
         <main className="admin-content">
           <FormNotice error={logout.error} />
@@ -225,7 +132,7 @@ export function UserShell({
             <PersonalOverview
               client={client}
               onHistory={() => setPage('history')}
-              onNotifications={() => setPage('notifications')}
+              onNotifications={() => setNotificationsOpen(true)}
             />
           )}
           {activePage === 'history' && (
@@ -237,10 +144,12 @@ export function UserShell({
                   description="Registros importados e associação da sua conta."
                 />
               )}
-              <div className="admin-panel">
-                <h2>Situação das fontes</h2>
-                <LatestSources api={api} />
-              </div>
+              <SyncPage
+                api={api}
+                allowFull={false}
+                embedded
+                onCompleted={() => setHistoryRevision((value) => value + 1)}
+              />
               <QueryError error={people.error} retry={people.reload} />
               {people.pending ? (
                 <Loading text="Localizando sua associação…" />
@@ -255,7 +164,14 @@ export function UserShell({
                   </Empty>
                 </div>
               ) : (
-                self && <HistoryView api={api} person={self} title="Meu histórico" />
+                self && (
+                  <HistoryView
+                    api={api}
+                    person={self}
+                    title="Meu histórico"
+                    refreshRevision={historyRevision}
+                  />
+                )
               )}
             </>
           )}
@@ -313,8 +229,12 @@ export function UserShell({
               )}
             </>
           )}
-          {activePage === 'sync' && <SyncPage api={api} allowFull={false} />}
-          {activePage === 'notifications' && <Inbox api={notifications} />}
+          {activePage === 'notifications' && !notificationsOpen && (
+            <Inbox
+              api={notifications}
+              onRead={() => setNotificationRevision((value) => value + 1)}
+            />
+          )}
           {activePage === 'analyses' && (
             <Analyses api={notifications} peopleApi={api} ownUserId={session.user.id} />
           )}

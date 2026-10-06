@@ -20,11 +20,11 @@ export const kindLabels = {
 export type ScheduleInput = Schema['TimeScheduleRequest']
 export type Dispatch = Required<Schema['TimeDispatchResponse']>
 export type Analysis = Schema['TimeAnalysisResponse']
-export type Notification = Required<Schema['TimeNotificationResponse']>
-export type Report = Required<Schema['TimeReportResponse']>
+type Notification = Required<Schema['TimeNotificationResponse']>
+type Report = Required<Schema['TimeReportResponse']>
 export class NotificationApi {
   constructor(
-    private readonly client: AuthClient,
+    private readonly client: Pick<AuthClient, 'request'>,
     private readonly organizationId?: string,
   ) {}
   private scoped(path: string) {

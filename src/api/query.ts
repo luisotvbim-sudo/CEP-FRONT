@@ -1,4 +1,4 @@
-export type QueryValues = Record<string, string | number | boolean | undefined>
+type QueryValues = Record<string, string | number | boolean | undefined>
 export type Paged<T> = { items?: T[] | null; total?: number; page?: number; pageSize?: number }
 
 export function query(values: QueryValues): string {

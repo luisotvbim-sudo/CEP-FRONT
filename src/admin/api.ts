@@ -14,13 +14,13 @@ export type Assignment = Schema['TeamAssignmentResponse']
 export type TimeRecord = Schema['WorkforceTimeRecordResponse']
 export type Invitation = Schema['InvitationResponse']
 export type User = Schema['UserResponse']
-export type AuditEvent = Schema['AuditEventResponse']
+type AuditEvent = Schema['AuditEventResponse']
 export type History = Schema['WorkforceAdminHistoryResponse']
 
 const root = '/organization/time-control'
 export class AdminApi {
   constructor(
-    private readonly client: AuthClient,
+    private readonly client: Pick<AuthClient, 'request'>,
     private readonly organizationId?: string,
   ) {}
   private request<T>(method: 'GET' | 'POST' | 'PATCH', path: string, body?: object): Promise<T> {

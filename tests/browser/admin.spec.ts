@@ -95,7 +95,8 @@ test('synchronization shows disabled integrations independently and partial succ
       },
     })
   })
-  await page.getByRole('button', { name: 'Atualizar últimos 7 dias' }).click()
+  await expect(page.getByText('Atualiza os últimos 17 dias, incluindo hoje.', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Atualizar sprint' }).click()
   await expect(page.getByRole('button', { name: 'Coleta em andamento' })).toBeDisabled()
   await expect(page.getByText('Sucesso parcial', { exact: true })).toBeVisible()
   await expect(page.getByText('Integração desabilitada', { exact: true })).toHaveCount(1)
@@ -178,9 +179,10 @@ test('member sees only the operational area and their scoped history', async ({ 
   await page.getByRole('button', { name: 'Consultar histórico' }).click()
   await expect(page.getByText('Duração indisponível não foi convertida em zero.')).toBeVisible()
   expect(calls.some((c) => c.path.includes(`workforcePersonId=${ids.person}`))).toBe(true)
-  await page.getByRole('button', { name: 'Atualização', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Atualização', exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Meu histórico', exact: true }).click()
   await expect(page.getByText(/Reprocessar até 90 dias/)).toHaveCount(0)
-  await page.getByRole('button', { name: 'Atualizar últimos 7 dias' }).click()
+  await page.getByRole('button', { name: 'Reprocessar dados do Monday' }).click()
   expect(calls.some((c) => c.path.includes('/synchronizations?full=false'))).toBe(true)
   expect(calls.some((c) => c.path.includes('/organization/invitations'))).toBe(false)
 })
@@ -232,16 +234,15 @@ test('member does not follow an unknown synchronization after another user start
   page,
 }) => {
   await fixture(page, { role: 'user' })
-  await page.getByRole('button', { name: 'Atualização', exact: true }).click()
-  await expect(page.getByText('Integração desabilitada', { exact: true })).toHaveCount(2)
+  await expect(page.getByRole('button', { name: 'Atualização', exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Meu histórico', exact: true }).click()
+  await expect(page.getByText('Integração desabilitada', { exact: true })).toHaveCount(0)
   await page.route('**/synchronizations?full=false', (route) =>
     route.fulfill({ status: 409, json: { code: 'sync_already_running' } }),
   )
-  await page.getByRole('button', { name: 'Atualizar últimos 7 dias' }).click()
+  await page.getByRole('button', { name: 'Reprocessar dados do Monday' }).click()
   await expect(page.getByRole('alert')).toContainText('Já existe uma sincronização em andamento')
-  await expect(
-    page.getByRole('heading', { name: 'Outra atualização está em andamento' }),
-  ).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Reprocessar dados do Monday' })).toBeEnabled()
   await expect(page.getByText('Integração desabilitada', { exact: true })).toHaveCount(0)
 })
 
@@ -332,10 +333,10 @@ test('a delayed running poll cannot replace a completed synchronization', async 
     await new Promise((resolve) => setTimeout(resolve, 1800))
     await route.fulfill({ json: { ...disabledBatch, id, status: 'partiallySucceeded' } })
   })
-  await page.getByRole('button', { name: 'Atualizar últimos 7 dias' }).click()
+  await page.getByRole('button', { name: 'Atualizar sprint' }).click()
   await expect(page.getByText('Sucesso parcial', { exact: true })).toBeVisible()
   await expect.poll(() => pollFinished).toBe(true)
-  await expect(page.getByRole('button', { name: 'Atualizar últimos 7 dias' })).toBeEnabled()
+  await expect(page.getByRole('button', { name: 'Atualizar sprint' })).toBeEnabled()
   await expect(page.getByText('Sucesso parcial', { exact: true })).toBeVisible()
 })
 

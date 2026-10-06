@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { AuthError, type AuthClient } from '../auth/auth-client'
 import { OverviewApi } from './overview-api'
-import { personalOverview } from './overview-fixture'
+import { personalOverview } from '../../tests/fixtures/overview'
 
 function setup(request: AuthClient['request']) {
   let expire = () => {}

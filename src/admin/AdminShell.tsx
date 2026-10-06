@@ -1,10 +1,10 @@
-import { useAction } from '../hooks/async'
+import { useLogout } from '../auth/useLogout'
+import { AccountControls } from '../components/AccountControls'
 import { useMemo, useState } from 'react'
 import {
   ClipboardList,
   History,
   Link2,
-  LogOut,
   RefreshCw,
   ShieldCheck,
   UserRoundCog,
@@ -77,7 +77,7 @@ export function AdminShell({
   useOpenInbox(() => setPage('notifications'))
   const [page, setPage] = useState<Page>('people')
   const [person, setPerson] = useState<Person | null>(null)
-  const action = useAction()
+  const action = useLogout(client, onLogout)
   function navigate(next: Page) {
     setPage(next)
     if (next !== 'history') setPerson(null)
@@ -132,29 +132,14 @@ export function AdminShell({
               </div>
             )}
           </div>
-          <div className="admin-account">
-            <span className="avatar">
-              {session.user.displayName?.slice(0, 1).toUpperCase() || 'A'}
-            </span>
-            <div>
-              <strong>{session.user.displayName || 'Coordenador'}</strong>
-              <span>{organization ? 'Administrador técnico' : 'Coordenador da organização'}</span>
-            </div>
-            <button
-              className="icon-button"
-              aria-label="Sair da conta"
-              title="Sair da conta"
-              disabled={action.pending}
-              onClick={() =>
-                void action.run(async () => {
-                  await client.logout()
-                  onLogout()
-                })
-              }
-            >
-              <LogOut size={19} />
-            </button>
-          </div>
+          <AccountControls
+            displayName={session.user.displayName}
+            fallbackName="Coordenador"
+            fallbackInitial="A"
+            roleLabel={organization ? 'Administrador técnico' : 'Coordenador da organização'}
+            pending={action.pending}
+            onLogout={action.logout}
+          />
         </header>
         <main className="admin-content">
           <FormNotice error={action.error} />

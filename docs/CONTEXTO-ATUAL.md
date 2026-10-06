@@ -1,5 +1,17 @@
 # Contexto atual do CEP-FRONT
 
+Mapa de manutenção e auditoria da base de testes: [limpeza do Front](mapa-front-limpeza.md). A fixture de acompanhamento pessoal fica em `tests/fixtures/overview.ts`; não é um módulo de execução do produto. Matrizes datadas abaixo são evidências históricas, e a auditoria identifica separadamente main, web de teste e desktop mock.
+
+Na branch de refatoração web, `AccountControls` apresenta a conta e `useLogout` controla a saída; `TeamHistory` mantém o histórico selecionado dentro da navegação de membro/líder. `HistoryFields` compartilha os campos de período/fonte; `useSynchronization` controla submissão e acompanhamento, enquanto `SyncPage` apresenta os modos pessoal/administrativo. `AdminApi` e `NotificationApi` dependem somente de `request`. Comportamento, contratos e estado de aplicação nos testes estão na [entrega da refatoração](refatoracao-front.md); essa estrutura não comprova integração à main ou ao desktop.
+
+Membro/Líder acessam avisos pessoais pelo sino no cabeçalho, com contagem de não lidas e dropdown paginado. “Ver meus avisos” abre o dropdown; a central completa e o destino nativo continuam disponíveis. Abrir/expandir não marca leitura nem recebimento. Administração conserva sua navegação atual. Ver [notificações](notificacoes-implementacao.md).
+
+Membro/Líder usam o botão “Reprocessar dados do Monday” em Meu histórico, com a orientação “Use este botão sempre que editar registros no Monday para atualizar os dados no CEP.” O bloco pessoal mostra somente o botão, a orientação e feedback acessível de andamento, conclusão/resultado parcial ou erro, sem painéis técnicos por fonte. A operação normal continua consultando Monday e VR Mais por 17 dias; o rótulo não restringe a API ao Monday. Sucesso total ou parcial recarrega o histórico com os filtros atuais, sem repetir a submissão. Coordenador conserva a tela administrativa e opção de até 90 dias.
+
+Sincronização normal: botão administrativo “Atualizar sprint” e botão pessoal “Reprocessar dados do Monday”, janela móvel de 17 dias incluindo hoje, dependente da API com essa política. O nome do botão não muda os períodos oficiais de análise da sprint (1–14/15–fim do mês); reprocessamento administrativo permanece até 90 dias.
+
+Detalhe de registro Monday: somente Início/Fim, origem informada Manual/Cronômetro e link da atividade quando disponível. Título, duração e estado continuam fora do detalhe; VR mostra apenas horários conhecidos/batidas informadas, link e origem explícita, sem metadados complementares nem pareamento inferido. Ausência de flags de origem não permite inferir cronômetro. Ver [histórico diário](historico-diario.md).
+
 Política de senha em 05/10/2026: formulários de ativação e recuperação e mensagens permitem mínimo de 6 e máximo de 200 caracteres. Requer API com a regra atualizada antes da publicação do cliente; sem mudanças nas rotas/allowlist. Código e builds não comprovam publicação web ou versão Windows instalada.
 
 Continuidade em 05/10/2026: acompanhamento pessoal integrado à main `53d8e5be438e18b2c67e7bcff82f8806330ada8e`, API/main `ba07f772f3ed9914a80ef9dfa4543385a742ecea`. A branch `codex/instalador-pronto` integra essas mudanças ao serviço/atualizador e ao [pacote 0.4.11](instalador-0.4.11.md), com recuperação durável de energia. Matrizes antigas abaixo conservam a auditoria datada; conferir o registro desta entrega antes de assumir versão publicada ou instalada.
@@ -20,7 +32,7 @@ O instalador CEP Horas está neste repositório. O projeto separado CEP Hub/01-C
 |---|---|
 | Pública | Login, recuperação/redefinição, ativação de convite; `/download` apresenta o ZIP de teste sem autenticar/consultar a API |
 | Coordenador (`organizationAdmin`) | Pessoas, associação/convite, sincronização, times/vínculos, histórico, usuários, auditoria, central própria, análises/erros, envio e configurações globais |
-| Membro (`user`) | Minha jornada/histórico, atualização normal, central pessoal e análises próprias |
+| Membro (`user`) | Minha jornada, Meu histórico com botão de reprocessamento, sino/central pessoal e análises próprias |
 | Líder (`user` com vínculo `manager`) | Visão pessoal mais times geridos, histórico das pessoas visíveis e análises dos times |
 | Administrador técnico (`systemAdmin`) | Organizações, configurações globais e central própria; seleciona organização para operações de pessoas/envio/histórico/administração |
 
@@ -42,7 +54,7 @@ Desde a entrega em branch de 05/10/2026, Minha jornada usa [acompanhamento pesso
 
 Diretórios Monday/VR são paginados no backend; a interface escolhe IDs internos ativos e ainda não associados. Correspondência por e-mail exato/único é sugestão, exige confirmação humana. Nomes iguais não criam associação automática. Associar/convidar enfileira e-mail, sem provar entrega.
 
-Atualização normal reavalia hoje e os seis dias anteriores; reprocessamento completo/carga inicial administrativa cobre até 90 dias. Não é delta puro por cursor. Fontes apresentam tentativa, resultado, contagens/cobertura e falhas independentes; última tentativa não significa último sucesso. Membro/Líder não recebem a opção de reprocessamento administrativo, e sua última tentativa é a que solicitaram.
+Atualização normal reavalia hoje e os 16 dias anteriores; reprocessamento completo/carga inicial administrativa cobre até 90 dias. Não é delta puro por cursor. Fontes apresentam tentativa, resultado, contagens/cobertura e falhas independentes; última tentativa não significa último sucesso. Membro/Líder não recebem a opção de reprocessamento administrativo, e sua última tentativa é a que solicitaram.
 
 `GET /organization/time-control/history` aceita até 90 dias inclusivos e retorna registros mais resumos diários da API. `DailyHistory`/`history-data.ts` agrupam/apresentam, sem calcular totais. Filtro de fonte restringe detalhes/dias encontrados; resumo de cada dia usa ambas as identidades. Datas civis preservam o dia da API; instantes usam São Paulo e durações mantêm segundos/sinal, inclusive acima de 24h.
 
@@ -90,3 +102,5 @@ Pendências de produto conservadas em RN/RF/CA/D: calendário e exceções, sobr
 ## O que foi validado nesta reescrita
 
 Inspeção de código/contratos e consistência documental. Nenhum build, instalação, envio de e-mail/aviso, operação autenticada de produção ou ação de energia foi executado por esta limpeza. CI e testes históricos devem ser consultados no commit correspondente, sem reapresentá-los como resultados atuais.
+
+/download mantém somente título e card de download, sem seções de requisitos/passos/FAQ ou descrições complementares. O destino continua o ZIP de teste 0.2.0.1; simplificar a página não publica MSI nem atualizador.

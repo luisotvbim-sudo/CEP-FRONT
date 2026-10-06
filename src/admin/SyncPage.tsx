@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useSynchronization } from './useSynchronization'
 import { Database, RefreshCw } from 'lucide-react'
-import { AuthError, errorMessage } from '../auth/auth-client'
-import type { AdminApi, Sync } from './api'
+import type { AdminApi } from './api'
 import { date, sourceLabel, syncLabels, timestamp } from './format'
 import { Badge, Empty, Loading, PageHeading, QueryError } from './ui'
 import { FormNotice } from '../components/FormNotice'
@@ -12,96 +11,44 @@ const sourceAdvice: Record<string, string> = {
   monday_invalid_configuration: 'Peça ao coordenador para revisar a configuração do Monday no servidor.',
 }
 
-export function SyncPage({ api, allowFull = true }: { api: AdminApi; allowFull?: boolean }) {
-  const [batch, setBatch] = useState<Sync | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [starting, setStarting] = useState(false)
-  const [full, setFull] = useState(false)
-  const [error, setError] = useState<AuthError | null>(null)
-  const [pollError, setPollError] = useState<AuthError | null>(null)
-  const active = useRef(true)
-  const inFlight = useRef(false)
-  const batchId = useRef<string | undefined>(undefined)
-  const previousBatch = useRef<string | undefined>(undefined)
-  const revision = useRef(0)
-  const refresh = useCallback(async () => {
-    const current = ++revision.current
-    try {
-      const result = batchId.current ? await api.syncStatus(batchId.current) : await api.latest()
-      if (current !== revision.current) return
-      if (result.id && result.id === previousBatch.current) return
-      if (active.current) {
-        batchId.current = result.id
-        setBatch(result)
-        setPollError(null)
-      }
-    } catch (failure) {
-      if (!active.current || current !== revision.current) return
-      if (failure instanceof AuthError && failure.code === 'sync_not_found') {
-        setBatch(null)
-        setPollError(null)
-      } else setPollError(errorMessage(failure))
-    } finally {
-      if (active.current && current === revision.current) setLoading(false)
-    }
-  }, [api])
-  useEffect(() => {
-    active.current = true
-    void refresh()
-    return () => {
-      active.current = false
-    }
-  }, [refresh])
-  const running = starting || batch?.status === 'running'
-  useEffect(() => {
-    if (!running) return
-    let disposed = false
-    let timer: ReturnType<typeof setTimeout>
-    const poll = async () => {
-      await refresh()
-      if (!disposed) timer = setTimeout(poll, 3000)
-    }
-    timer = setTimeout(poll, 1200)
-    return () => {
-      disposed = true
-      clearTimeout(timer)
-    }
-  }, [running, refresh])
+export function SyncPage({ api, allowFull = true, embedded = false, onCompleted }: {
+  api: AdminApi
+  allowFull?: boolean
+  embedded?: boolean
+  onCompleted?: () => void
+}) {
+  const { batch, loading, full, setFull, error, pollError, running, refresh, start, reloadLatest } =
+    useSynchronization(api, allowFull, onCompleted)
 
-  async function start() {
-    if (inFlight.current || running) return
-    inFlight.current = true
-    revision.current++
-    setStarting(true)
-    setError(null)
-    previousBatch.current = batch?.id
-    setBatch(null)
-    batchId.current = undefined
-    try {
-      const result = await api.synchronize(full)
-      revision.current++
-      previousBatch.current = undefined
-      if (active.current) {
-        batchId.current = result.id
-        setBatch(result)
-      }
-    } catch (failure) {
-      revision.current++
-      previousBatch.current = undefined
-      if (active.current) {
-        const problem = errorMessage(failure)
-        setError(problem)
-        // A member's /latest only exposes their own batches. A conflict may belong to
-        // somebody else, so showing their previous batch as the current one is misleading.
-        if (!allowFull && problem.code === 'sync_already_running') {
-          setBatch(null)
-          setLoading(false)
-        } else await refresh()
-      }
-    } finally {
-      inFlight.current = false
-      if (active.current) setStarting(false)
-    }
+  if (embedded) {
+    const message = running
+      ? 'Reprocessando dados…'
+      : batch?.status === 'succeeded'
+        ? 'Dados atualizados.'
+        : batch?.status === 'partiallySucceeded'
+          ? 'Atualização parcial. Alguns dados não foram atualizados.'
+          : batch?.status === 'failed'
+            ? 'Não foi possível atualizar os dados. Tente novamente.'
+            : null
+    return (
+      <>
+        <button
+          className="primary-button compact"
+          disabled={running || loading}
+          aria-describedby="history-reprocess-help"
+          onClick={() => void start()}
+        >
+          <RefreshCw size={17} aria-hidden="true" className={running ? 'spin' : ''} />
+          {running ? 'Reprocessando dados…' : 'Reprocessar dados do Monday'}
+        </button>
+        <p id="history-reprocess-help" className="muted">
+          Use este botão sempre que editar registros no Monday para atualizar os dados no CEP.
+        </p>
+        <FormNotice error={error} />
+        <QueryError error={pollError} retry={() => void refresh()} />
+        {message && <p role="status">{message}</p>}
+      </>
+    )
   }
 
   return (
@@ -112,10 +59,7 @@ export function SyncPage({ api, allowFull = true }: { api: AdminApi; allowFull?:
         action={
           <button
             className="secondary-button"
-            onClick={() => {
-              batchId.current = undefined
-              void refresh()
-            }}
+            onClick={reloadLatest}
             disabled={loading}
           >
             <RefreshCw size={15} /> Consultar estado
@@ -139,9 +83,8 @@ export function SyncPage({ api, allowFull = true }: { api: AdminApi; allowFull?:
               />
               <span>Reprocessar até 90 dias e diretórios (carga administrativa)</span>
             </label>
-          ) : (
-            <p className="muted">A atualização normal reavalia os últimos 7 dias da sua pessoa e das pessoas dos times que você lidera, quando houver.</p>
-          )}
+          ) : null}
+          {(!allowFull || !full) && <p className="muted">Atualiza os últimos 17 dias, incluindo hoje.</p>}
         </div>
         <button
           className="primary-button compact"
@@ -149,7 +92,7 @@ export function SyncPage({ api, allowFull = true }: { api: AdminApi; allowFull?:
           onClick={() => void start()}
         >
           <RefreshCw size={17} className={running ? 'spin' : ''} />
-          {running ? 'Coleta em andamento…' : allowFull && full ? 'Reprocessar até 90 dias' : 'Atualizar últimos 7 dias'}
+          {running ? 'Coleta em andamento…' : allowFull && full ? 'Reprocessar até 90 dias' : 'Atualizar sprint'}
         </button>
       </div>
       <FormNotice error={error} />
