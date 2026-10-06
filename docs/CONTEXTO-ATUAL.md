@@ -54,6 +54,8 @@ Histórico é importado: não consulta fontes agora, não prolonga timer aberto 
 
 ## Análises e notificações
 
+A lista de relatórios limita a largura da grade para manter filtros e paginação acessíveis com detalhes preenchidos em telas estreitas. A consulta continua lendo snapshots, sem importar fontes. Verificação de apresentação usa fixtures isoladas; não certifica cálculos das fontes reais.
+
 `src/notifications/` consome configurações globais, agendas, prévia/envio, central, histórico de envios e relatórios persistidos. Aditivo funcional: [contrato atual](contrato-analises-notificacoes.md); integração: [notificações](notificacoes-implementacao.md).
 
 - Diferença = Monday − VR, tolerância inicial simétrica de 30 minutos, comparação em segundos; limite exato permitido. Divergência absoluta soma magnitudes diárias. O cliente não classifica horas nem escolhe destinatários oficiais.

@@ -2,6 +2,12 @@
   display: grid;
   gap: 1rem;
 }
+.analysis-reports {
+  grid-template-columns: minmax(0, 1fr);
+}
+.analysis-reports > article {
+  min-width: 0;
+}
 .notification-form > label {
   display: grid;
   gap: 0.5rem;

@@ -14,6 +14,8 @@ Contexto revisto em 04/10/2026. Código auditado: Front `eb63dbd`, API `b36c6e1`
 
 O frontend não calcula período, tolerância ou destinatários. Total agregado nulo não vira subtotal válido. Dia corrente/qualidade incompleta e valores desconhecidos são mostrados como recebidos. Calendário, casos/justificativas/aprovações e exportação continuam planejados.
 
+A lista de análises mantém a grade limitada à largura disponível, com rolagem horizontal no detalhe diário. Relatórios preenchidos não devem alargar a página nem impedir o acionamento dos filtros e da paginação no celular. O detalhe aparece diretamente no relatório; a expansão da análise anexada pertence à central de notificações.
+
 ## Recebimento Windows
 
 `NotificationDelivery` consulta pendentes depois do login/retomada e a cada minuto. Recupera todas as páginas antes de confirmar, evitando que confirmação desloque a paginação. Inclui mensagens antigas já geradas enquanto o PC esteve desligado; não reconstrói execuções que o servidor nunca gerou.

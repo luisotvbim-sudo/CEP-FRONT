@@ -41,7 +41,7 @@ export function Analyses({
           </button>
         }
       />
-      <section className="admin-panel notification-form">
+      <section className="admin-panel notification-form analysis-reports">
         <label>
           Período
           <select
