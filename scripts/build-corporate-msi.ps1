@@ -1,6 +1,6 @@
 #Requires -Version 7.0
 param(
-    [string]$Version = '0.4.14',
+    [string]$Version = '0.4.15',
     [string]$UpdateSigningKeyPath
 )
 $ErrorActionPreference = 'Stop'
