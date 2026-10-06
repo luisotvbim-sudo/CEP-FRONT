@@ -6,7 +6,7 @@ Contrato implementado nas bases auditadas em 04/10/2026: CEP-API `b36c6e1` e CEP
 
 O e-mail inclui instruções e link para `https://plugincep.com.br/?convite=1`. A URL é configurável no backend por `Email:InvitationActivationUrl`. Ela não contém código, senha ou e-mail. Na página de login existe também **Recebi um convite**, compatível com códigos já enviados e ainda válidos.
 
-O formulário pede e-mail do convite, nome, código, senha e confirmação. Senha entre 12 e 200 caracteres; preservar todos os caracteres, inclusive espaços. Validar confirmação localmente e impedir envio duplicado. Nunca guardar esses dados no armazenamento do navegador nem na URL.
+O formulário pede e-mail do convite, nome, código, senha e confirmação. Senha entre 6 e 200 caracteres; preservar todos os caracteres, inclusive espaços. Validar confirmação localmente e impedir envio duplicado. Nunca guardar esses dados no armazenamento do navegador nem na URL.
 
 ## Endpoint
 

@@ -1,5 +1,7 @@
 # Contexto atual do CEP-FRONT
 
+Política de senha em 05/10/2026: formulários de ativação e recuperação e mensagens permitem mínimo de 6 e máximo de 200 caracteres. Requer API com a regra atualizada antes da publicação do cliente; sem mudanças nas rotas/allowlist. Código e builds não comprovam publicação web ou versão Windows instalada.
+
 Continuidade em 05/10/2026: acompanhamento pessoal integrado à main `53d8e5be438e18b2c67e7bcff82f8806330ada8e`, API/main `ba07f772f3ed9914a80ef9dfa4543385a742ecea`. A branch `codex/instalador-pronto` integra essas mudanças ao serviço/atualizador e ao [pacote 0.4.11](instalador-0.4.11.md), com recuperação durável de energia. Matrizes antigas abaixo conservam a auditoria datada; conferir o registro desta entrega antes de assumir versão publicada ou instalada.
 
 Reescrito em 04/10/2026 a partir do código e dos contratos versionados. Entrada para continuar em qualquer computador: [README](../README.md), [índice](README.md), [especificação](produto/especificacao-funcional.md) e [compatibilidade](compatibilidade-backend.md). Base analisada: Front `eb63dbdc7f7bf83d0a4b51ee5567ed5aa80c138c`; API `b36c6e149b42253b44860d98c6ffe44f98c53dd6`.
