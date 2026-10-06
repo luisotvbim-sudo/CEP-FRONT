@@ -143,8 +143,6 @@ export function UserShell({
               associationPending={people.pending}
               associationError={people.error}
               retryAssociation={people.reload}
-              onHistory={() => setPage('history')}
-              onNotifications={() => setNotificationsOpen(true)}
             />
           )}
           {activePage === 'history' && (

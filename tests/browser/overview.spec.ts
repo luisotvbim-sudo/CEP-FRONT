@@ -10,7 +10,7 @@ for (const [status, title] of [
   ['notAssociated', 'Sua associação precisa ser conferida'],
   ['inactiveIdentity', 'Um cadastro de origem está inativo'],
 ] as const) {
-  test(`personal overview ${status} has one heading and accessible progressive detail`, async ({
+  test(`personal overview ${status} keeps the concise summary and period history`, async ({
     page,
   }) => {
     const calls = await fixture(page, { role: 'user', overviewStatus: status })
@@ -21,17 +21,17 @@ for (const [status, title] of [
     expect(calls.filter((call) => call.path.includes('/overview')).length).toBe(1)
     if (status === 'incomplete') {
       await expect(page.locator('.overview-metrics').getByText('Indisponível')).toHaveCount(3)
-      await page.getByText('Ver detalhes e qualidade das fontes').focus()
-      await page.keyboard.press('Enter')
-      await expect(
-        page.getByRole('heading', { name: 'Valores disponíveis por fonte' }),
-      ).toBeVisible()
     }
+    await expect(page.getByRole('region', { name: 'Histórico do período' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Dias que merecem atenção' })).toHaveCount(0)
+    await expect(page.getByText('Ver detalhes e qualidade das fontes')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Consultar meu histórico' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Ver meus avisos' })).toHaveCount(0)
     expect(
       (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze())
         .violations,
     ).toEqual([])
-    await page.getByRole('button', { name: 'Consultar meu histórico' }).click()
+    await page.getByRole('button', { name: 'Meu histórico', exact: true }).click()
     await expect(page.getByRole('heading', { name: 'Meu histórico' })).toBeVisible()
     await expect(page.locator('h1')).toHaveCount(1)
   })

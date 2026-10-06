@@ -2,7 +2,7 @@
 
 **Minha jornada** consulta automaticamente `GET /api/v1/me/time-control/overview?period=daily` após login. Contrato e cálculo pertencem à [CEP API](https://github.com/luisotvbim-sudo/CEP-API), em `docs/personal-overview.md`; [demanda #17](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/17).
 
-O resumo apresenta situação oficial, corte, até três métricas e dias de atenção. Detalhe diário e qualidade das fontes ficam em expansão acessível. Períodos/datas vêm da API; React não calcula tolerância/classificação. Desconhecido não é zero. Dia em andamento é parcial; diferenças pedem revisão na origem sem definir débito, produtividade ou irregularidade.
+O resumo apresenta situação oficial, corte e até três métricas. A página não mostra a lista de dias de atenção, a expansão de qualidade das fontes, atalhos e nota final; o histórico importado do período aparece abaixo dos cartões. Períodos/datas vêm da API; React não calcula tolerância/classificação. Desconhecido não é zero. Dia em andamento é parcial; diferenças não definem débito, produtividade ou irregularidade.
 
 **Meu histórico** conserva registros importados e filtros. Notificações e análises persistidas mantêm seus fluxos/cortes. Conferir agora lê fontes; Atualização importa histórico; nenhuma atualiza avisos antigos por inferência. Ler aviso não resolve ocorrência.
 
