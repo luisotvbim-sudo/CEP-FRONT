@@ -1,8 +1,8 @@
 # Contexto atual do CEP-FRONT
 
-Membro/Líder atualizam as fontes pelo botão “Atualizar sprint” em Meu histórico; não há página/item Atualização na navegação pessoal. O controle conserva andamento, resultados por fonte e erros; sucesso total ou parcial recarrega o histórico com os filtros atuais, sem repetir a submissão. Coordenador conserva a sincronização administrativa e opção de até 90 dias.
+Membro/Líder usam o botão “Reprocessar dados do Monday” em Meu histórico, com a orientação “Use este botão sempre que editar registros no Monday para atualizar os dados no CEP.” O bloco pessoal mostra somente o botão, a orientação e feedback acessível de andamento, conclusão/resultado parcial ou erro, sem painéis técnicos por fonte. A operação normal continua consultando Monday e VR Mais por 17 dias; o rótulo não restringe a API ao Monday. Sucesso total ou parcial recarrega o histórico com os filtros atuais, sem repetir a submissão. Coordenador conserva a tela administrativa e opção de até 90 dias.
 
-Sincronização normal: botão “Atualizar sprint”, janela móvel de 17 dias incluindo hoje, dependente da API com essa política. O nome do botão não muda os períodos oficiais de análise da sprint (1–14/15–fim do mês); reprocessamento administrativo permanece até 90 dias.
+Sincronização normal: botão administrativo “Atualizar sprint” e botão pessoal “Reprocessar dados do Monday”, janela móvel de 17 dias incluindo hoje, dependente da API com essa política. O nome do botão não muda os períodos oficiais de análise da sprint (1–14/15–fim do mês); reprocessamento administrativo permanece até 90 dias.
 
 Detalhe de registro Monday: somente Início/Fim, origem informada Manual/Cronômetro e link da atividade quando disponível. Título, duração e estado continuam fora do detalhe; VR mostra apenas horários conhecidos/batidas informadas, link e origem explícita, sem metadados complementares nem pareamento inferido. Ausência de flags de origem não permite inferir cronômetro. Ver [histórico diário](historico-diario.md).
 

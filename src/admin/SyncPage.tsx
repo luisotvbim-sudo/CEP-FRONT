@@ -118,6 +118,37 @@ export function SyncPage({ api, allowFull = true, embedded = false, onCompleted 
     }
   }
 
+  if (embedded) {
+    const message = running
+      ? 'Reprocessando dados…'
+      : batch?.status === 'succeeded'
+        ? 'Dados atualizados.'
+        : batch?.status === 'partiallySucceeded'
+          ? 'Atualização parcial. Alguns dados não foram atualizados.'
+          : batch?.status === 'failed'
+            ? 'Não foi possível atualizar os dados. Tente novamente.'
+            : null
+    return (
+      <>
+        <button
+          className="primary-button compact"
+          disabled={running || loading}
+          aria-describedby="history-reprocess-help"
+          onClick={() => void start()}
+        >
+          <RefreshCw size={17} aria-hidden="true" className={running ? 'spin' : ''} />
+          {running ? 'Reprocessando dados…' : 'Reprocessar dados do Monday'}
+        </button>
+        <p id="history-reprocess-help" className="muted">
+          Use este botão sempre que editar registros no Monday para atualizar os dados no CEP.
+        </p>
+        <FormNotice error={error} />
+        <QueryError error={pollError} retry={() => void refresh()} />
+        {message && <p role="status">{message}</p>}
+      </>
+    )
+  }
+
   return (
     <>
       {!embedded && <PageHeading
