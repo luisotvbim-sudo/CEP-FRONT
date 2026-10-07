@@ -2,6 +2,8 @@ CEP HORAS 0.4 - INSTALACAO CORPORATIVA PELA TI
 
 PACOTE 0.4.17 - CANDIDATO WINDOWS 10/11
 PILOTO DE SENHA DIARIA, PIN E RECUPERACAO DE ENERGIA
+Aceite e acompanhamento: CEP-ORQUESTRADOR #37
+https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/37
 Mostra avisos sanitizados ao validar senha diaria ou PIN. Se a saida protegida
 falhar ou sua resposta se perder, tenta retomar a supervisao uma unica vez e
 informa quando nao consegue confirmar. Pedidos de energia recuperados pelo
