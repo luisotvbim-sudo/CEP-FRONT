@@ -1,9 +1,9 @@
 CEP HORAS 0.4 - INSTALACAO CORPORATIVA PELA TI
 
-PACOTE 0.4.17 - PILOTO MANUAL WINDOWS 10/11
-Instalacao manual de teste. Manifesto de atualizacao aguardando assinatura
-da identidade existente; manifesto e assinatura nao acompanham este kit.
-MSI sem assinatura Authenticode. Nao habilita atualizacao automatica.
+PACOTE 0.4.18 - PILOTO MANUAL WINDOWS 10/11
+Instalacao manual de teste. Manifesto de atualizacao assinado pela identidade
+existente acompanha o kit. Esta prerelease nao e o canal automatico latest.
+MSI sem assinatura Authenticode; o Windows pode exibir aviso de confianca.
 PILOTO DE SENHA DIARIA, PIN E RECUPERACAO DE ENERGIA
 Aceite e acompanhamento: CEP-ORQUESTRADOR #37
 https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/37
@@ -110,7 +110,7 @@ ATUALIZACAO MSI
   GitHub, chave privada ou senha administrativa e instalado nos clientes.
 - Atualizar agora inicia somente um MSI aprovado do canal fixo; Depois adia.
   A manutencao do update preserva as politicas e nao usa o fechamento diario.
-- Homologar a versao instalada para 0.4.17 com conta comum em VM/PC piloto
+- Homologar a versao instalada para 0.4.18 com conta comum em VM/PC piloto
   antes de publicar no canal estavel para a equipe.
 - Build sem manifesto e assinatura validos nao pertence ao canal automatico.
 - Publicacao, backup portatil da chave e recuperacao sao responsabilidades da TI.

@@ -9,6 +9,7 @@ Contexto reescrito em 04/10/2026 após revisão do código. Comece por [CONTEXTO
 
 | Documento | Finalidade |
 |---|---|
+| [Piloto MSI 0.4.18](piloto-windows-0.4.18.md) | Pacote com manifesto de atualização assinado, sem promoção automática |
 | [Piloto MSI 0.4.17](piloto-windows-0.4.17.md) | Pacote manual com PRs #28–#30, integridade e limites de homologação |
 | [Avisos de senha diária e PIN](feedback-senhas-windows.md) | Feedback sanitizado sobre a base 0.4.16 e limites de homologação Windows |
 | [Contexto atual](CONTEXTO-ATUAL.md) | Funcionamento, arquitetura, sessão, escopos, bases e pendências para retomar |
