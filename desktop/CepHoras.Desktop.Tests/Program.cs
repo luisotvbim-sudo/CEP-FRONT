@@ -9,6 +9,7 @@ void Check(bool condition, string reason)
     Interlocked.Increment(ref checks);
     if (!condition) throw new InvalidOperationException(reason);
 }
+await ProtectedExitOperationTests.Run(Check);
 foreach (var code in new[] { "multiple_sessions", "update_maintenance", "access_denied", "service_error", "unknown" })
 {
     var feedback = ProtectedExitFeedback.Refusal(code);

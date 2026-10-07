@@ -56,6 +56,46 @@ function fixture() {
 afterEach(() => vi.useRealTimers())
 
 describe('native power deadlines and reconciliation', () => {
+  it('never automatically cancels an explicitly recovered error, even for a matching ID', async () => {
+    const f = fixture()
+    const pending = f.host.schedule('restart', { kind: 'api-unreachable' })
+    const requestId = f.messages[0].payload.requestId
+    const assertion = expect(pending).rejects.toMatchObject({ requestId, recovered: true })
+    for (const listener of [...f.listeners])
+      listener({
+        data: {
+          id: f.messages[0].id,
+          ok: false,
+          error: { code: 'power_recovery_required', requestId },
+        },
+      })
+    await assertion
+    expect(f.messages.map((m) => m.operation)).toEqual(['schedule'])
+  })
+  it('validates discovery DTO and retains explicit recovery origin', async () => {
+    const requestId = crypto.randomUUID()
+    for (const recovered of [true, false]) {
+      const f = fixture()
+      const pending = f.host.status()
+      expect(f.messages[0].operation).toBe('status')
+      expect(f.messages[0].payload).toEqual({})
+      f.reply(0, { state: 'recovery-required', requestId, recovered })
+      expect(await pending).toEqual({ state: 'recovery-required', requestId, recovered })
+    }
+    for (const result of [
+      null,
+      {},
+      { state: 'idle', requestId },
+      { state: 'recovery-required', requestId },
+      { state: 'recovery-required', requestId: 'invalid', recovered: true },
+      { state: 'terminal' },
+    ]) {
+      const f = fixture()
+      const assertion = expect(f.host.status()).rejects.toThrow()
+      f.reply(0, result)
+      await assertion
+    }
+  })
   it.each([
     'power_service_unavailable',
     'power_service_timeout',

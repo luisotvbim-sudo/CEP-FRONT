@@ -30,6 +30,7 @@ internal sealed class PowerBridgeHandler(ApiSession session, Func<ControlRequest
     private Pending? current;
     private int suspensionCount;
     private bool uncertainQuiescence;
+    private long discoveryRevision;
     private EndingPermission? ending;
     private static readonly HashSet<string> Actions = new(StringComparer.Ordinal) { "shutdown", "restart", "hibernate" };
 
@@ -59,10 +60,49 @@ internal sealed class PowerBridgeHandler(ApiSession session, Func<ControlRequest
         "schedule" => Schedule(payload),
         "cancel" => Cancel(payload),
         "reconcile" => Reconcile(payload),
+        "status" => Discover(payload),
         _ => throw new PowerBridgeFailure("unsupported_power_operation")
     };
 
     private async Task<object> VerifyApiUnreachable() => new { unreachable = await session.IsApiUnreachable() };
+
+    private async Task<object> Discover(JsonElement payload)
+    {
+        if (payload.ValueKind != JsonValueKind.Object || payload.EnumerateObject().Any())
+            throw new PowerBridgeFailure("invalid_power_request");
+        var userId = session.CurrentUserId ?? Guid.Empty;
+        long revision;
+        lock (gate) revision = discoveryRevision;
+        var response = await send(new ControlRequest("status")).WaitAsync(ServiceBudget);
+        ValidateDiscovery(response);
+        lock (gate)
+        {
+            if ((session.CurrentUserId ?? Guid.Empty) != userId) throw new PowerBridgeFailure("session_expired");
+            // A late discovery must never replace dispatch/cancellation/lease state.
+            if (current is not null) return new { state = "recovery-required", requestId = current.RequestId, recovered = current.Recovered };
+            if (revision != discoveryRevision) return new { state = "unavailable" };
+            if (suspensionCount != 0) throw new PowerBridgeFailure("power_recovery_in_progress");
+            if (response.RequestId is not null)
+            {
+                if (response.Code is not ("power_uncertain" or "ready" or "inactive") ||
+                    !Guid.TryParse(response.RequestId, out _) || !Guid.TryParse(response.OriginalBrokerInstanceId, out _) ||
+                    response.Action is not string action || !Actions.Contains(action))
+                    throw new PowerBridgeFailure("power_service_invalid_response");
+                current = new Pending(response.RequestId, action, userId)
+                {
+                    BrokerInstanceId = response.OriginalBrokerInstanceId, Dispatched = true, Recovered = true
+                };
+                ending = null;
+                return new { state = "recovery-required", requestId = current.RequestId, recovered = true };
+            }
+            if (response.Action is not null || response.OriginalBrokerInstanceId is not null || response.ExecuteAt is not null)
+                throw new PowerBridgeFailure("power_service_invalid_response");
+            if (response.Code == "power_uncertain") return new { state = "unavailable" };
+            if (response.Code is not ("ready" or "inactive")) throw new PowerBridgeFailure(response.Code);
+            if (uncertainQuiescence) return new { state = "unavailable" };
+            return new { state = "idle" };
+        }
+    }
 
     private static string RequestId(JsonElement payload)
     {
@@ -88,9 +128,10 @@ internal sealed class PowerBridgeHandler(ApiSession session, Func<ControlRequest
         lock (gate)
         {
             if (suspensionCount != 0 || uncertainQuiescence) throw new PowerBridgeFailure("power_recovery_in_progress");
-            if (current is not null) throw new PowerBridgeFailure("native_power_uncertain", requestId: current.RequestId);
+            if (current is not null) throw new PowerBridgeFailure(current.Recovered ? "power_recovery_required" : "native_power_uncertain", requestId: current.RequestId);
             // Retain the ID before any await: recovery owns pre-dispatch requests too.
             current = pending;
+            discoveryRevision++;
         }
         try
         {
@@ -213,6 +254,7 @@ internal sealed class PowerBridgeHandler(ApiSession session, Func<ControlRequest
         lock (gate)
         {
             pending = current?.RequestId == requestId ? current : null;
+            discoveryRevision++;
             if (pending is not null) pending.CancellationRequested = true;
             brokerInstanceId = pending?.BrokerInstanceId;
             dispatched = pending?.Dispatched == true;
@@ -239,12 +281,21 @@ internal sealed class PowerBridgeHandler(ApiSession session, Func<ControlRequest
 
     private void AdoptRecovery(ControlResponse response)
     {
-        if (response.Code != "power_uncertain") return;
+        ValidateDiscovery(response);
+        if (response.RequestId is null)
+        {
+            if (response.Code == "power_uncertain") throw new PowerBridgeFailure("power_uncertain");
+            return;
+        }
         if (Guid.TryParse(response.RequestId, out _) && Guid.TryParse(response.OriginalBrokerInstanceId, out _) &&
             response.Action is string action && Actions.Contains(action))
         {
             lock (gate)
             {
+                if (current is { } known && known.RequestId == response.RequestId && !known.Recovered &&
+                    known.BrokerInstanceId == response.OriginalBrokerInstanceId) return;
+                if (current is { Dispatched: true } existing && existing.RequestId != response.RequestId)
+                    throw new PowerBridgeFailure("native_power_uncertain", requestId: existing.RequestId);
                 current = new Pending(response.RequestId!, action, session.CurrentUserId ?? Guid.Empty)
                 {
                     BrokerInstanceId = response.OriginalBrokerInstanceId,
@@ -257,6 +308,23 @@ internal sealed class PowerBridgeHandler(ApiSession session, Func<ControlRequest
         throw new PowerBridgeFailure("power_uncertain");
     }
 
+    private static void ValidateDiscovery(ControlResponse response)
+    {
+        if (response.PowerStatusVersion != 1 || !Guid.TryParse(response.BrokerInstanceId, out _))
+            throw new PowerBridgeFailure("power_service_changed");
+        if (response.RequestId is null)
+        {
+            if (response.Action is not null || response.ExecuteAt is not null || response.OriginalBrokerInstanceId is not null)
+                throw new PowerBridgeFailure("power_service_invalid_response");
+            if (response.Code is not ("ready" or "inactive" or "power_uncertain"))
+                throw new PowerBridgeFailure(response.Code);
+        }
+        else if (response.Code is not ("ready" or "inactive" or "power_uncertain") ||
+            !Guid.TryParse(response.RequestId, out _) || !Guid.TryParse(response.OriginalBrokerInstanceId, out _) ||
+            response.Action is not string action || !Actions.Contains(action))
+            throw new PowerBridgeFailure("power_service_invalid_response");
+    }
+
     // Hold across navigation, browser disposal, host exit or updates. Failure keeps
     // scheduling suspended until another attempt confirms service cancellation.
     internal async Task<IAsyncDisposable> QuiesceAsync(CancellationToken token = default)
@@ -265,6 +333,7 @@ internal sealed class PowerBridgeHandler(ApiSession session, Func<ControlRequest
         lock (gate)
         {
             suspensionCount++;
+            discoveryRevision++;
             ending = null;
             requestId = current?.RequestId;
             if (current is not null) current.CancellationRequested = true;

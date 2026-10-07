@@ -1,5 +1,12 @@
 # Contexto atual do CEP-FRONT
 
+Na branch `codex/windows-password-causes`, sobre PR #28 `d10a30a`, a
+[correção das falhas de estado Windows](feedback-senhas-windows.md) separa prazos
+IPC, reconcilia saída incerta, descobre pedidos próprios sem nova autorização API
+e evita confirmar retomada de suspensão de outro SID. O status nativo exige
+marcador compatível do serviço; cancelamento recuperado é explícito pelo menu ou
+bandeja. Não representa merge, MSI distribuído, upgrade ou produção.
+
 Na branch `codex/password-feedback`, baseada em `installer-v0.4.16` (`f197abb`),
 a [entrega de avisos de senha/PIN](feedback-senhas-windows.md) acrescenta
 feedback explícito e sanitizado na saída diária e no menu Energia, preservando

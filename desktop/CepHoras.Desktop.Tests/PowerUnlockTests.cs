@@ -14,7 +14,7 @@ internal static class PowerUnlockTests
     private const string Broker = "dddddddd-bbbb-cccc-dddd-eeeeeeeeeeee";
     private static PowerBridgeHandler Host(ApiSession session, Func<ControlRequest, Task<ControlResponse>> sender) =>
         new(session, async request => request.Operation == "status"
-            ? new ControlResponse("ready", "fixture", Active: true, BrokerInstanceId: Broker)
+            ? new ControlResponse("ready", "fixture", Active: true, BrokerInstanceId: Broker, PowerStatusVersion: 1)
             : (await sender(request)) with { BrokerInstanceId = Broker });
     private static readonly Uri Api = new("https://power-fixture.invalid");
     private static readonly object User = new { id = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"), role = "user" };

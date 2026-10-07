@@ -96,20 +96,22 @@ async function nativeFixture(
               throw new Error('Fixture rejected stale document')
             messages.push(message)
             const result =
-              message.operation === 'schedule'
-                ? {
-                    requestId: message.payload.requestId,
-                    action: message.payload.action,
-                    executeAt: new Date(Date.now() + 10_000).toISOString(),
-                  }
-                : message.operation === 'cancel'
-                  ? { cancelled: !cancelFails }
-                  : message.operation === 'reconcile'
-                    ? {
-                        requestId: message.payload.requestId,
-                        state: (window as any).powerTerminal ? 'terminal' : 'pending',
-                      }
-                    : { unreachable }
+              message.operation === 'status'
+                ? ((window as any).nativeStatus ?? { state: 'idle' })
+                : message.operation === 'schedule'
+                  ? {
+                      requestId: message.payload.requestId,
+                      action: message.payload.action,
+                      executeAt: new Date(Date.now() + 10_000).toISOString(),
+                    }
+                  : message.operation === 'cancel'
+                    ? { cancelled: !cancelFails }
+                    : message.operation === 'reconcile'
+                      ? {
+                          requestId: message.payload.requestId,
+                          state: (window as any).powerTerminal ? 'terminal' : 'pending',
+                        }
+                      : { unreachable }
             const reply = () => {
               if (message.operation === 'schedule')
                 result.executeAt = new Date(Date.now() + 10_000).toISOString()
@@ -129,9 +131,102 @@ async function nativeFixture(
 const menu = (page: Page) => page.getByRole('region', { name: 'Energia do computador' })
 async function openMenu(page: Page) {
   await menu(page).locator('summary').click()
+  if (await page.evaluate(() => window.__CEP_POWER_VERSION__ === 1)) {
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () =>
+            ((window as any).powerMessages || []).filter((m: any) => m.operation === 'status')
+              .length,
+        ),
+      )
+      .toBeGreaterThan(0)
+    await expect(menu(page).getByText('Consultando…', { exact: true })).toHaveCount(0)
+  }
 }
 const operations = (page: Page) =>
-  page.evaluate(() => ((window as any).powerMessages || []).map((m: any) => m.operation))
+  page.evaluate(() =>
+    ((window as any).powerMessages || [])
+      .map((m: any) => m.operation)
+      .filter((operation: string) => operation !== 'status'),
+  )
+
+test('inherited request is discovered without API authorization and only explicitly cancelled', async ({
+  page,
+}) => {
+  await fixture(page)
+  const api = await apiFixture(page, 'indeterminate')
+  await nativeFixture(page)
+  const requestId = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
+  await page.evaluate((requestId) => {
+    ;(window as any).nativeStatus = { state: 'recovery-required', requestId, recovered: true }
+  }, requestId)
+  await openMenu(page)
+  await expect(menu(page).getByRole('button', { name: 'Cancelar', exact: true })).toBeVisible()
+  expect(api).toHaveLength(0)
+  expect(await operations(page)).not.toContain('schedule')
+  expect(await operations(page)).not.toContain('cancel')
+  await menu(page).getByRole('button', { name: 'Cancelar', exact: true }).click()
+  await expect(menu(page)).toContainText('Ação cancelada')
+  expect((await operations(page)).filter((x: string) => x === 'cancel')).toHaveLength(1)
+})
+
+for (const recovered of [true, false]) {
+  test(`discovery recovered=${recovered} preserves cancellation policy on unmount`, async ({
+    page,
+  }) => {
+    await fixture(page)
+    await nativeFixture(page)
+    await page.evaluate((recovered) => {
+      ;(window as any).nativeStatus = {
+        state: 'recovery-required',
+        requestId: crypto.randomUUID(),
+        recovered,
+      }
+    }, recovered)
+    await openMenu(page)
+    await expect(menu(page).getByRole('button', { name: 'Cancelar', exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Sair da conta', exact: true }).click()
+    await expect(menu(page)).toHaveCount(0)
+    expect((await operations(page)).filter((x: string) => x === 'cancel')).toHaveLength(
+      recovered ? 0 : 1,
+    )
+  })
+}
+
+test('Verify status discovers pending request even when API is indeterminate', async ({ page }) => {
+  await fixture(page)
+  const calls = await apiFixture(page, 'indeterminate')
+  await nativeFixture(page)
+  await openMenu(page)
+  await expect(
+    menu(page).getByRole('button', { name: 'Verificar status', exact: true }),
+  ).toBeEnabled()
+  await page.evaluate(() => {
+    ;(window as any).nativeStatus = {
+      state: 'recovery-required',
+      requestId: crypto.randomUUID(),
+      recovered: true,
+    }
+  })
+  await menu(page).getByRole('button', { name: 'Verificar status', exact: true }).click()
+  await expect(menu(page).getByRole('button', { name: 'Cancelar', exact: true })).toBeVisible()
+  expect(calls).toHaveLength(0)
+})
+
+test('foreign or unsupported native state never supplies a cancellation identifier', async ({
+  page,
+}) => {
+  await fixture(page)
+  await nativeFixture(page)
+  await page.evaluate(() => {
+    ;(window as any).nativeStatus = { state: 'unavailable' }
+  })
+  await openMenu(page)
+  await expect(menu(page)).toContainText('não confirmou a ausência')
+  await expect(menu(page).getByRole('button', { name: 'Cancelar', exact: true })).toHaveCount(0)
+  expect(await operations(page)).not.toContain('cancel')
+})
 
 for (const profile of [
   { role: 'organizationAdmin' },

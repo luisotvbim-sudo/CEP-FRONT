@@ -27,7 +27,8 @@ public sealed record ControlResponse(
     string? UpdatePhase = null,
     string? InstalledVersion = null,
     string? BrokerInstanceId = null,
-    string? OriginalBrokerInstanceId = null);
+    string? OriginalBrokerInstanceId = null,
+    int? PowerStatusVersion = null);
 
 public static class ControlWire
 {
@@ -66,6 +67,7 @@ public static class ControlClient
 {
     public static async Task<ControlResponse> Send(ControlRequest request)
     {
+        var lifecycle = request.Operation is "desktop-suspend" or "desktop-resume";
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(8));
         using var pipe = new NamedPipeClientStream(
             ".",
@@ -78,8 +80,11 @@ public static class ControlClient
         if (!GetNamedPipeServerProcessId(pipe.SafePipeHandle, out var process) ||
             process == 0 || process != GetServiceProcessId())
             throw new UnauthorizedAccessException("O canal não pertence ao serviço instalado do CEP Horas.");
-        await ControlWire.Write(pipe, request, timeout.Token);
-        return await ControlWire.Read<ControlResponse>(pipe, timeout.Token);
+        using var sending = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await ControlWire.Write(pipe, request, lifecycle ? sending.Token : timeout.Token);
+        using var receiving = new CancellationTokenSource(TimeSpan.FromSeconds(
+            lifecycle ? 30 : 8));
+        return await ControlWire.Read<ControlResponse>(pipe, lifecycle ? receiving.Token : timeout.Token);
     }
 
     public static uint GetServiceProcessId()

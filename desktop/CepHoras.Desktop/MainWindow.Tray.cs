@@ -9,6 +9,7 @@ namespace CepHoras.Desktop;
 
 public partial class MainWindow
 {
+    private bool reviewingNativePower;
     private void ConfigureTray()
     {
         trayIconStream = System.Windows.Application.GetResourceStream(
@@ -27,11 +28,14 @@ public partial class MainWindow
         tray.ContextMenuStrip.Items.Add("Minhas notificações", null, (_, _) => OpenWindow(true));
         tray.ContextMenuStrip.Items.Add("Testar notificação", null, (_, _) => ShowTestNotification());
         if (managedInstallation)
+        {
+            tray.ContextMenuStrip.Items.Add("Verificar solicitação de energia", null, async (_, _) => await ReviewNativePowerRequest());
             tray.ContextMenuStrip.Items.Add("Verificar atualizações", null, async (_, _) =>
             {
                 OpenWindow(false);
                 await CheckMsiUpdates();
             });
+        }
         tray.ContextMenuStrip.Items.Add(new System.Windows.Forms.ToolStripSeparator());
         tray.ContextMenuStrip.Items.Add("Fechar CEP Horas", null, async (_, _) => await RequestProtectedExit());
         tray.DoubleClick += (_, _) => OpenWindow(false);
@@ -93,6 +97,29 @@ public partial class MainWindow
         catch { ShowProtectionWarning(); }
     }
 
+    private async Task ReviewNativePowerRequest()
+    {
+        if (closed || power is null || reviewingNativePower || closingWithPassword || installingUpdate || startingMsiUpdate || restartingInterface) return;
+        reviewingNativePower = true;
+        try
+        {
+            var status = JsonSerializer.SerializeToElement(await power.Execute("status", JsonSerializer.SerializeToElement(new { })));
+            if (status.GetProperty("state").GetString() == "recovery-required")
+            {
+                if (System.Windows.MessageBox.Show(
+                    "Há uma solicitação de energia sua no serviço Windows. Deseja cancelar explicitamente essa solicitação?",
+                    "CEP Horas — solicitação de energia", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+                await power.Execute("cancel", JsonSerializer.SerializeToElement(new { requestId = status.GetProperty("requestId").GetString() }));
+                ShowExitFeedback("O serviço confirmou o cancelamento da sua solicitação de energia.");
+            }
+            else ShowExitFeedback(status.GetProperty("state").GetString() == "idle"
+                ? "O serviço confirmou que não há solicitação de energia pendente."
+                : "Há uma solicitação que exige revisão pelo titular ou pela TI.");
+        }
+        catch (Exception error) { ShowExitFeedback(ProtectedExitFeedback.Failure(error)); }
+        finally { reviewingNativePower = false; }
+    }
+
     private void ShowProtectionWarning()
     {
         if (closed || tray is null) return;
@@ -106,7 +133,7 @@ public partial class MainWindow
     private async Task RequestProtectedExit()
     {
         if (closed) return;
-        if (closingWithPassword || installingUpdate || startingMsiUpdate || restartingInterface)
+        if (closingWithPassword || reviewingNativePower || installingUpdate || startingMsiUpdate || restartingInterface)
         {
             ShowExitFeedback("Há um fechamento, atualização ou reinício da interface em andamento. Aguarde a conclusão.");
             return;
@@ -126,28 +153,29 @@ public partial class MainWindow
             await using var powerLease = power is null ? null : await power.QuiesceAsync(lifetime.Token);
             if (managedInstallation)
             {
-                var response = await ControlClient.Send(new ControlRequest("desktop-suspend"));
+                var response = await ProtectedExitOperation.Run(ControlClient.Send, () =>
+                {
+                    WindowsPolicyNotification.NotifyShell();
+                    if (WindowsShutdownAccess.HasShutdownPrivilege() == false)
+                        System.Windows.MessageBox.Show(
+                            "As configurações de energia foram restauradas. Esta sessão do Windows ainda usa as permissões da versão anterior. Salve seu trabalho e saia e entre no Windows uma vez para liberar os controles. O CEP Horas será fechado.",
+                            "CEP Horas — atualizar sessão do Windows", MessageBoxButton.OK, MessageBoxImage.Information);
+                    FinishProtectedExit(progress);
+                    return Task.CompletedTask;
+                }, ShowProtectionWarning, () => !closed);
                 if (response.Code != "desktop_suspended")
                 {
                     progress.CompletePreparation();
                     ShowExitFeedback("Senha aceita. " + ProtectedExitFeedback.Refusal(response.Code));
                     return;
                 }
-                WindowsPolicyNotification.NotifyShell();
-                if (WindowsShutdownAccess.HasShutdownPrivilege() == false)
-                    System.Windows.MessageBox.Show(
-                        "As configurações de energia foram restauradas. Esta sessão do Windows ainda usa as permissões da versão anterior. Salve seu trabalho e saia e entre no Windows uma vez para liberar os controles. O CEP Horas será fechado.",
-                        "CEP Horas — atualizar sessão do Windows", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
             }
-            progress.CompletePreparation();
-            System.Windows.MessageBox.Show(
-                "Senha aceita e preparação concluída. O CEP Horas será fechado.",
-                "CEP Horas — fechamento", MessageBoxButton.OK, MessageBoxImage.Information);
-            exiting = true;
-            Close();
+            FinishProtectedExit(progress);
         }
         catch (Exception exception)
         {
+            if (!closed) exiting = false;
             progress?.CompletePreparation();
             ShowExitFeedback((passwordAccepted ? "Senha aceita. " : "Não foi possível abrir a verificação da senha. ") +
                 ProtectedExitFeedback.Failure(exception));
@@ -157,6 +185,16 @@ public partial class MainWindow
             progress?.CompletePreparation();
             closingWithPassword = false;
         }
+    }
+
+    private void FinishProtectedExit(ClosePasswordDialog progress)
+    {
+        progress.CompletePreparation();
+        System.Windows.MessageBox.Show("Senha aceita e preparação concluída. O CEP Horas será fechado.",
+            "CEP Horas — fechamento", MessageBoxButton.OK, MessageBoxImage.Information);
+        exiting = true;
+        Close();
+        if (!closed) throw new InvalidOperationException("Fechamento não concluído.");
     }
 
     private void ShowExitFeedback(string message)

@@ -42,7 +42,7 @@ export function PowerMenu({ client }: { client: AuthClient }) {
   const [scheduled, setScheduled] = useState<ScheduledPower | null>(null)
   const [remaining, setRemaining] = useState(10)
   const [uncertain, setUncertain] = useState(false)
-  const active = useRef<{ host: NativePower; requestId: string } | null>(null)
+  const active = useRef<{ host: NativePower; requestId: string; recovered?: boolean } | null>(null)
   const mounted = useRef(true)
   const cancelButton = useRef<HTMLButtonElement>(null)
   const pinInput = useRef<HTMLInputElement>(null)
@@ -56,7 +56,7 @@ export function PowerMenu({ client }: { client: AuthClient }) {
       mounted.current = false
       if (pin) pin.value = ''
       const current = active.current
-      if (current) void current.host.cancel(current.requestId).catch(() => {})
+      if (current && !current.recovered) void current.host.cancel(current.requestId).catch(() => {})
     }
   }, [])
   useEffect(() => {
@@ -137,6 +137,40 @@ export function PowerMenu({ client }: { client: AuthClient }) {
     return () => clearInterval(timer)
   }, [unlock])
 
+  async function discover(host: NativePower): Promise<boolean> {
+    const result = await host.status()
+    if (!mounted.current) return true
+    if (result.state === 'recovery-required') {
+      active.current = { host, requestId: result.requestId, recovered: result.recovered }
+      setUncertain(true)
+      setNotice(
+        'Há uma solicitação de energia anterior. Cancele explicitamente antes de continuar.',
+      )
+      return true
+    }
+    if (result.state === 'unavailable') {
+      setNotice('O serviço não confirmou a ausência de solicitações. Solicite revisão à TI.')
+      return true
+    }
+    return false
+  }
+
+  async function discoverOnOpen() {
+    if (busy.current || active.current) return
+    const host = nativePower()
+    if (!host) return
+    busy.current = true
+    setPending(true)
+    try {
+      await discover(host)
+    } catch (error) {
+      if (mounted.current) setNotice(powerFailure(error, 'action'))
+    } finally {
+      busy.current = false
+      if (mounted.current) setPending(false)
+    }
+  }
+
   async function release(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const pin = pinInput.current?.value ?? ''
@@ -181,6 +215,8 @@ export function PowerMenu({ client }: { client: AuthClient }) {
     setCheck(null)
     const host = nativePower()
     try {
+      // Native recovery remains available even when API authorization is denied.
+      if (!action && host && (await discover(host))) return
       let authorization: Parameters<NativePower['schedule']>[1]
       try {
         const result = action ? await api.check(action) : await api.status()
@@ -228,7 +264,7 @@ export function PowerMenu({ client }: { client: AuthClient }) {
       )
     } catch (error) {
       if (error instanceof NativePowerUncertain && host && mounted.current) {
-        active.current = { host, requestId: error.requestId }
+        active.current = { host, requestId: error.requestId, recovered: error.recovered }
         setUncertain(true)
       }
       if (mounted.current) setNotice(powerFailure(error, 'action'))
@@ -259,7 +295,11 @@ export function PowerMenu({ client }: { client: AuthClient }) {
   }
   return (
     <section className="power-menu" aria-label="Energia do computador">
-      <details>
+      <details
+        onToggle={(event) => {
+          if (event.currentTarget.open) void discoverOnOpen()
+        }}
+      >
         <summary>
           <Power size={14} aria-hidden="true" /> Energia do computador
         </summary>

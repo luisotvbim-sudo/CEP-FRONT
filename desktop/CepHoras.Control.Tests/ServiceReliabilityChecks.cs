@@ -18,6 +18,12 @@ internal static class ServiceReliabilityChecks
             (_, _) => throw new IOException("fixture audit unavailable"), () => now);
         var id = Guid.NewGuid().ToString();
         Assert(authority.Handle(new("schedule", id, "shutdown", 10), "owner").Code == "scheduled", "audit failure cannot hide a scheduled action");
+        var discovery = authority.Handle(new("status"), "owner");
+        Assert(discovery is { Code: "ready", Active: true, RequestId: var discovered, Action: "shutdown" } && discovered == id &&
+            discovery.OriginalBrokerInstanceId == discovery.BrokerInstanceId,
+            "host restart discovers its scheduled request without service restart or new authorization");
+        Assert(authority.Handle(new("status"), "other") is { Code: "power_uncertain", RequestId: null, Action: null, OriginalBrokerInstanceId: null },
+            "discovery does not reveal a different SID's scheduled request");
         Assert(authority.Handle(new("power-status", id), "owner") is { Code: "pending", RequestId: var statusId, Action: "shutdown" } && statusId == id,
             "status preserves owner/id/action/deadline");
         Assert(authority.Handle(new("power-status", id), "other") is { Code: "not_pending", Action: null }, "status does not expose another owner action");

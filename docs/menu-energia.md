@@ -1,5 +1,11 @@
 # Menu de energia: contrato e execução
 
+A branch `codex/windows-password-causes` adiciona consulta nativa de solicitações
+próprias ao abrir o menu/Verificar status e na bandeja, sem depender de nova
+autorização API para cancelar explicitamente um pedido recuperado. Consulta e
+cancelamento não autorizam nova ação. Serviço antigo sem marcador de estado não
+comprova ausência; ver [compatibilidade IPC e correções](feedback-senhas-windows.md).
+
 A branch `codex/password-feedback` sobre `installer-v0.4.16` melhora os
 [avisos de senha diária e PIN](feedback-senhas-windows.md): progresso, recusas,
 sessão expirada, respostas incertas e falhas do serviço. O PIN continua liberando
