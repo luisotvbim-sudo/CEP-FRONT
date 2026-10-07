@@ -84,21 +84,14 @@ internal sealed class PowerBridgeHandler(ApiSession session, Func<ControlRequest
             if (suspensionCount != 0) throw new PowerBridgeFailure("power_recovery_in_progress");
             if (response.RequestId is not null)
             {
-                if (response.Code is not ("power_uncertain" or "ready" or "inactive") ||
-                    !Guid.TryParse(response.RequestId, out _) || !Guid.TryParse(response.OriginalBrokerInstanceId, out _) ||
-                    response.Action is not string action || !Actions.Contains(action))
-                    throw new PowerBridgeFailure("power_service_invalid_response");
-                current = new Pending(response.RequestId, action, userId)
+                current = new Pending(response.RequestId, response.Action!, userId)
                 {
                     BrokerInstanceId = response.OriginalBrokerInstanceId, Dispatched = true, Recovered = true
                 };
                 ending = null;
                 return new { state = "recovery-required", requestId = current.RequestId, recovered = true };
             }
-            if (response.Action is not null || response.OriginalBrokerInstanceId is not null || response.ExecuteAt is not null)
-                throw new PowerBridgeFailure("power_service_invalid_response");
             if (response.Code == "power_uncertain") return new { state = "unavailable" };
-            if (response.Code is not ("ready" or "inactive")) throw new PowerBridgeFailure(response.Code);
             if (uncertainQuiescence) return new { state = "unavailable" };
             return new { state = "idle" };
         }
@@ -287,25 +280,20 @@ internal sealed class PowerBridgeHandler(ApiSession session, Func<ControlRequest
             if (response.Code == "power_uncertain") throw new PowerBridgeFailure("power_uncertain");
             return;
         }
-        if (Guid.TryParse(response.RequestId, out _) && Guid.TryParse(response.OriginalBrokerInstanceId, out _) &&
-            response.Action is string action && Actions.Contains(action))
+        lock (gate)
         {
-            lock (gate)
+            if (current is { } known && known.RequestId == response.RequestId && !known.Recovered &&
+                known.BrokerInstanceId == response.OriginalBrokerInstanceId) return;
+            if (current is { Dispatched: true } existing && existing.RequestId != response.RequestId)
+                throw new PowerBridgeFailure("native_power_uncertain", requestId: existing.RequestId);
+            current = new Pending(response.RequestId, response.Action!, session.CurrentUserId ?? Guid.Empty)
             {
-                if (current is { } known && known.RequestId == response.RequestId && !known.Recovered &&
-                    known.BrokerInstanceId == response.OriginalBrokerInstanceId) return;
-                if (current is { Dispatched: true } existing && existing.RequestId != response.RequestId)
-                    throw new PowerBridgeFailure("native_power_uncertain", requestId: existing.RequestId);
-                current = new Pending(response.RequestId!, action, session.CurrentUserId ?? Guid.Empty)
-                {
-                    BrokerInstanceId = response.OriginalBrokerInstanceId,
-                    Dispatched = true, Recovered = true
-                };
-                ending = null;
-            }
-            throw new PowerBridgeFailure("power_recovery_required", requestId: response.RequestId);
+                BrokerInstanceId = response.OriginalBrokerInstanceId,
+                Dispatched = true, Recovered = true
+            };
+            ending = null;
         }
-        throw new PowerBridgeFailure("power_uncertain");
+        throw new PowerBridgeFailure("power_recovery_required", requestId: response.RequestId);
     }
 
     private static void ValidateDiscovery(ControlResponse response)
@@ -377,10 +365,5 @@ internal sealed class PowerBridgeHandler(ApiSession session, Func<ControlRequest
             }
             return ValueTask.CompletedTask;
         }
-    }
-
-    internal async Task CancelCurrent()
-    {
-        await using var lease = await QuiesceAsync();
     }
 }

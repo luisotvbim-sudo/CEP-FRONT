@@ -1,5 +1,11 @@
 # Instalador corporativo do CEP Horas
 
+O contrato de saída, consulta de pedidos próprios e retomada nesta branch segue
+a [PR #29](https://github.com/luisotvbim-sudo/CEP-FRONT/pull/29), `cebc15b`, com
+[compatibilidade IPC e limites](feedback-senhas-windows.md). A matriz de pacotes
+abaixo conserva bases históricas; esse código não identifica um MSI distribuído,
+upgrade homologado ou política aplicada em uma máquina.
+
 O [candidato 0.4.16](icone-windows-0.4.16.md) adiciona o ícone da marca ao
 executável e aos atalhos do menu Iniciar e da área de trabalho, mantendo as
 políticas e a identidade de upgrade do MSI.

@@ -4,6 +4,14 @@ Entrega de código na branch `codex/installer-reliability`, a partir de `1911a31
 
 ## Achados corrigidos
 
+Referência de manutenção posterior: na branch `codex/windows-password-refactor`,
+sobre PR #29 `cebc15b`, o wrapper `CancelCurrent` citado no achado histórico
+abaixo foi retirado por não ter chamadas em produção. O sucessor para lifecycle
+continua sendo `QuiesceAsync` com lease; testes obtêm/descartam o lease localmente.
+O estado persistido e a descoberta de pedidos seguem o
+[contrato Windows atual dessa base](feedback-senhas-windows.md), sem mudar o
+registro de implementação e suas lacunas datadas em 04/10.
+
 - O prazo de cinco segundos de `NativePowerBridge` encerrava a espera antes do orçamento real de revalidação nativa da API, refresh de sessão, probe de transporte e IPC. A resposta perdida podia deixar a interface em cancelamento incerto durante uma operação ainda em curso.
 - `PowerBridgeHandler` guardava o identificador somente após a resposta de agendamento. Recuperação/logout durante autorização ou IPC não tinham um identificador para reconciliar. `CancelCurrent` também descartava o identificador sem validar a resposta de cancelamento.
 - Uma conclusão de agendamento antiga podia restabelecer permissão de encerramento após cancelamento. A autorização nativa, a intenção de cancelamento e o dispatch não tinham uma transição comum.

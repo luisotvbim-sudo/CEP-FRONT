@@ -7,6 +7,11 @@ using CepHoras.Desktop;
 
 internal static class PowerBridgeTests
 {
+    private static async Task QuiesceAndRelease(PowerBridgeHandler host)
+    {
+        await using var lease = await host.QuiesceAsync();
+    }
+
     private static readonly Guid UserId = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
     private static readonly string Broker = Guid.Parse("dddddddd-bbbb-cccc-dddd-eeeeeeeeeeee").ToString();
     private static PowerBridgeHandler Host(ApiSession session, Func<ControlRequest, Task<ControlResponse>> sender, TimeProvider? clock = null) =>
@@ -94,7 +99,7 @@ internal static class PowerBridgeTests
             });
             var id = Guid.NewGuid().ToString();
             var scheduling = host.Execute("schedule", Schedule(id));
-            await Failure(host.CancelCurrent(), "native_power_uncertain", check);
+            await Failure(QuiesceAndRelease(host), "native_power_uncertain", check);
             var state = JsonSerializer.SerializeToElement(await host.Execute("reconcile", Id(id)));
             check(state.GetProperty("state").GetString() == "terminal" && statusCalls == 1, "A lost pre-dispatch cancel acknowledgment must be reconciled with its service tombstone");
             cancelledAuthorization.SetResult(Ok(new { action = "shutdown", decision = "allowed", code = "within_tolerance", @override = false,
@@ -122,7 +127,7 @@ internal static class PowerBridgeTests
             reply.SetResult(Scheduled(old));
             await Failure(scheduling, "power_request_cancelled", check);
             check(host.SessionEndingAllowed, "Stale completion discarded the newer confirmed schedule");
-            await host.CancelCurrent();
+            await QuiesceAndRelease(host);
             check(!host.SessionEndingAllowed, "Confirmed cancellation retained session-ending permission");
         }
 
@@ -139,7 +144,7 @@ internal static class PowerBridgeTests
             });
             var id = Guid.NewGuid().ToString();
             await host.Execute("schedule", Schedule(id));
-            await Failure(host.CancelCurrent(), "native_power_uncertain", check);
+            await Failure(QuiesceAndRelease(host), "native_power_uncertain", check);
             await Failure(host.Execute("schedule", Schedule(Guid.NewGuid().ToString())), "power_recovery_in_progress", check);
             confirm = true;
             await using (await host.QuiesceAsync()) {
@@ -148,7 +153,7 @@ internal static class PowerBridgeTests
             }
             await host.Execute("schedule", Schedule(Guid.NewGuid().ToString(), "hibernate"));
             check(!host.SessionEndingAllowed, "Hibernate must not permit Windows session ending");
-            await host.CancelCurrent();
+            await QuiesceAndRelease(host);
         }
 
         // Lost scheduling replies remain visible to recovery; cancel-before-schedule uses the same ID.
@@ -163,7 +168,7 @@ internal static class PowerBridgeTests
             var id = Guid.NewGuid().ToString();
             try { await host.Execute("schedule", Schedule(id)); throw new InvalidOperationException("Lost reply was accepted"); }
             catch (IOException) { }
-            await host.CancelCurrent();
+            await QuiesceAndRelease(host);
             check(cancelledId == id, "Recovery forgot a request whose service reply was lost");
         }
 
@@ -187,7 +192,7 @@ internal static class PowerBridgeTests
             var ended = JsonSerializer.SerializeToElement(await host.Execute("reconcile", Id(id)));
             check(ended.GetProperty("state").GetString() == "terminal", "Terminal service state was not reconciled");
             await host.Execute("schedule", Schedule(Guid.NewGuid().ToString()));
-            await host.CancelCurrent();
+            await QuiesceAndRelease(host);
         }
 
         using (var session = await Session(root, "leases"))
@@ -204,7 +209,7 @@ internal static class PowerBridgeTests
             try { await host.QuiesceAsync(cancelled.Token); throw new InvalidOperationException("Cancelled recovery proceeded"); }
             catch (OperationCanceledException) { }
             await Failure(host.Execute("schedule", Schedule(Guid.NewGuid().ToString())), "power_recovery_in_progress", check);
-            await host.CancelCurrent();
+            await QuiesceAndRelease(host);
             foreach (var malformed in new[] { "null", "{}", "{\"requestId\":12}", "{\"requestId\":\"" + Guid.NewGuid() + "\",\"action\":\"shutdown\",\"delaySeconds\":\"10\"}" })
                 await Failure(host.Execute("schedule", JsonDocument.Parse(malformed).RootElement), "invalid_power_request", check);
         }
@@ -233,7 +238,7 @@ internal static class PowerBridgeTests
             check(!host.SessionEndingAllowed, "Confirmed cancellation retained Windows ending grace");
             await host.Execute("schedule", Schedule(Guid.NewGuid().ToString(), "hibernate"));
             check(!host.SessionEndingAllowed, "Hibernate opened Windows ending grace");
-            await host.CancelCurrent();
+            await QuiesceAndRelease(host);
         }
 
         // A restarted broker must not claim it canceled a predecessor's Windows
@@ -260,13 +265,13 @@ internal static class PowerBridgeTests
             await Failure(host.Execute("cancel", Id(id)), "native_power_uncertain", check);
             await Failure(host.Execute("reconcile", Id(id)), "native_power_uncertain", check);
             var beforeRecovery = cancellations;
-            await Failure(host.CancelCurrent(), "power_recovery_required", check);
+            await Failure(QuiesceAndRelease(host), "power_recovery_required", check);
             check(cancellations == beforeRecovery, "Lifecycle recovery automatically canceled a request inherited from another broker");
             await Failure(host.Execute("schedule", Schedule(Guid.NewGuid().ToString())), "power_recovery_in_progress", check);
             check(scheduled == 1, "Broker change replayed a scheduled action or discarded uncertainty");
             broker = Broker;
             await host.Execute("cancel", Id(id));
-            await host.CancelCurrent();
+            await QuiesceAndRelease(host);
         }
         using (var session = await Session(root, "broker-missing"))
         {
@@ -437,6 +442,27 @@ internal static class PowerBridgeTests
         await lateHost.Execute("schedule", Schedule(Guid.NewGuid().ToString()));
         var known = JsonSerializer.SerializeToElement(await lateHost.Execute("status", JsonSerializer.SerializeToElement(new { })));
         check(!known.GetProperty("recovered").GetBoolean(), "Known live host request must retain its normal cancellation behavior");
+        foreach (var invalidResponse in new[]
+        {
+            new ControlResponse("service_error", "fixture", BrokerInstanceId: Broker, PowerStatusVersion: 1),
+            new ControlResponse("ready", "fixture", RequestId: lateId, Action: "invalid", OriginalBrokerInstanceId: Broker, BrokerInstanceId: Broker, PowerStatusVersion: 1),
+            new ControlResponse("ready", "fixture", RequestId: lateId, Action: "restart", OriginalBrokerInstanceId: "invalid", BrokerInstanceId: Broker, PowerStatusVersion: 1),
+            new ControlResponse("ready", "fixture", Action: "restart", BrokerInstanceId: Broker, PowerStatusVersion: 1),
+        })
+        {
+            var useInvalidStatus = false;
+            var knownHost = new PowerBridgeHandler(lateSession, request => Task.FromResult(request.Operation switch
+            {
+                "status" => useInvalidStatus ? invalidResponse : new ControlResponse("ready", "fixture", Active: true, BrokerInstanceId: Broker, PowerStatusVersion: 1),
+                _ => Scheduled(request) with { BrokerInstanceId = Broker }
+            }));
+            await knownHost.Execute("schedule", Schedule(Guid.NewGuid().ToString()));
+            useInvalidStatus = true;
+            var code = invalidResponse.Code == "service_error" ? "service_error" : "power_service_invalid_response";
+            await Failure(knownHost.Execute("status", JsonSerializer.SerializeToElement(new { })), code, check);
+            await Failure(knownHost.QuiesceAsync(), code, check);
+            check(!knownHost.SessionEndingAllowed, "Malformed status must not grant a lifecycle lease even with a known request");
+        }
     }
 
     private sealed class Clock(DateTimeOffset now) : TimeProvider

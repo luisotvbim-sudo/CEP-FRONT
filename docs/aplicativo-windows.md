@@ -1,5 +1,11 @@
 # Aplicativo Windows — contexto atual do host
 
+Para senha diária, descoberta/cancelamento de pedidos e retomada de supervisão,
+a referência desta branch é a [PR #29](https://github.com/luisotvbim-sudo/CEP-FRONT/pull/29),
+`cebc15b`, e o [contrato Windows](feedback-senhas-windows.md). As bases auditadas
+de 04/10 abaixo são históricas; não comprovam integração à main, versão instalada
+ou publicação das correções F01/F02/F03.
+
 O [candidato MSI 0.4.16](icone-windows-0.4.16.md) incorpora a logomarca
 reduzida ao executável, à janela/barra de tarefas e à bandeja, além dos
 atalhos do instalador corporativo.
