@@ -9,6 +9,34 @@ void Check(bool condition, string reason)
     Interlocked.Increment(ref checks);
     if (!condition) throw new InvalidOperationException(reason);
 }
+foreach (var code in new[] { "multiple_sessions", "update_maintenance", "access_denied", "service_error", "unknown" })
+{
+    var feedback = ProtectedExitFeedback.Refusal(code);
+    Check(!string.IsNullOrWhiteSpace(feedback), "Protected exit refusal must be visible");
+    Check(!feedback.Contains("unknown"), "Do not echo unknown service codes");
+}
+Check(ProtectedExitFeedback.Refusal("multiple_sessions").Contains("outra sessão"), "Explain multiple Windows sessions");
+Check(ProtectedExitFeedback.Refusal("update_maintenance").Contains("atualização"), "Explain maintenance refusal");
+foreach (var failure in new Exception[] {
+    new PowerBridgeFailure("power_recovery_required"), new PowerBridgeFailure("power_uncertain"),
+    new PowerBridgeFailure("native_power_uncertain"), new PowerBridgeFailure("power_service_changed"),
+    new OperationCanceledException("private fixture"), new TimeoutException("private fixture"),
+    new UnauthorizedAccessException("private fixture"), new System.IO.IOException("private fixture"),
+    new JsonException("private fixture"), new InvalidOperationException("private fixture") })
+{
+    var feedback = ProtectedExitFeedback.Failure(failure);
+    Check(!string.IsNullOrWhiteSpace(feedback) && !feedback.Contains("private fixture"), "Exit exceptions must be visible and sanitized");
+}
+Check(ProtectedExitFeedback.Failure(new PowerBridgeFailure("power_recovery_required")).Contains("tente cancelar"), "Uncertain power requires explicit cancellation");
+foreach (var (failure, code) in new (Exception, string)[] {
+    (new OperationCanceledException("private"), "power_service_timeout"),
+    (new TimeoutException("private"), "power_service_timeout"),
+    (new UnauthorizedAccessException("private"), "access_denied"),
+    (new System.IO.InvalidDataException("private"), "power_service_invalid_response"),
+    (new JsonException("private"), "power_service_invalid_response"),
+    (new System.IO.IOException("private"), "power_service_unavailable"),
+    (new Exception("private"), "service_error") })
+    Check(PowerBridgeFailure.ServiceCode(failure) == code, "Native service exception must use sanitized public code");
 const string id = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
 var allowed = new (string Method, string Path)[]
 {

@@ -8,6 +8,14 @@ internal sealed class PowerBridgeFailure(string code, string? correlationId = nu
     internal string Code { get; } = code;
     internal string? CorrelationId { get; } = correlationId;
     internal string? RequestId { get; } = requestId;
+    internal static string ServiceCode(Exception error) => error switch
+    {
+        OperationCanceledException or TimeoutException => "power_service_timeout",
+        UnauthorizedAccessException => "access_denied",
+        System.IO.InvalidDataException or JsonException => "power_service_invalid_response",
+        System.IO.IOException => "power_service_unavailable",
+        _ => "service_error"
+    };
 }
 
 internal sealed class PowerBridgeHandler(ApiSession session, Func<ControlRequest, Task<ControlResponse>>? sender = null, TimeProvider? timeProvider = null)

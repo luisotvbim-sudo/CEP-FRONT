@@ -9,6 +9,7 @@ Contexto reescrito em 04/10/2026 após revisão do código. Comece por [CONTEXTO
 
 | Documento | Finalidade |
 |---|---|
+| [Avisos de senha diária e PIN](feedback-senhas-windows.md) | Feedback sanitizado sobre a base 0.4.16 e limites de homologação Windows |
 | [Contexto atual](CONTEXTO-ATUAL.md) | Funcionamento, arquitetura, sessão, escopos, bases e pendências para retomar |
 | [Beta MSI 0.4.13](beta-msi-0.4.13.md) | Integração web/auditoria, pacote, GitHub sem latest, dependência do convite e aceite do piloto Windows |
 | [Candidato MSI 0.4.14 para Windows 10](windows10-msi-0.4.14.md) | Escopo 22H2 x64, preservação do instalador, verificações e piloto Windows pendente |

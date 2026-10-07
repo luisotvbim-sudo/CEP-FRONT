@@ -105,39 +105,66 @@ public partial class MainWindow
 
     private async Task RequestProtectedExit()
     {
-        if (closingWithPassword || closed || installingUpdate || restartingInterface) return;
-        var dialog = new ClosePasswordDialog();
-        if (IsVisible) dialog.Owner = this;
-        if (dialog.ShowDialog() != true) return;
-
+        if (closed) return;
+        if (closingWithPassword || installingUpdate || startingMsiUpdate || restartingInterface)
+        {
+            ShowExitFeedback("Há um fechamento, atualização ou reinício da interface em andamento. Aguarde a conclusão.");
+            return;
+        }
         closingWithPassword = true;
+        var passwordAccepted = false;
+        ClosePasswordDialog? progress = null;
         try
         {
+            var dialog = new ClosePasswordDialog();
+            if (IsVisible) dialog.Owner = this;
+            if (dialog.ShowDialog() != true) return;
+            passwordAccepted = true;
+            progress = new ClosePasswordDialog();
+            if (IsVisible) progress.Owner = this;
+            progress.ShowPreparation();
             await using var powerLease = power is null ? null : await power.QuiesceAsync(lifetime.Token);
             if (managedInstallation)
             {
                 var response = await ControlClient.Send(new ControlRequest("desktop-suspend"));
                 if (response.Code != "desktop_suspended")
-                    throw new InvalidOperationException("O serviço não autorizou o fechamento.");
+                {
+                    progress.CompletePreparation();
+                    ShowExitFeedback("Senha aceita. " + ProtectedExitFeedback.Refusal(response.Code));
+                    return;
+                }
                 WindowsPolicyNotification.NotifyShell();
                 if (WindowsShutdownAccess.HasShutdownPrivilege() == false)
                     System.Windows.MessageBox.Show(
                         "As configurações de energia foram restauradas. Esta sessão do Windows ainda usa as permissões da versão anterior. Salve seu trabalho e saia e entre no Windows uma vez para liberar os controles. O CEP Horas será fechado.",
                         "CEP Horas — atualizar sessão do Windows", MessageBoxButton.OK, MessageBoxImage.Information);
             }
+            progress.CompletePreparation();
+            System.Windows.MessageBox.Show(
+                "Senha aceita e preparação concluída. O CEP Horas será fechado.",
+                "CEP Horas — fechamento", MessageBoxButton.OK, MessageBoxImage.Information);
             exiting = true;
             Close();
         }
-        catch
+        catch (Exception exception)
         {
-            if (IsVisible)
-                System.Windows.MessageBox.Show(this, "Não foi possível autorizar o fechamento. Tente novamente ou solicite suporte à TI.",
-                    "CEP Horas", MessageBoxButton.OK, MessageBoxImage.Error);
-            else
-                System.Windows.MessageBox.Show("Não foi possível autorizar o fechamento. Tente novamente ou solicite suporte à TI.",
-                    "CEP Horas", MessageBoxButton.OK, MessageBoxImage.Error);
+            progress?.CompletePreparation();
+            ShowExitFeedback((passwordAccepted ? "Senha aceita. " : "Não foi possível abrir a verificação da senha. ") +
+                ProtectedExitFeedback.Failure(exception));
         }
-        finally { closingWithPassword = false; }
+        finally
+        {
+            progress?.CompletePreparation();
+            closingWithPassword = false;
+        }
+    }
+
+    private void ShowExitFeedback(string message)
+    {
+        if (IsVisible)
+            System.Windows.MessageBox.Show(this, message, "CEP Horas — fechamento", MessageBoxButton.OK, MessageBoxImage.Warning);
+        else
+            System.Windows.MessageBox.Show(message, "CEP Horas — fechamento", MessageBoxButton.OK, MessageBoxImage.Warning);
     }
 
     private void ShowNotificationSummary(int count)

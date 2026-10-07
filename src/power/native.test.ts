@@ -39,11 +39,38 @@ function fixture() {
           },
         })
     },
+    failCode: (index: number, code: string) => {
+      for (const listener of [...listeners])
+        listener({
+          data: {
+            id: messages[index].id,
+            ok: false,
+            error: { code, message: 'private fixture payload' },
+          },
+        })
+    },
   }
 }
 afterEach(() => vi.useRealTimers())
 
 describe('native power deadlines and reconciliation', () => {
+  it.each([
+    'power_service_unavailable',
+    'power_service_timeout',
+    'power_service_invalid_response',
+    'update_maintenance',
+    'access_denied',
+    'service_error',
+  ])('preserves native error %s without exposing raw payload', async (code) => {
+    const f = fixture()
+    const operation = f.host.cancel(crypto.randomUUID())
+    const assertion = expect(operation).rejects.toMatchObject({ code })
+    f.failCode(0, code)
+    await assertion
+    await expect(operation).rejects.not.toThrow('private fixture payload')
+    expect(f.messages).toHaveLength(1)
+    expect(f.listeners.size).toBe(0)
+  })
   it('retains the existing host request ID and requires explicit cancellation instead of canceling it during a new schedule', async () => {
     const f = fixture()
     const existingId = crypto.randomUUID()

@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode, type FormEvent } from 'react'
 import { Power } from 'lucide-react'
-import { errorMessage, type AuthClient } from '../auth/auth-client'
+import { type AuthClient } from '../auth/auth-client'
+import { powerFailure } from './feedback'
 import { actionLabels, PowerApi, validPowerPin, type PowerAction, type PowerCheck } from './api'
 import { unlockRemaining, unlockTime, unlockWindow, type UnlockWindow } from './unlock-clock'
 import {
@@ -140,14 +141,19 @@ export function PowerMenu({ client }: { client: AuthClient }) {
     event.preventDefault()
     const pin = pinInput.current?.value ?? ''
     if (pinInput.current) pinInput.current.value = ''
-    if (busy.current || active.current) return
+    if (busy.current || active.current) {
+      setNotice(
+        'Há uma operação de energia em andamento. Aguarde ou confirme seu cancelamento antes de liberar o PIN.',
+      )
+      return
+    }
     if (!validPowerPin(pin)) {
       setNotice('Informe exatamente 6 dígitos numéricos.')
       return
     }
     busy.current = true
     setPending(true)
-    setNotice('')
+    setNotice('Validando o PIN administrativo com o serviço…')
     setCheck(null)
     const requestedAt = performance.now()
     try {
@@ -158,12 +164,7 @@ export function PowerMenu({ client }: { client: AuthClient }) {
       setUnlockSeconds(unlockRemaining(window, performance.now()))
       setNotice('Liberação administrativa confirmada por 5 minutos para sua conta.')
     } catch (error) {
-      const failure = errorMessage(error)
-      if (mounted.current)
-        setNotice(
-          failure.message +
-            (failure.correlationId ? ` Código para suporte: ${failure.correlationId}` : ''),
-        )
+      if (mounted.current) setNotice(powerFailure(error, 'unlock'))
     } finally {
       busy.current = false
       if (mounted.current) setPending(false)
@@ -174,7 +175,9 @@ export function PowerMenu({ client }: { client: AuthClient }) {
     if (busy.current || active.current) return
     busy.current = true
     setPending(true)
-    setNotice('')
+    setNotice(
+      action ? 'Verificando autorização para a ação…' : 'Consultando o estado da liberação…',
+    )
     setCheck(null)
     const host = nativePower()
     try {
@@ -187,7 +190,10 @@ export function PowerMenu({ client }: { client: AuthClient }) {
           setUnlock(null)
           setUnlockSeconds(0)
         }
-        if (!action || result.decision !== 'allowed') return
+        if (!action || result.decision !== 'allowed') {
+          setNotice('Consulta concluída. Nenhuma ação foi agendada.')
+          return
+        }
         authorization = { kind: 'api', check: result }
       } catch (error) {
         if (!action || !host || !mayVerifyOffline(error) || !(await host.verifyApiUnreachable()))
@@ -205,6 +211,9 @@ export function PowerMenu({ client }: { client: AuthClient }) {
         )
         return
       }
+      setNotice(
+        'Autorização recebida. O aplicativo está revalidando a permissão e solicitando o agendamento ao serviço Windows…',
+      )
       const job = await host.schedule(action, authorization)
       if (!mounted.current) {
         await host.cancel(job.requestId)
@@ -212,17 +221,17 @@ export function PowerMenu({ client }: { client: AuthClient }) {
       }
       active.current = { host, requestId: job.requestId }
       setScheduled(job)
+      setNotice(
+        authorization.kind === 'api-unreachable'
+          ? 'Agendamento confirmado em contingência de transporte. Você pode cancelar durante a contagem.'
+          : 'Agendamento confirmado pelo aplicativo. Você pode cancelar durante a contagem.',
+      )
     } catch (error) {
       if (error instanceof NativePowerUncertain && host && mounted.current) {
         active.current = { host, requestId: error.requestId }
         setUncertain(true)
       }
-      const failure = errorMessage(error)
-      if (mounted.current)
-        setNotice(
-          failure.message +
-            (failure.correlationId ? ` Código para suporte: ${failure.correlationId}` : ''),
-        )
+      if (mounted.current) setNotice(powerFailure(error, 'action'))
     } finally {
       busy.current = false
       if (mounted.current) setPending(false)
@@ -232,6 +241,7 @@ export function PowerMenu({ client }: { client: AuthClient }) {
     if (busy.current || !active.current) return
     busy.current = true
     setPending(true)
+    setNotice('Solicitando cancelamento ao serviço Windows…')
     try {
       await active.current.host.cancel(active.current.requestId)
       active.current = null
@@ -241,7 +251,7 @@ export function PowerMenu({ client }: { client: AuthClient }) {
         setNotice('Ação cancelada pelo aplicativo.')
       }
     } catch (error) {
-      if (mounted.current) setNotice(errorMessage(error).message)
+      if (mounted.current) setNotice(powerFailure(error, 'cancel'))
     } finally {
       busy.current = false
       if (mounted.current) setPending(false)

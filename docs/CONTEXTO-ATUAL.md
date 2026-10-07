@@ -1,5 +1,11 @@
 # Contexto atual do CEP-FRONT
 
+Na branch `codex/password-feedback`, baseada em `installer-v0.4.16` (`f197abb`),
+a [entrega de avisos de senha/PIN](feedback-senhas-windows.md) acrescenta
+feedback explícito e sanitizado na saída diária e no menu Energia, preservando
+contratos, cinco minutos e revalidação. Não declara nova versão instalada;
+homologação corporativa Windows 10/11 permanece pendente.
+
 Na branch `codex/app-icon-windows`, o candidato MSI 0.4.16 aplica a marca ao
 [ícone nativo, bandeja e atalhos](icone-windows-0.4.16.md), preservando a
 correção 0.4.15 e a matriz Windows 10/11. Na branch anterior

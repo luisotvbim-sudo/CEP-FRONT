@@ -2,6 +2,43 @@ import { AuthError } from '../auth/auth-client'
 import { BridgeCallFailure, callBridge, type WebViewBridge } from '../auth/bridge-transport'
 import type { PowerAction, PowerCheck } from './api'
 
+export const nativePowerMessages: Record<string, string> = {
+  native_power_unavailable:
+    'A execução de energia exige a instalação corporativa do CEP Horas. Solicite suporte à TI.',
+  power_service_unavailable:
+    'Não foi possível comunicar com o serviço Windows de energia. Confira o estado no Windows e solicite à TI a verificação do serviço.',
+  power_service_timeout:
+    'O serviço Windows de energia não respondeu dentro do prazo. Confira o estado no Windows antes de tentar novamente.',
+  power_service_invalid_response:
+    'O serviço Windows de energia retornou uma resposta inválida. Confira o estado no Windows e solicite suporte à TI.',
+  native_power_timeout:
+    'O serviço de energia não confirmou a operação dentro do prazo. Confira o estado no Windows.',
+  invalid_native_response:
+    'O aplicativo retornou uma resposta de energia inválida. Confira o estado no Windows e solicite suporte à TI.',
+  invalid_power_response:
+    'A API retornou uma resposta inválida. Nenhuma ação foi agendada; use Verificar status.',
+  power_not_authorized:
+    'A revalidação recusou a ação. A liberação pode ter expirado ou o acesso mudado. Verifique o status antes de tentar novamente.',
+  update_maintenance:
+    'Uma atualização está em andamento. Aguarde seu término antes de solicitar energia.',
+  access_denied:
+    'O serviço Windows recusou o acesso do aplicativo. Solicite à TI a verificação da instalação.',
+  service_error:
+    'O serviço Windows falhou ao processar a operação. Confira o estado no Windows e solicite suporte à TI.',
+  inactive:
+    'A proteção de energia do aplicativo não está ativa. Solicite à TI a verificação do serviço.',
+  power_recovery_in_progress:
+    'O aplicativo está em recuperação. Aguarde antes de solicitar uma ação.',
+  power_request_cancelled: 'A solicitação foi interrompida pelo aplicativo.',
+  power_authorization_timeout: 'A verificação demorou para responder. Verifique novamente.',
+  session_expired: 'Sua sessão expirou. Entre novamente.',
+  power_service_changed:
+    'O serviço de energia precisa de atualização ou recuperação. Confira o estado no Windows.',
+  power_uncertain: 'Há uma solicitação de energia pendente de revisão pelo titular ou pela TI.',
+  power_storage_unavailable:
+    'Não foi possível registrar o estado de energia. Solicite suporte à TI.',
+}
+
 declare global {
   interface Window {
     __CEP_POWER_VERSION__?: number
@@ -56,23 +93,11 @@ export class NativePowerBridge implements NativePower {
             error.failure.requestId
           )
             throw new NativePowerUncertain(error.failure.requestId)
-          const messages: Record<string, string> = {
-            power_recovery_in_progress:
-              'O aplicativo está em recuperação. Aguarde antes de solicitar uma ação.',
-            power_request_cancelled: 'A solicitação foi interrompida pelo aplicativo.',
-            power_authorization_timeout:
-              'A verificação demorou para responder. Verifique novamente.',
-            session_expired: 'Sua sessão expirou. Entre novamente.',
-            power_service_changed:
-              'O serviço de energia precisa de atualização ou recuperação. Confira o estado no Windows.',
-            power_uncertain:
-              'Há uma solicitação de energia pendente de revisão pelo titular ou pela TI.',
-            power_storage_unavailable:
-              'Não foi possível registrar o estado de energia. Solicite suporte à TI.',
-          }
+          const messages = nativePowerMessages
           throw new AuthError(
-            messages[error.failure.code ?? ''] ??
-              'O aplicativo não confirmou a operação de energia.',
+            Object.hasOwn(messages, error.failure.code ?? '')
+              ? messages[error.failure.code!]
+              : 'O aplicativo não confirmou a operação de energia.',
             error.failure.correlationId ?? undefined,
             error.failure.code ?? 'native_power_failed',
           )
@@ -140,7 +165,11 @@ export class NativePowerBridge implements NativePower {
       !('cancelled' in result) ||
       result.cancelled !== true
     )
-      throw new AuthError('O cancelamento não foi confirmado. Tente cancelar novamente.')
+      throw new AuthError(
+        'O cancelamento não foi confirmado. Tente cancelar novamente.',
+        undefined,
+        'native_power_uncertain',
+      )
   }
   async reconcile(requestId: string): Promise<PowerState> {
     const result = await this.call('reconcile', { requestId })

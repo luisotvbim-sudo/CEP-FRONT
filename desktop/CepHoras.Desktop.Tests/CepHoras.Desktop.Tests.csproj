@@ -10,6 +10,7 @@
   <ItemGroup>
     <Compile Include="../CepHoras.Desktop/ApiSession.cs" Link="ApiSession.cs" />
     <Compile Include="../CepHoras.Desktop/ApiRoutePolicy.cs" Link="ApiRoutePolicy.cs" />
+    <Compile Include="../CepHoras.Desktop/ProtectedExitFeedback.cs" Link="ProtectedExitFeedback.cs" />
     <Compile Include="../CepHoras.Desktop/DailyClosePassword.cs" Link="DailyClosePassword.cs" />
     <Compile Include="../CepHoras.Desktop/ProtectedJsonFile.cs" Link="ProtectedJsonFile.cs" />
     <Compile Include="../CepHoras.Desktop/PowerBridgeHandler.cs" Link="PowerBridgeHandler.cs" />
