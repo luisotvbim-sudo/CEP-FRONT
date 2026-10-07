@@ -1,5 +1,10 @@
 # Contexto atual do CEP-FRONT
 
+A branch `codex/windows-signed-pilot-0.4.18` prepara um novo piloto a partir do
+0.4.17, com manifesto RSA-PSS assinado pela identidade existente. O MSI segue
+sem Authenticode. A release permanece prerelease e não ativa `latest` nem o
+atualizador automático; instalação e upgrade em Windows ainda exigem piloto.
+
 A branch `codex/windows-password-pilot-0.4.17`, sobre `a7e7426`, prepara o
 [piloto MSI 0.4.17](piloto-windows-0.4.17.md) com os PRs #28–#30 para download
 manual. Publicação prerelease, CI/revisão do pacote e homologação Windows são
