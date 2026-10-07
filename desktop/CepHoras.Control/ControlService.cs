@@ -137,33 +137,33 @@ internal sealed class ControlService : ServiceBase
                 try
                 {
                     await pipe.WaitForConnectionAsync(stop.Token);
-                    using var deadline = CancellationTokenSource.CreateLinkedTokenSource(stop.Token);
-                    deadline.CancelAfter(TimeSpan.FromSeconds(5));
-                    var request = await ControlWire.Read<ControlRequest>(pipe, deadline.Token);
-                    var sid = CallerSid(pipe);
-                    var client = sid is null ? null : TrustedClient(pipe, sid);
-                    ControlResponse response;
-                    if (sid is null || client is null)
-                        response = new("access_denied", "Somente o CEP Horas instalado pode solicitar esta operação.");
-                    else
+                    await ControlExchange.Run(pipe, request =>
                     {
-                        try
+                        var sid = CallerSid(pipe);
+                        var client = sid is null ? null : TrustedClient(pipe, sid);
+                        ControlResponse response;
+                        if (sid is null || client is null)
+                            response = new("access_denied", "Somente o CEP Horas instalado pode solicitar esta operação.");
+                        else
                         {
-                            response = request.Operation switch
+                            try
                             {
-                                "desktop-suspend" => desktopLifecycle.Suspend(client.SessionId, sid),
-                                "desktop-resume" => desktopLifecycle.Resume(client.SessionId, sid),
-                                "update-check" or "update-start" or "update-status" or "update-ready" => updates.Handle(request, client),
-                                _ => authority.Handle(request, sid)
-                            };
+                                response = request.Operation switch
+                                {
+                                    "desktop-suspend" => desktopLifecycle.Suspend(client.SessionId, sid),
+                                    "desktop-resume" => desktopLifecycle.Resume(client.SessionId, sid),
+                                    "update-check" or "update-start" or "update-status" or "update-ready" => updates.Handle(request, client),
+                                    _ => authority.Handle(request, sid)
+                                };
+                            }
+                            catch
+                            {
+                                response = new("service_error", "A operação não pôde ser concluída. Solicite suporte à TI.");
+                                PolicyStore.Audit("service-request-failed", sid);
+                            }
                         }
-                        catch
-                        {
-                            response = new("service_error", "A operação não pôde ser concluída. Solicite suporte à TI.");
-                            PolicyStore.Audit("service-request-failed", sid);
-                        }
-                    }
-                    await ControlWire.Write(pipe, response, deadline.Token);
+                        return response;
+                    }, stop.Token);
                 }
                 catch (OperationCanceledException) { }
                 catch (IOException) { }

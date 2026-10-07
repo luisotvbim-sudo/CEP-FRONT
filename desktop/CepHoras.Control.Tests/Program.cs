@@ -6,6 +6,7 @@ using CepHoras.Control.Protocol;
 using CepHoras.Updates;
 
 // These checks never install a service, modify Windows policy or invoke a real power action.
+await ControlExchangeChecks.Run();
 var original = new PolicySnapshot(
     new() { ["SeShutdownPrivilege"] = ["S-1-5-32-545"], ["SeRemoteShutdownPrivilege"] = [] },
     []);
