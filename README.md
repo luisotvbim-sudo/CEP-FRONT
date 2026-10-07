@@ -1,6 +1,6 @@
 # CEP Horas — web, Windows e instalador
 
-O código da página pública `/download` aponta à prerelease MSI 0.4.16 para Windows 10 22H2 e Windows 11 24H2+ x64. O convite da API permanece apontando à página; CI, integração e implantação web são verificadas separadamente. [Entrega da página](docs/download-msi-0.4.16.md).
+Esta branch prepara `/download` para o piloto MSI 0.4.18, sem publicação web. A página produtiva ainda aponta à 0.4.16; o convite da API permanece apontando à página, sem versão fixa. [Preparação do piloto](docs/download-msi-0.4.18.md) e [entrega anterior](docs/download-msi-0.4.16.md).
 
 A publicação web de 06/10/2026 do histórico pessoal está registrada com SHA implantado, CI, saúde pública e limite da conferência autenticada em [publicação do histórico](docs/publicacao-web-historico-2026-10-06.md).
 
