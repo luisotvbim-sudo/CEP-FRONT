@@ -1,6 +1,20 @@
 CEP HORAS 0.4 - INSTALACAO CORPORATIVA PELA TI
 
-PACOTE 0.4.16 - CANDIDATO WINDOWS 10/11
+PACOTE 0.4.17 - PILOTO MANUAL WINDOWS 10/11
+Instalacao manual de teste. Manifesto de atualizacao aguardando assinatura
+da identidade existente; manifesto e assinatura nao acompanham este kit.
+MSI sem assinatura Authenticode. Nao habilita atualizacao automatica.
+PILOTO DE SENHA DIARIA, PIN E RECUPERACAO DE ENERGIA
+Aceite e acompanhamento: CEP-ORQUESTRADOR #37
+https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/37
+Mostra avisos sanitizados ao validar senha diaria ou PIN. Se a saida protegida
+falhar ou sua resposta se perder, tenta retomar a supervisao uma unica vez e
+informa quando nao consegue confirmar. Pedidos de energia recuperados pelo
+servico exigem cancelamento explicito; a bandeja oferece Verificar solicitacao
+de energia mesmo sem login na API. Uma conta Windows diferente nao pode retomar
+a suspensao do titular. O PIN continua exclusivo das acoes CEP, por cinco minutos.
+Este piloto inclui as correcoes dos PRs 28, 29 e 30. Upgrade, politicas Windows
+e integracao autenticada devem ser homologados pela TI no computador piloto.
 Usa a logomarca Conceito no icone do aplicativo, barra de tarefas, area de
 notificacao e atalhos. O MSI cria um atalho na area de trabalho de todos os
 usuarios. Um atalho antigo fixado na barra de tarefas pode manter o icone em
@@ -96,7 +110,7 @@ ATUALIZACAO MSI
   GitHub, chave privada ou senha administrativa e instalado nos clientes.
 - Atualizar agora inicia somente um MSI aprovado do canal fixo; Depois adia.
   A manutencao do update preserva as politicas e nao usa o fechamento diario.
-- Homologar a versao instalada para 0.4.16 com conta comum em VM/PC piloto
+- Homologar a versao instalada para 0.4.17 com conta comum em VM/PC piloto
   antes de publicar no canal estavel para a equipe.
 - Build sem manifesto e assinatura validos nao pertence ao canal automatico.
 - Publicacao, backup portatil da chave e recuperacao sao responsabilidades da TI.

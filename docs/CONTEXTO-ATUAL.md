@@ -1,5 +1,10 @@
 # Contexto atual do CEP-FRONT
 
+A branch `codex/windows-password-pilot-0.4.17`, sobre `a7e7426`, prepara o
+[piloto MSI 0.4.17](piloto-windows-0.4.17.md) com os PRs #28–#30 para download
+manual. Publicação prerelease, CI/revisão do pacote e homologação Windows são
+etapas distintas; não altera web, API, canal automático ou main.
+
 A branch `codex/windows-password-refactor`, sobre PR #29 `cebc15b`, remove
 validações repetidas de discovery e um wrapper sem uso em produção, preservando
 F01/F02/F03 e o contrato Windows. Consulte o [mapa de uso e compatibilidade](feedback-senhas-windows.md).
