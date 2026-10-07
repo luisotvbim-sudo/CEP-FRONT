@@ -1,5 +1,9 @@
 # Contexto atual do CEP-FRONT
 
+A branch `codex/windows-password-refactor`, sobre PR #29 `cebc15b`, remove
+validações repetidas de discovery e um wrapper sem uso em produção, preservando
+F01/F02/F03 e o contrato Windows. Consulte o [mapa de uso e compatibilidade](feedback-senhas-windows.md).
+
 Na branch `codex/windows-password-causes`, sobre PR #28 `d10a30a`, a
 [correção das falhas de estado Windows](feedback-senhas-windows.md) separa prazos
 IPC, reconcilia saída incerta, descobre pedidos próprios sem nova autorização API

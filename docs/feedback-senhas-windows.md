@@ -53,6 +53,16 @@ não permite remover a suspensão de outro SID.
 
 ## Compatibilidade IPC
 
+Na branch `codex/windows-password-refactor`, sobre `cebc15b` da PR #29,
+`ValidateDiscovery` permanece a validação única da resposta de status antes dos
+gates de sessão, pedido conhecido, revisão e suspensão. `Discover` e
+`AdoptRecovery` usam os campos já validados sem repetir a classificação.
+Produção usa `QuiesceAsync` com lease durante saída/recarga/manutenção; o wrapper
+`CancelCurrent`, referenciado somente por fixtures, foi removido. Os testes usam
+um helper local que obtém e descarta imediatamente o lease, preservando os
+cenários anteriores. Essa limpeza não altera contratos, gates ou políticas de
+cancelamento e não acrescenta uma capacidade ao produto.
+
 O pipe v2 e suas operações fixas são preservados. O `status` adiciona o campo
 opcional `PowerStatusVersion: 1`; `ready`/`Active` permanecem compatíveis.
 Quando há pedido do titular, os campos opcionais `RequestId`, `Action`, `ExecuteAt`
