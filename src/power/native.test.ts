@@ -40,12 +40,14 @@ function fixture() {
         })
     },
     failCode: (index: number, code: string) => {
+      // Simulate an extra wire field without adding it to the public contract.
+      const failure = { code, message: 'private fixture payload' }
       for (const listener of [...listeners])
         listener({
           data: {
             id: messages[index].id,
             ok: false,
-            error: { code, message: 'private fixture payload' },
+            error: failure,
           },
         })
     },
