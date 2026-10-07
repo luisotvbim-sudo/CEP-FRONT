@@ -36,6 +36,8 @@ export function UserShell({
   const api = useMemo(() => new AdminApi(client), [client])
   const people = useQuery(() => api.visiblePeople(), [api])
   const teams = useQuery(() => api.teams(false, today()), [api])
+  const reloadPeople = people.reload
+  const reloadTeams = teams.reload
   const [page, setPage] = useState<Page>('mine')
   const notifications = useNotificationApi(client)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
@@ -47,6 +49,11 @@ export function UserShell({
   })
   const [teamId, setTeamId] = useState<string | null>(null)
   const [historyRevision, setHistoryRevision] = useState(0)
+  const onSyncCompleted = useCallback(() => {
+    reloadPeople()
+    reloadTeams()
+    setHistoryRevision((value) => value + 1)
+  }, [reloadPeople, reloadTeams])
   const logout = useLogout(client, onLogout)
   const self = people.data?.find((person) => person.userId === session.user.id)
   const managed = teams.data ?? []
@@ -131,8 +138,11 @@ export function UserShell({
           {activePage === 'mine' && (
             <PersonalOverview
               client={client}
-              onHistory={() => setPage('history')}
-              onNotifications={() => setNotificationsOpen(true)}
+              historyApi={api}
+              personId={self?.id}
+              associationPending={people.pending}
+              associationError={people.error}
+              retryAssociation={people.reload}
             />
           )}
           {activePage === 'history' && (
@@ -148,16 +158,16 @@ export function UserShell({
                 api={api}
                 allowFull={false}
                 embedded
-                onCompleted={() => setHistoryRevision((value) => value + 1)}
+                onCompleted={onSyncCompleted}
               />
               <QueryError error={people.error} retry={people.reload} />
-              {people.pending ? (
+              {people.pending && !self ? (
                 <Loading text="Localizando sua associação…" />
-              ) : !people.error && !self ? (
+              ) : people.error ? null : !self ? (
                 <div className="admin-panel">
                   <Empty title="Seus registros ainda não estão disponíveis">
                     <p>
-                      Não encontramos uma pessoa associada à sua conta dentro do vínculo vigente.
+                      Não encontramos uma pessoa associada à sua conta.
                       Isso não significa zero horas. Peça ao coordenador para conferir a associação
                       e seu acesso.
                     </p>

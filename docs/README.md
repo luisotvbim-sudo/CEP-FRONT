@@ -9,11 +9,14 @@ Contexto reescrito em 04/10/2026 após revisão do código. Comece por [CONTEXTO
 
 | Documento | Finalidade |
 |---|---|
+| [Piloto MSI 0.4.19](piloto-windows-0.4.19.md) | Paridade das telas web no Windows, upgrade local e limites antes de distribuição manual |
 | [Piloto MSI 0.4.18](piloto-windows-0.4.18.md) | Pacote com manifesto de atualização assinado, sem promoção automática |
 | [Piloto MSI 0.4.17](piloto-windows-0.4.17.md) | Pacote manual com PRs #28–#30, integridade e limites de homologação |
 | [Avisos de senha diária e PIN](feedback-senhas-windows.md) | Feedback sanitizado sobre a base 0.4.16 e limites de homologação Windows |
 | [Contexto atual](CONTEXTO-ATUAL.md) | Funcionamento, arquitetura, sessão, escopos, bases e pendências para retomar |
 | [Beta MSI 0.4.13](beta-msi-0.4.13.md) | Integração web/auditoria, pacote, GitHub sem latest, dependência do convite e aceite do piloto Windows |
+| [Página MSI 0.4.18](download-msi-0.4.18.md) | Piloto manual, aviso de Authenticode e publicação web conferida |
+| [Página de download MSI 0.4.16](download-msi-0.4.16.md) | Destino do convite na web e compatibilidade exibida |
 | [Candidato MSI 0.4.14 para Windows 10](windows10-msi-0.4.14.md) | Escopo 22H2 x64, preservação do instalador, verificações e piloto Windows pendente |
 | [Correção PIN/bridge MSI 0.4.15](pin-admin-bridge-0.4.15.md) | Campos opcionais nulos do erro nativo, mensagem correta ao usuário e diagnóstico pendente da resposta real da API |
 | [Ícone nativo Windows MSI 0.4.16](icone-windows-0.4.16.md) | Marca no executável, janela/barra de tarefas, bandeja e atalhos do MSI |

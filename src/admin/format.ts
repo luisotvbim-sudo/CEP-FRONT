@@ -8,6 +8,8 @@ export const today = () =>
     month: '2-digit',
     day: '2-digit',
   }).format(new Date())
+export const daysBeforeToday = (days: number) =>
+  new Date(Date.parse(today()) - days * 86400000).toISOString().slice(0, 10)
 export function date(value?: string | null) {
   return value && /^\d{4}-\d{2}-\d{2}$/.test(value)
     ? value.split('-').reverse().join('/')
@@ -25,6 +27,24 @@ export function duration(seconds?: number | null) {
   if (seconds == null || !Number.isFinite(seconds)) return 'Indisponível'
   const value = Math.abs(Math.trunc(seconds))
   return `${seconds < 0 ? '−' : ''}${String(Math.floor(value / 3600)).padStart(2, '0')}:${String(Math.floor((value % 3600) / 60)).padStart(2, '0')}${value % 60 ? ':' + String(value % 60).padStart(2, '0') : ''}`
+}
+export function mondayDifference(seconds?: number | null) {
+  if (seconds == null || !Number.isFinite(seconds))
+    return {
+      label: 'Diferença indisponível',
+      duration: 'Indisponível',
+      signedDuration: 'Indisponível',
+      known: false,
+    }
+  const absolute = duration(Math.abs(seconds))
+  if (seconds === 0)
+    return { label: 'Sem diferença', duration: absolute, signedDuration: absolute, known: true }
+  return {
+    label: seconds > 0 ? 'Sobrando no Monday' : 'Faltando no Monday',
+    duration: absolute,
+    signedDuration: `${seconds > 0 ? '+' : '−'}${absolute}`,
+    known: true,
+  }
 }
 export function validatePeriod(from: string, to: string): string | null {
   const valid = (s: string) =>

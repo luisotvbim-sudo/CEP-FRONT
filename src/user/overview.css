@@ -1,8 +1,7 @@
 .overview-panel {
   min-width: 0;
 }
-.overview-controls,
-.overview-links {
+.overview-controls {
   display: flex;
   flex-wrap: wrap;
   gap: 16px;
@@ -54,27 +53,6 @@
   font-weight: 600;
   overflow-wrap: anywhere;
 }
-.overview-attention {
-  padding-left: 20px;
-}
-.overview-attention li {
-  margin: 16px 0;
-}
-.overview-attention span {
-  display: block;
-  margin-top: 6px;
-  color: #566159;
-}
-.overview-details {
-  margin: 24px 0;
-  padding: 16px 0;
-  border-top: 1px solid #dce2dd;
-  border-bottom: 1px solid #dce2dd;
-}
-.overview-details summary {
-  cursor: pointer;
-  font-weight: 600;
-}
 .overview-notice {
   padding: 16px;
   margin-top: 20px;
@@ -82,8 +60,7 @@
   border: 1px solid #ded4b6;
   border-radius: 8px;
 }
-.overview-panel button:focus-visible,
-.overview-panel summary:focus-visible {
+.overview-panel button:focus-visible {
   outline: 3px solid #427257;
   outline-offset: 4px;
 }
