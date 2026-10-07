@@ -11,7 +11,7 @@ Contexto reescrito em 04/10/2026 após revisão do código. Comece por [CONTEXTO
 |---|---|
 | [Contexto atual](CONTEXTO-ATUAL.md) | Funcionamento, arquitetura, sessão, escopos, bases e pendências para retomar |
 | [Beta MSI 0.4.13](beta-msi-0.4.13.md) | Integração web/auditoria, pacote, GitHub sem latest, dependência do convite e aceite do piloto Windows |
-| [Preparação da página MSI 0.4.18](download-msi-0.4.18.md) | Piloto manual, aviso de Authenticode e publicação web ainda pendente |
+| [Página MSI 0.4.18](download-msi-0.4.18.md) | Piloto manual, aviso de Authenticode e publicação web conferida |
 | [Página de download MSI 0.4.16](download-msi-0.4.16.md) | Destino do convite na web, compatibilidade exibida e publicação separada do canal automático |
 | [Mapa e limpeza do Front](mapa-front-limpeza.md) | Auditoria de código e consumidores na base de testes, mudanças isoladas e candidatos preservados |
 | [Refatoração estrutural do Front](refatoracao-front.md) | Separação de responsabilidades, commits selecionáveis, checks e imagem aplicada somente nos Docker de teste |

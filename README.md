@@ -1,6 +1,6 @@
 # CEP Horas — web, Windows e instalador
 
-Esta branch prepara `/download` para o piloto MSI 0.4.18, sem publicação web. A página produtiva ainda aponta à 0.4.16; o convite da API permanece apontando à página, sem versão fixa. [Preparação do piloto](docs/download-msi-0.4.18.md) e [entrega anterior](docs/download-msi-0.4.16.md).
+A página pública `/download` oferece o piloto manual MSI 0.4.18 com aviso de ausência de Authenticode e de atualização automática. O convite da API permanece apontando à página, sem versão fixa. O MSI e a página web têm ciclos de publicação separados; a homologação Windows real continua pendente. [Publicação da página](docs/download-msi-0.4.18.md) e [entrega anterior](docs/download-msi-0.4.16.md).
 
 A publicação web de 06/10/2026 do histórico pessoal está registrada com SHA implantado, CI, saúde pública e limite da conferência autenticada em [publicação do histórico](docs/publicacao-web-historico-2026-10-06.md).
 
