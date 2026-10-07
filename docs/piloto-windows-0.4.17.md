@@ -14,6 +14,10 @@ A refatoração preserva esses contratos; detalhes em
 [feedback de senha/PIN](feedback-senhas-windows.md) e [menu Energia](menu-energia.md).
 
 A publicação é prerelease, sem `latest`, para download manual pelo piloto.
+Por decisão humana na Issue #37, o MSI e o kit podem ser disponibilizados
+sem manifesto/assinatura de atualização, cuja assinatura pela identidade
+existente permanece pendente. Esses dois arquivos não acompanham a release.
+O MSI não possui assinatura Authenticode; esta entrega exige instalação manual.
 Não altera `/download`, canal automático, web/API ou produção e não integra os
 PRs à main. Chave pública, identidade MSI, política Windows e formato do
 manifesto assinado permanecem os estabelecidos em

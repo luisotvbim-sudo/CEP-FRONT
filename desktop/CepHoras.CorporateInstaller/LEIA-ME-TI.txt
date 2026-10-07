@@ -1,6 +1,9 @@
 CEP HORAS 0.4 - INSTALACAO CORPORATIVA PELA TI
 
-PACOTE 0.4.17 - CANDIDATO WINDOWS 10/11
+PACOTE 0.4.17 - PILOTO MANUAL WINDOWS 10/11
+Instalacao manual de teste. Manifesto de atualizacao aguardando assinatura
+da identidade existente; manifesto e assinatura nao acompanham este kit.
+MSI sem assinatura Authenticode. Nao habilita atualizacao automatica.
 PILOTO DE SENHA DIARIA, PIN E RECUPERACAO DE ENERGIA
 Aceite e acompanhamento: CEP-ORQUESTRADOR #37
 https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/37
