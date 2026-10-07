@@ -109,7 +109,7 @@ do Windows. Cada ação consulta a API e o WPF revalida antes do serviço local.
 
 Mensagens usam catálogo fixo e identificador de suporte limitado a 100 caracteres
 alfanuméricos, hífen ou sublinhado. Não exibem texto bruto de exceções ou corpos
-de erro. Não há novas rotas, DTOs, persistência, logs de segredos ou repetição de
+de erro. Não há novas rotas/DTOs HTTP da API, persistência, logs de segredos ou repetição de
 mutações com resultado incerto. HTTP continua impedindo contingência; somente
 falha de transporte confirmada pelo host permite o fluxo existente.
 
@@ -120,6 +120,10 @@ O PR registra os comandos e resultados efetivamente executados. Compilação WPF
 e testes de mensagens não comprovam o diálogo numa instalação corporativa real.
 O driver WPF/WebView2 executado valida o host/bridge geral com API descartável;
 não aciona os novos diálogos de saída diária, preparação ou confirmação.
+Os testes da Issue #35 exercitam a coordenação de saída e o status/cancelamento
+com serviço/stream/executores falsos; não acionam a nova confirmação da bandeja
+numa instalação gerenciada. Essa interação e perda real de pipe após restauração
+continuam exigindo piloto corporativo Windows 10/11 do par host/serviço.
 Homologação Windows 10/11 permanece pendente: senha recusada/aceita, bandeja,
 cancelamento do diálogo, tentativa sobreposta, múltiplas sessões, manutenção,
 serviço indisponível, PIN/expiração e retorno acessível das mensagens.
