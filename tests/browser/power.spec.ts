@@ -321,7 +321,9 @@ for (const unreachable of [true, false]) {
     await openMenu(page)
     await menu(page).getByRole('button', { name: 'Desligar', exact: true }).click()
     await expect(menu(page)).toContainText(
-      unreachable ? 'Ação permitida em contingência' : 'Não foi possível conectar',
+      unreachable
+        ? 'Agendamento confirmado em contingência'
+        : 'A operação de energia não foi confirmada',
     )
     expect(await operations(page)).toEqual(
       unreachable ? ['verify-api-unreachable', 'schedule'] : ['verify-api-unreachable'],
@@ -405,10 +407,10 @@ for (const status of [403, 429, 503]) {
     await submitPin(page)
     await expect(menu(page)).toContainText(
       status === 403
-        ? 'PIN administrativo inválido'
+        ? 'PIN administrativo recusado'
         : status === 429
-          ? 'Limite de liberações atingido'
-          : 'PIN administrativo ainda não foi configurado',
+          ? 'Limite de tentativas atingido'
+          : 'PIN administrativo não está configurado',
     )
     await expect(menu(page)).not.toContainText('liberados temporariamente por')
     expect(await operations(page)).toEqual([])
@@ -526,7 +528,7 @@ test('failed PIN does not extend an existing window; status remains GET only', a
   await page.clock.runFor(60_000)
   await unlockFixture(page, 403)
   await submitPin(page, '654321')
-  await expect(menu(page)).toContainText('PIN administrativo inválido')
+  await expect(menu(page)).toContainText('PIN administrativo recusado')
   await expect(menu(page)).toContainText('liberados temporariamente por 4:00')
   let requests = 0
   await page.route('**/api/v1/me/time-control/power-action-status**', (route) => {
@@ -548,4 +550,70 @@ test('failed PIN does not extend an existing window; status remains GET only', a
   await expect(menu(page)).toContainText('Liberado.')
   expect(requests).toBe(1)
   expect(await operations(page)).toEqual([])
+})
+
+for (const scenario of [
+  { name: 'expired session', status: 401, code: 'session_expired', expected: 'Entre novamente' },
+  { name: 'invalid success response', status: 200, code: '', expected: 'não pôde ser validada' },
+  {
+    name: 'API unavailable over HTTP',
+    status: 500,
+    code: 'unexpected_error',
+    expected: 'indisponível para validar o PIN',
+  },
+  { name: 'transport failure', status: 0, code: '', expected: 'não foi recebida' },
+]) {
+  test(`PIN feedback for ${scenario.name} never schedules or probes`, async ({ page }) => {
+    await fixture(page)
+    await nativeFixture(page)
+    let attempts = 0
+    if (scenario.status === 401)
+      await page.route('**/api/v1/auth/web/refresh', (route) =>
+        route.fulfill({ status: 401, json: { code: 'session_expired' } }),
+      )
+    await page.route('**/api/v1/me/time-control/power-action-unlock', async (route) => {
+      attempts++
+      if (!scenario.status) return route.abort('connectionfailed')
+      await route.fulfill({
+        status: scenario.status,
+        json: { code: scenario.code, detail: 'private fixture payload' },
+      })
+    })
+    await openMenu(page)
+    await submitPin(page)
+    if (scenario.status === 401) {
+      await expect(page.getByRole('status')).toContainText(scenario.expected)
+      await expect(menu(page)).toHaveCount(0)
+    } else {
+      await expect(menu(page)).toContainText(scenario.expected)
+      await expect(menu(page)).not.toContainText('private fixture payload')
+      await expect(menu(page)).not.toContainText('liberados temporariamente por')
+    }
+    expect(await operations(page)).toEqual([])
+    expect(attempts).toBe(1)
+  })
+}
+
+test('PIN validation announces progress and prevents overlapping attempts', async ({ page }) => {
+  await fixture(page)
+  let release!: () => void
+  const hold = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  let attempts = 0
+  await page.route('**/api/v1/me/time-control/power-action-unlock', async (route) => {
+    attempts++
+    await hold
+    await route.fulfill({ json: unlockResponse })
+  })
+  await openMenu(page)
+  await submitPin(page)
+  await expect(menu(page)).toContainText('Validando o PIN administrativo')
+  await expect(
+    menu(page).getByRole('button', { name: 'Liberar por 5 minutos', exact: true }),
+  ).toBeDisabled()
+  await expect(menu(page).getByRole('button', { name: 'Desligar', exact: true })).toBeDisabled()
+  release()
+  await expect(menu(page)).toContainText('Liberação administrativa confirmada por 5 minutos')
+  expect(attempts).toBe(1)
 })

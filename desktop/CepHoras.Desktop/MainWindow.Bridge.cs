@@ -18,6 +18,7 @@ public partial class MainWindow
             if (messageGeneration == webViewLifecycle.Generation && ReferenceEquals(messageCore, Browser.CoreWebView2)) Reply(response);
         }
         string? id = null;
+        var powerOperation = false;
         try
         {
             using var message = JsonDocument.Parse(e.WebMessageAsJson);
@@ -76,6 +77,7 @@ public partial class MainWindow
             var payload = root.GetProperty("payload");
             if (type == "cep-power")
             {
+                powerOperation = true;
                 if (!managedInstallation || power is null) throw new PowerBridgeFailure("native_power_unavailable");
                 var powerResult = await power.Execute(operation, payload);
                 Respond(new { id, ok = true, result = powerResult });
@@ -90,6 +92,10 @@ public partial class MainWindow
         }
         catch (PowerBridgeFailure failure) { Respond(new { id, ok = false, error = new { code = failure.Code, correlationId = failure.CorrelationId, requestId = failure.RequestId } }); }
         catch (ApiFailure failure) { Respond(new { id, ok = false, error = new { status = failure.Status, code = failure.Code, correlationId = failure.CorrelationId, transportFailure = failure.TransportFailure, retryAfterSeconds = failure.RetryAfterSeconds } }); }
+        catch (Exception failure) when (powerOperation)
+        {
+            Respond(new { id, ok = false, error = new { code = PowerBridgeFailure.ServiceCode(failure) } });
+        }
         catch { if (id is not null) Respond(new { id, ok = false, error = new { code = "desktop_request_failed" } }); }
     }
 

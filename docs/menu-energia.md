@@ -1,5 +1,11 @@
 # Menu de energia: contrato e execução
 
+A branch `codex/password-feedback` sobre `installer-v0.4.16` melhora os
+[avisos de senha diária e PIN](feedback-senhas-windows.md): progresso, recusas,
+sessão expirada, respostas incertas e falhas do serviço. O PIN continua liberando
+somente ações no menu CEP por cinco minutos; não libera controles nativos Windows.
+Contratos e critérios de autorização permanecem os da base.
+
 O candidato MSI 0.4.15 corrige no cliente Windows a interpretação de campos
 opcionais nulos do erro HTTP devolvido pelo bridge. A mensagem genérica
 “O aplicativo retornou uma resposta inválida” no 0.4.14 pode ter ocultado
