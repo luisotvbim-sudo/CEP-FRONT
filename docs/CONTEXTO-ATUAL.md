@@ -1,5 +1,7 @@
 # Contexto atual do CEP-FRONT
 
+Esta branch prepara o card público `/download` para a prerelease MSI 0.4.18 com aviso de piloto manual e ausência de Authenticode. O código, por si só, não altera a página produtiva, que ainda aponta à 0.4.16. O convite da API segue apontando à página, sem versão; publicação web exige decisão específica, CI e implantação separada. [Preparação](download-msi-0.4.18.md).
+
 Em 06/10/2026, o código da página pública `/download` passou a apontar à prerelease MSI 0.4.16, com Windows 10 22H2 e Windows 11 24H2+ x64 Pro/Enterprise/Education. O link do convite da API permanece `/download`; a troca pública do site exige integração, CI e implantação web separadas da release do MSI. [Entrega web](download-msi-0.4.16.md).
 
 Preparação beta 0.4.13 anterior em 06/10/2026: [pacote e distribuição](beta-msi-0.4.13.md)
