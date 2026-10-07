@@ -4,7 +4,8 @@ Em 07/10/2026, a página web `/download` oferece o MSI 0.4.18 como piloto
 manual, sem Authenticode nem canal automático. O site publicado já contém o
 histórico do período em Minha jornada; a base usada para gerar o MSI 0.4.18
 não incorporava essa integração web. Esta branch combina o código Windows do piloto com a interface
-web atual para o próximo pacote, ainda sem release. Consulte a
+web atual no MSI 0.4.19, instalado em uma estação Windows 11 para piloto e
+ainda sem release. Consulte a
 [Issue #41](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/41),
 a [publicação do histórico](docs/publicacao-web-historico-2026-10-06.md) e a
 [página de download](docs/download-msi-0.4.18.md).

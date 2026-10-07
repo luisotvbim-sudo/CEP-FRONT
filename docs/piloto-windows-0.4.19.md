@@ -1,0 +1,9 @@
+# Piloto Windows — MSI 0.4.19
+
+O 0.4.19 sucede o 0.4.18 sem alterar os ativos já publicados. Incorpora ao React embarcado no MSI as telas atuais da web, inclusive “Histórico do período” em Minha jornada. O host WPF, o bridge, o serviço e o modelo de sessão permanecem no desenho atual. Demanda: [CEP-ORQUESTRADOR #41](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/41).
+
+Build local com manifesto RSA-PSS/SHA-256 assinado pela identidade de publicação existente. MSI SHA-256 `e905cecc7d8602ae17cdecb57f6ab6adb6b5a51ac71011ae2f313ac7ebb22de8`. O manifesto e a assinatura verificaram com a chave pública embarcada, e o kit TI local os inclui. O MSI não possui Authenticode. CI `validate`/`desktop` do PR #35 passou; lint, 141 testes unitários, build e 38 testes de navegador direcionados passaram antes do pacote.
+
+Em 07/10/2026, a estação piloto Windows 11 Pro x64 recebeu upgrade manual 0.4.18→0.4.19, com backup do perfil e ProgramData, `msiexec` retorno 0, serviço Running/Automatic e versão instalada 0.4.19. O usuário confirmou login e a nova seção. O histórico de hoje estava inicialmente vazio enquanto os cartões exibiam horas consultadas ao vivo; após “Revalidar Monday e VR Mais (20 dias)” em Meu histórico, os registros importados de hoje apareceram. São leituras com cortes diferentes, sem defeito novo confirmado.
+
+Antes de distribuir manualmente como prerelease para outros pilotos, conferir o kit final e o vínculo do tag ao commit revisado; publicar com `latest=false`, mantendo `/download` e o canal automático como estão. A homologação nesta estação não cobriu reinício normal do host WPF após o upgrade, detalhes de batidas e estados nulos por inspeção visual, Windows 10, energia real, rollback nem recuperação portátil da chave. Esses limites devem constar nas notas do piloto. A promoção de `latest` exige avaliação separada da Issue #40.

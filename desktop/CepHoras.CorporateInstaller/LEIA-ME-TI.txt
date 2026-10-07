@@ -1,12 +1,17 @@
 CEP HORAS 0.4 - INSTALACAO CORPORATIVA PELA TI
 
-PACOTE 0.4.18 - PILOTO MANUAL WINDOWS 10/11
+PACOTE 0.4.19 - PILOTO MANUAL WINDOWS 10/11
 Instalacao manual de teste. Manifesto de atualizacao assinado pela identidade
 existente acompanha o kit. Esta prerelease nao e o canal automatico latest.
 MSI sem assinatura Authenticode; o Windows pode exibir aviso de confianca.
 PILOTO DE SENHA DIARIA, PIN E RECUPERACAO DE ENERGIA
-Aceite e acompanhamento: CEP-ORQUESTRADOR #37
-https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/37
+Aceite e acompanhamento: CEP-ORQUESTRADOR #41
+https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/41
+Esta versao inclui na interface Windows a tela web atual de Minha jornada,
+com Historico do periodo e detalhes importados de Monday e VR Mais. Os
+cartoes de horas consultam as fontes ao vivo; o historico usa registros ja
+importados. Em Meu historico, Revalidar Monday e VR Mais atualiza os ultimos
+20 dias inclusivos, incluindo hoje.
 Mostra avisos sanitizados ao validar senha diaria ou PIN. Se a saida protegida
 falhar ou sua resposta se perder, tenta retomar a supervisao uma unica vez e
 informa quando nao consegue confirmar. Pedidos de energia recuperados pelo
@@ -110,7 +115,7 @@ ATUALIZACAO MSI
   GitHub, chave privada ou senha administrativa e instalado nos clientes.
 - Atualizar agora inicia somente um MSI aprovado do canal fixo; Depois adia.
   A manutencao do update preserva as politicas e nao usa o fechamento diario.
-- Homologar a versao instalada para 0.4.18 com conta comum em VM/PC piloto
+- Homologar a versao instalada para 0.4.19 com conta comum em VM/PC piloto
   antes de publicar no canal estavel para a equipe.
 - Build sem manifesto e assinatura validos nao pertence ao canal automatico.
 - Publicacao, backup portatil da chave e recuperacao sao responsabilidades da TI.
