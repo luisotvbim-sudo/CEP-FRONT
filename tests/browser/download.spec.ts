@@ -17,14 +17,14 @@ test('public Windows download keeps only the title and download card without a s
     page.getByRole('link', { name: 'Baixar para Windows', exact: true }),
   ).toHaveAttribute(
     'href',
-    'https://github.com/luisotvbim-sudo/CEP-FRONT/releases/download/installer-v0.4.13/CEP-Horas-Windows-win-x64.msi',
+    'https://github.com/luisotvbim-sudo/CEP-FRONT/releases/download/installer-v0.4.18/CEP-Horas-Windows-win-x64.msi',
   )
-  await expect(page.getByText('Beta · 0.4.13 · MSI', { exact: true })).toBeVisible()
-  await expect(page.getByText('Windows 11 x64 · Pro / Enterprise / Education · 24H2+', { exact: true })).toBeVisible()
+  await expect(page.getByText('Piloto manual · 0.4.18 · MSI', { exact: true })).toBeVisible()
+  await expect(page.getByText('Windows 10 22H2 / Windows 11 24H2+ · x64', { exact: true })).toBeVisible()
+  await expect(page.getByText('Pro / Enterprise / Education', { exact: true })).toBeVisible()
   await expect(page.getByText('Instalação pela TI · WebView2 por máquina.', { exact: true })).toBeVisible()
-  await expect(
-    page.getByText(/não tem assinatura digital nem atualização automática/),
-  ).toHaveCount(0)
+  await expect(page.getByText(/MSI ainda não tem assinatura digital do editor \(Authenticode\)/)).toBeVisible()
+  await expect(page.getByText(/não está no canal de atualização automática/)).toBeVisible()
   await expect(page.getByRole('link', { name: 'Baixar .NET Desktop Runtime' })).toHaveCount(0)
   await expect(page.getByRole('link', { name: 'Baixar WebView2 Runtime' })).toHaveCount(0)
   await expect(page.locator('main section')).toHaveCount(1)

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
-import { fixture } from './admin-fixture'
+import { fixture, ids } from './admin-fixture'
 import { personalOverview } from '../fixtures/overview'
 
 for (const [status, title] of [
@@ -10,7 +10,7 @@ for (const [status, title] of [
   ['notAssociated', 'Sua associação precisa ser conferida'],
   ['inactiveIdentity', 'Um cadastro de origem está inativo'],
 ] as const) {
-  test(`personal overview ${status} has one heading and accessible progressive detail`, async ({
+  test(`personal overview ${status} keeps the concise summary and period history`, async ({
     page,
   }) => {
     const calls = await fixture(page, { role: 'user', overviewStatus: status })
@@ -20,22 +20,45 @@ for (const [status, title] of [
     await expect(page.getByText(/Conferido até/)).toBeVisible()
     expect(calls.filter((call) => call.path.includes('/overview')).length).toBe(1)
     if (status === 'incomplete') {
-      await expect(page.locator('.overview-metrics').getByText('Indisponível')).toHaveCount(3)
-      await page.getByText('Ver detalhes e qualidade das fontes').focus()
-      await page.keyboard.press('Enter')
-      await expect(
-        page.getByRole('heading', { name: 'Valores disponíveis por fonte' }),
-      ).toBeVisible()
+      await expect(page.locator('.overview-metrics').getByText('Indisponível', { exact: true })).toHaveCount(3)
+      await expect(page.locator('.overview-metrics').getByText('Diferença indisponível')).toBeVisible()
+    } else if (status === 'difference') {
+      await expect(page.locator('.overview-metrics').getByText('Faltando no Monday')).toBeVisible()
+    } else if (status === 'regular') {
+      await expect(page.locator('.overview-metrics').getByText('Sem diferença')).toBeVisible()
     }
+    await expect(page.getByRole('region', { name: 'Histórico do período' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Dias que merecem atenção' })).toHaveCount(0)
+    await expect(page.getByText('Ver detalhes e qualidade das fontes')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Consultar meu histórico' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Ver meus avisos' })).toHaveCount(0)
     expect(
       (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze())
         .violations,
     ).toEqual([])
-    await page.getByRole('button', { name: 'Consultar meu histórico' }).click()
+    await page.getByRole('button', { name: 'Meu histórico', exact: true }).click()
     await expect(page.getByRole('heading', { name: 'Meu histórico' })).toBeVisible()
     await expect(page.locator('h1')).toHaveCount(1)
   })
 }
+
+test('positive Monday delta is shown as extra time relative to VR Mais', async ({ page }) => {
+  await fixture(page, { role: 'user' })
+  await expect(page.getByRole('heading', { name: 'Dentro da tolerância neste corte' })).toBeVisible()
+  const response = personalOverview('difference')
+  response.analysis = {
+    ...response.analysis!,
+    vrSeconds: 7200,
+    mondaySeconds: 10800,
+    deltaSeconds: 3600,
+  }
+  await page.route('**/me/time-control/overview?**', (route) =>
+    route.fulfill({ json: response }),
+  )
+  await page.getByRole('button', { name: 'Conferir agora' }).click()
+  const card = page.locator('.overview-metrics').getByText('Sobrando no Monday').locator('..')
+  await expect(card).toContainText('01:00')
+})
 
 test('failed refresh preserves previous cutoff and does not expose source internals', async ({
   page,
@@ -93,9 +116,50 @@ test('rapid period selection reads only the last choice and logout removes perso
     .poll(() => calls.filter((call) => call.path.includes('overview?period=sprint')).length)
     .toBe(1)
   expect(calls.filter((call) => call.path.includes('overview?period=weekly'))).toHaveLength(0)
+  await expect
+    .poll(() => calls.filter((call) => call.path.includes('/history?from=2026-09-15')).length)
+    .toBe(1)
   await page.getByRole('button', { name: 'Sair da conta' }).click()
   await expect(page.getByRole('button', { name: 'Entrar na minha conta' })).toBeVisible()
   await expect(page.getByText('Dentro da tolerância neste corte')).toHaveCount(0)
+  await expect(page.getByRole('region', { name: 'Histórico do período' })).toHaveCount(0)
+})
+
+test('my journey shows both sources from the selected official period', async ({ page }) => {
+  const calls = await fixture(page, { role: 'user' })
+  await page.getByLabel('Período oficial').selectOption('previousDay')
+  const history = page.getByRole('region', { name: 'Histórico do período' })
+  await expect(history).toContainText('20/09/2026 a 20/09/2026')
+  await expect(history.getByRole('button', { name: 'Expandir dia 20/09/2026' })).toBeVisible()
+  await history.getByRole('button', { name: 'Expandir dia 20/09/2026' }).click()
+  await expect(history.getByRole('heading', { name: 'Monday' })).toBeVisible()
+  await expect(history.getByRole('heading', { name: 'VR Mais' })).toBeVisible()
+  expect(
+    calls.some(
+      ({ path }) =>
+        path.includes('/history?from=2026-09-20&to=2026-09-20') &&
+        path.includes(`workforcePersonId=${ids.person}`),
+    ),
+  ).toBe(true)
+})
+
+test('history failure offers retry without hiding the live overview', async ({ page }) => {
+  await fixture(page, { role: 'user' })
+  const history = page.getByRole('region', { name: 'Histórico do período' })
+  await expect(history.getByRole('button', { name: 'Expandir dia 20/09/2026' })).toBeVisible()
+  let attempts = 0
+  await page.route('**/organization/time-control/history?**', (route) => {
+    attempts++
+    return attempts === 1
+      ? route.fulfill({ status: 503, json: { code: 'history_unavailable' } })
+      : route.fallback()
+  })
+  await page.getByLabel('Período oficial').selectOption('previousDay')
+  await expect(history.getByRole('button', { name: 'Tentar novamente' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Dentro da tolerância neste corte' })).toBeVisible()
+  await history.getByRole('button', { name: 'Tentar novamente' }).click()
+  await expect(history.getByRole('button', { name: 'Expandir dia 20/09/2026' })).toBeVisible()
+  expect(attempts).toBe(2)
 })
 
 test('personal overview fits 360 pixels and produces synthetic review captures', async ({
