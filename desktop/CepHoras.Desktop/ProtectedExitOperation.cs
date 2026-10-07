@@ -5,7 +5,7 @@ namespace CepHoras.Desktop;
 internal static class ProtectedExitOperation
 {
     internal static async Task<ControlResponse> Run(
-        Func<ControlRequest, Task<ControlResponse>> send, Func<Task> finish, Action protectionUnconfirmed)
+        Func<ControlRequest, Task<ControlResponse>> send, Func<Task> finish, Action protectionUnconfirmed, Func<bool> remainsOpen)
     {
         try
         {
@@ -22,7 +22,7 @@ internal static class ProtectedExitOperation
         {
             // No replay of suspend and no inference of completion after a lost
             // reply. This host remains open and explicitly requests protection.
-            await Resume(send, protectionUnconfirmed);
+            if (remainsOpen()) await Resume(send, protectionUnconfirmed);
             throw;
         }
     }

@@ -162,7 +162,7 @@ public partial class MainWindow
                             "CEP Horas — atualizar sessão do Windows", MessageBoxButton.OK, MessageBoxImage.Information);
                     FinishProtectedExit(progress);
                     return Task.CompletedTask;
-                }, ShowProtectionWarning);
+                }, ShowProtectionWarning, () => !closed);
                 if (response.Code != "desktop_suspended")
                 {
                     progress.CompletePreparation();
