@@ -1,5 +1,7 @@
 # Contexto atual do CEP-FRONT
 
+Em 07/10/2026, a [prerelease MSI 0.4.19](https://github.com/luisotvbim-sudo/CEP-FRONT/releases/tag/installer-v0.4.19) está disponível para instalação manual acompanhada, com manifesto assinado e sem Authenticode ou `latest`. Esta branch altera apenas o card `/download` para apontar ao pacote novo e informar que seu piloto específico ocorreu em Windows 11; Windows 10 ainda requer teste desta versão. A implantação web da mudança é etapa separada. [Preparação](download-msi-0.4.19.md).
+
 Em 07/10/2026, o card público `/download` foi implantado para a prerelease MSI 0.4.18 com aviso de piloto manual, ausência de Authenticode e nenhuma atualização automática. O convite da API segue apontando à página, sem versão; template e backend não mudaram. A página foi publicada após autorização específica, CI da main e verificação nos dois domínios. [Publicação](download-msi-0.4.18.md).
 
 Em 06/10/2026, o código da página pública `/download` passou a apontar à prerelease MSI 0.4.16, com Windows 10 22H2 e Windows 11 24H2+ x64 Pro/Enterprise/Education. O link do convite da API permanece `/download`; a troca pública do site exige integração, CI e implantação web separadas da release do MSI. [Entrega web](download-msi-0.4.16.md).

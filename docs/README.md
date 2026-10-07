@@ -9,6 +9,7 @@ Contexto reescrito em 04/10/2026 após revisão do código. Comece por [CONTEXTO
 
 | Documento | Finalidade |
 |---|---|
+| [Página MSI 0.4.19](download-msi-0.4.19.md) | Link da prerelease manual 0.4.19, aviso de piloto Windows 10 e dependência de implantação web |
 | [Contexto atual](CONTEXTO-ATUAL.md) | Funcionamento, arquitetura, sessão, escopos, bases e pendências para retomar |
 | [Beta MSI 0.4.13](beta-msi-0.4.13.md) | Integração web/auditoria, pacote, GitHub sem latest, dependência do convite e aceite do piloto Windows |
 | [Página MSI 0.4.18](download-msi-0.4.18.md) | Piloto manual, aviso de Authenticode e publicação web conferida |
