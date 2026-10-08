@@ -20,6 +20,7 @@ internal sealed class ControlService : ServiceBase
     private Task? listener;
     private Task? supervisor;
     private int stopping;
+    private Guid? installationId;
     private bool InMaintenance => Volatile.Read(ref stopping) != 0 || updates.InMaintenance;
 
     internal ControlService()
@@ -45,6 +46,8 @@ internal sealed class ControlService : ServiceBase
     protected override void OnStart(string[] args)
     {
         authority.Initialize(); // Read/validate before IPC; no automatic startup power effect.
+        try { installationId = InstallationIdentity.ReadOrCreate(); }
+        catch { installationId = null; /* Telemetry identity must not block service startup. */ }
         try { updates.Initialize(authority.CancelForMaintenance); }
         catch (Exception error) { PolicyStore.Audit("update-initialization-failed:" + error.GetType().Name, "SYSTEM"); }
         try { desktopLifecycle.ProtectAtServiceStart(); }
@@ -162,7 +165,7 @@ internal sealed class ControlService : ServiceBase
                                 PolicyStore.Audit("service-request-failed", sid);
                             }
                         }
-                        return response;
+                        return request.Operation == "status" ? response with { InstallationId = installationId } : response;
                     }, stop.Token);
                 }
                 catch (OperationCanceledException) { }

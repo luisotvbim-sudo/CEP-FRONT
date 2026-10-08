@@ -45,6 +45,8 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer notificationTimer = new() { Interval = TimeSpan.FromSeconds(60) };
     private NotificationDelivery? notifications;
     private PowerBridgeHandler? power;
+    private DesktopTelemetry? telemetry;
+    private readonly DispatcherTimer telemetryTimer = new() { Interval = TimeSpan.FromMinutes(1) };
     private readonly bool managedInstallation = File.Exists(Path.Combine(AppContext.BaseDirectory, "managed-install.marker"));
     private readonly bool windowsAdministrator = new WindowsPrincipal(WindowsIdentity.GetCurrent())
         .IsInRole(WindowsBuiltInRole.Administrator);
@@ -75,6 +77,7 @@ public partial class MainWindow : Window
             SystemEvents.PowerModeChanged -= OnPowerModeChanged;
             System.Windows.Application.Current.SessionEnding -= OnSessionEnding;
             notificationTimer.Stop();
+            telemetryTimer.Stop();
             updateTimer.Stop();
             msiStatusTimer.Stop();
             webViewHealthTimer.Stop();
@@ -121,7 +124,16 @@ public partial class MainWindow : Window
             if (api.Scheme != "https" && !(api.Scheme == "http" && api.IsLoopback))
                 throw new InvalidOperationException("HTTPS is required outside loopback.");
             session = new ApiSession(api);
-            power = managedInstallation ? new PowerBridgeHandler(session) : null;
+            power = managedInstallation ? new PowerBridgeHandler(session, telemetry: (code, phase, outcome, action, error, operationId) =>
+                telemetry?.Record(code, phase, outcome, action, error, operationId),
+                durableTelemetry: (code, phase, outcome, action, error, operationId) =>
+                    telemetry?.RecordDurableAsync(code, phase, outcome, action, error, operationId) ?? Task.CompletedTask) : null;
+            if (managedInstallation && DesktopTelemetry.IsEnabledByConfiguration())
+            {
+                telemetryTimer.Tick += async (_, _) => { if (telemetry is not null) await telemetry.FlushAsync(); };
+                telemetryTimer.Start();
+                _ = InitializeTelemetry();
+            }
             notifications = new NotificationDelivery(session);
             ConfigureTray();
             if (managedInstallation) _ = ResumeDesktopSupervision();
@@ -155,6 +167,21 @@ public partial class MainWindow : Window
                 : "Não foi possível preparar o CEP Horas. Confira a instalação e a configuração da API e abra o aplicativo novamente.",
                 hostSetupReady ? "initialization-failed" : "host-initialization-failed", hostSetupReady && !browserCreationUnconfirmed);
         }
+    }
+
+    private async Task InitializeTelemetry()
+    {
+        try
+        {
+            var status = await ControlClient.Send(new ControlRequest("status"));
+            if (closed || status.InstallationId is not Guid id || id == Guid.Empty || session is null) return;
+            var version = typeof(MainWindow).Assembly.GetName().Version;
+            var appVersion = version is null ? "0.0.0" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
+            telemetry = new DesktopTelemetry(session, true, appVersion, id);
+            telemetry.Record("desktop_started", "startup", "success");
+            await telemetry.FlushAsync();
+        }
+        catch { /* The host still starts and power behavior stays unchanged. */ }
     }
 
 }

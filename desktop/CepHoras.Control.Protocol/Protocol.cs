@@ -28,7 +28,8 @@ public sealed record ControlResponse(
     string? InstalledVersion = null,
     string? BrokerInstanceId = null,
     string? OriginalBrokerInstanceId = null,
-    int? PowerStatusVersion = null);
+    int? PowerStatusVersion = null,
+    Guid? InstallationId = null);
 
 public static class ControlWire
 {

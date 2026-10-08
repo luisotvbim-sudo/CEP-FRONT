@@ -6,6 +6,23 @@ using CepHoras.Control.Protocol;
 using CepHoras.Updates;
 
 // These checks never install a service, modify Windows policy or invoke a real power action.
+var identityDirectory = Path.Combine(Path.GetTempPath(), "cep-install-id-" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(identityDirectory);
+try
+{
+    var identity = InstallationIdentity.ReadOrCreateAt(identityDirectory);
+    Assert(identity != Guid.Empty && InstallationIdentity.ReadOrCreateAt(identityDirectory) == identity,
+        "Installation ID must persist without hardware identifiers");
+    File.WriteAllText(Path.Combine(identityDirectory, "installation-id"), "invalid");
+    try { InstallationIdentity.ReadOrCreateAt(identityDirectory); throw new InvalidOperationException("Corrupt installation ID was accepted"); }
+    catch (InvalidDataException) { }
+}
+finally
+{
+    if (Path.GetFullPath(identityDirectory).StartsWith(Path.GetFullPath(Path.GetTempPath()), StringComparison.OrdinalIgnoreCase) &&
+        Path.GetFileName(identityDirectory).StartsWith("cep-install-id-", StringComparison.Ordinal))
+        Directory.Delete(identityDirectory, recursive: true);
+}
 await ControlExchangeChecks.Run();
 var original = new PolicySnapshot(
     new() { ["SeShutdownPrivilege"] = ["S-1-5-32-545"], ["SeRemoteShutdownPrivilege"] = [] },

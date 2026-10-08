@@ -15,6 +15,7 @@
     <Compile Include="../CepHoras.Desktop/DailyClosePassword.cs" Link="DailyClosePassword.cs" />
     <Compile Include="../CepHoras.Desktop/ProtectedJsonFile.cs" Link="ProtectedJsonFile.cs" />
     <Compile Include="../CepHoras.Desktop/PowerBridgeHandler.cs" Link="PowerBridgeHandler.cs" />
+    <Compile Include="../CepHoras.Desktop/DesktopTelemetry.cs" Link="DesktopTelemetry.cs" />
     <Compile Include="../CepHoras.Desktop/SingleInstanceCoordinator.cs" Link="SingleInstanceCoordinator.cs" />
     <Compile Include="../CepHoras.Desktop/WindowsShutdownAccess.cs" Link="WindowsShutdownAccess.cs" />
     <Compile Include="../CepHoras.Desktop/WebViewProfileRecovery.cs" Link="WebViewProfileRecovery.cs" />
