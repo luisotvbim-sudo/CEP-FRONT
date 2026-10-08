@@ -1,6 +1,6 @@
 # Telemetria estruturada do CEP Horas Windows
 
-Implementação da [Issue CEP-ORQUESTRADOR #48](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/48), dependente da [API #47](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/47) e coordenada pela [Issue #45](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/45). Esta branch parte da tag `installer-v0.4.19` para preservar o código nativo usado no piloto. Nenhum MSI com este código foi publicado ou instalado.
+Implementação da [Issue CEP-ORQUESTRADOR #48](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/48), dependente da [API #47](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/47) e coordenada pela [Issue #45](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/45). Esta branch parte da tag `installer-v0.4.19` para preservar o código nativo usado no piloto. O próximo pacote manual planejado para esta implementação é o 0.4.20; seu build, publicação e instalação são etapas distintas.
 
 ## Contrato e fluxo
 

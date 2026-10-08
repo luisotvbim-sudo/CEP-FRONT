@@ -1,9 +1,20 @@
 CEP HORAS 0.4 - INSTALACAO CORPORATIVA PELA TI
 
-PACOTE 0.4.19 - PILOTO MANUAL WINDOWS 10/11
+PACOTE 0.4.20 - PILOTO MANUAL WINDOWS 10/11
 Instalacao manual de teste. Manifesto de atualizacao assinado pela identidade
 existente acompanha o kit. Esta prerelease nao e o canal automatico latest.
 MSI sem assinatura Authenticode; o Windows pode exibir aviso de confianca.
+TELEMETRIA E DIAGNOSTICO DO PILOTO 0.4.20
+Este pacote registra eventos estruturados de inicio, decisao de energia,
+agendamento, cancelamento, recuperacao e atualizacao. O host WPF envia lotes
+autenticados a CEP API quando ha sessao; falha de rede conserva fila local
+protegida por usuario. A API precisa ter a migration de telemetria implantada
+antes do piloto. O envio minimo inicia ativo; a TI pode desativar no processo
+com CEP_DESKTOP_TELEMETRY=0. Eventos nao incluem senha, PIN, token, e-mail,
+nome do PC ou texto livre. O ID aleatorio da instalacao nao vem do hardware.
+Confirmacao de agendamento significa que o servico aceitou o pedido; nao prova
+que o Windows desligou. A auditoria SYSTEM ainda fica local. Para diagnostico,
+consulte docs/telemetria-desktop.md na branch desta versao.
 PILOTO DE SENHA DIARIA, PIN E RECUPERACAO DE ENERGIA
 Aceite e acompanhamento: CEP-ORQUESTRADOR #41
 https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/41
