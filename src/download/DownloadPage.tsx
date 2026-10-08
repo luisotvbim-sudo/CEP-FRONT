@@ -5,8 +5,8 @@ import icon from '../assets/conceito-icon.png'
 import './download.css'
 
 const desktopRelease = {
-  version: '0.4.19',
-  download: 'https://github.com/luisotvbim-sudo/CEP-FRONT/releases/download/installer-v0.4.19/CEP-Horas-Windows-win-x64.msi',
+  version: '0.4.20',
+  download: 'https://github.com/luisotvbim-sudo/CEP-FRONT/releases/download/installer-v0.4.20/CEP-Horas-Windows-win-x64.msi',
 }
 
 export function DownloadPage() {
@@ -32,7 +32,7 @@ export function DownloadPage() {
             <p className="download-platform">Pro / Enterprise / Education</p>
             <p className="download-platform">Instalação pela TI · WebView2 por máquina.</p>
             <span className="download-test-badge">Piloto manual · {desktopRelease.version} · MSI</span>
-            <p className="download-pilot-notice">Instale com acompanhamento da TI. O upgrade 0.4.19 foi testado em Windows 11; esta versão ainda precisa de piloto específico em Windows 10. O MSI não tem assinatura digital do editor (Authenticode), então o Windows pode exibir um aviso de confiança. Esta versão não está no canal de atualização automática.</p>
+            <p className="download-pilot-notice">Instale com acompanhamento da TI, começando por um computador piloto. A versão 0.4.20 registra eventos técnicos de falhas e ações críticas quando há sessão autenticada. O upgrade desta versão ainda precisa de validação no Windows 10 e 11. O MSI não tem assinatura digital do editor (Authenticode), então o Windows pode exibir um aviso de confiança. Esta versão não está no canal de atualização automática.</p>
             <a className="download-primary" href={desktopRelease.download}><ArrowDownToLine size={20} aria-hidden="true" /> Baixar para Windows</a>
           </div>
         </section>
