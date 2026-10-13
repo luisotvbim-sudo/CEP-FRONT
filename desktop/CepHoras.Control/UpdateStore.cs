@@ -53,6 +53,9 @@ internal sealed class UpdateStore
                     InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit, PropagationFlags.None, AccessControlType.Allow));
             directory.Create(security);
         }
+        // DirectoryInfo.Exists may retain the pre-create snapshot after the ACL
+        // overload. Refresh before validating a directory created on first start.
+        directory.Refresh();
         ValidatePrivate(directory);
     }
 
