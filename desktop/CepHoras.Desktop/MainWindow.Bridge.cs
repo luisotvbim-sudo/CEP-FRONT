@@ -87,6 +87,11 @@ public partial class MainWindow
             await using var sessionPowerLease = operation == "logout" && power is not null ? await power.QuiesceAsync(lifetime.Token) : null;
             var result = await session!.Execute(operation, payload);
             Respond(new { id, ok = true, result });
+            if (operation is "login" or "restore" && telemetry is not null)
+            {
+                telemetry.Record("desktop_started", "startup", "success");
+                _ = telemetry.FlushAsync();
+            }
             if (operation is "login" or "restore" && notifications is not null)
                 await notifications.Poll(ShowNotificationSummary);
         }

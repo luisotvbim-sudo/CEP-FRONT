@@ -54,6 +54,7 @@ internal static class PowerBridgeTests
 
     internal static async Task Run(Action<bool, string> check, string root)
     {
+        await TelemetryDoesNotChangePower(check, root);
         await DiscoveryChecks(check, root);
         await RecoveryChecks(check, root);
         // Pre-dispatch cancellation owns the request while API authorization is awaiting.
@@ -316,6 +317,59 @@ internal static class PowerBridgeTests
             check(terminal.GetProperty("state").GetString() == "terminal" && !host.SessionEndingAllowed,
                 "Confirmed journal cancellation for the original broker did not reconcile terminal state");
         }
+    }
+
+    private static async Task TelemetryDoesNotChangePower(Action<bool, string> check, string root)
+    {
+        using (var failedSession = await Session(root, "telemetry-api-failed", _ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.InternalServerError))))
+        {
+            var observed = new List<(string Code, string Phase)>();
+            var failedHost = new PowerBridgeHandler(failedSession, request => Task.FromResult(new ControlResponse("ready", "fixture",
+                Active: true, BrokerInstanceId: Broker, PowerStatusVersion: 1)),
+                telemetry: (code, phase, _, _, _, _) => observed.Add((code, phase)));
+            try { await failedHost.Execute("schedule", Schedule(Guid.NewGuid().ToString())); throw new InvalidOperationException("API failure was accepted"); }
+            catch (ApiFailure failure) { check(failure.Status == 500, "Wrong API failure in telemetry fixture"); }
+            check(observed.Any(e => e == ("power_check_failed", "authorization")) &&
+                observed.All(e => e.Code != "power_schedule_failed"), "API failure was labeled as service schedule failure");
+        }
+        using var session = await Session(root, "telemetry-native");
+        var serviceAck = new TaskCompletionSource<ControlResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var durableCalls = 0;
+        var requestId = Guid.NewGuid().ToString();
+        var host = new PowerBridgeHandler(session, request => request.Operation switch
+        {
+            "status" => Task.FromResult(new ControlResponse("ready", "fixture", Active: true, BrokerInstanceId: Broker, PowerStatusVersion: 1)),
+            "schedule" => serviceAck.Task,
+            _ => Task.FromResult(Cancelled(request) with { BrokerInstanceId = Broker })
+        },
+            durableTelemetry: (code, phase, outcome, action, error, operation) =>
+            {
+                durableCalls++;
+                check(code == "power_schedule_confirmed" && phase == "schedule" && outcome == "success" &&
+                    action == "shutdown" && operation == Guid.Parse(requestId), "Wrong confirmed power event");
+                throw new IOException("fixture-local-journal-failure");
+            });
+        var scheduling = host.Execute("schedule", Schedule(requestId));
+        for (var attempt = 0; attempt < 40 && !serviceAck.Task.IsCompleted && durableCalls == 0; attempt++)
+            await Task.Delay(10);
+        check(durableCalls == 0, "Telemetry ran before the service schedule ACK");
+        serviceAck.SetResult(Scheduled(new ControlRequest("schedule", requestId, "shutdown")) with { BrokerInstanceId = Broker });
+        var result = JsonSerializer.SerializeToElement(await scheduling);
+        check(result.GetProperty("requestId").GetString() == requestId && durableCalls == 1,
+            "Local telemetry write failure changed a confirmed power response");
+
+        var recoveryEvent = new List<(string Code, string Error)>();
+        var recoveryHost = new PowerBridgeHandler(session, request => request.Operation switch
+        {
+            "status" => Task.FromResult(new ControlResponse("ready", "fixture", Active: true, BrokerInstanceId: Broker, PowerStatusVersion: 1)),
+            "power-status" => Task.FromException<ControlResponse>(new IOException("fixture-ipc-failed")),
+            _ => Task.FromResult(Scheduled(request) with { BrokerInstanceId = Broker })
+        }, telemetry: (code, _, _, _, error, _) => recoveryEvent.Add((code, error)));
+        var recoveryId = Guid.NewGuid().ToString();
+        await recoveryHost.Execute("schedule", Schedule(recoveryId));
+        await Failure(recoveryHost.Execute("reconcile", Id(recoveryId)), "native_power_uncertain", check);
+        check(recoveryEvent.Contains(("power_recovery_required", "service_unavailable")),
+            "IPC recovery failure lost its closed error category");
     }
 
     private static async Task RecoveryChecks(Action<bool, string> check, string root)

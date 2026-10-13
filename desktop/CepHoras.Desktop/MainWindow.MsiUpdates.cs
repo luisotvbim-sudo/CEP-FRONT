@@ -36,7 +36,10 @@ public partial class MainWindow
             acquired = true;
             if (!closed) ShowMsiUpdate(await ControlClient.Send(new ControlRequest("update-check")));
         }
-        catch { /* Network/service outages must not prevent normal work. */ }
+        catch (Exception error)
+        {
+            telemetry?.Record("update_check_failed", "update", "failure", errorCode: DesktopTelemetry.Error(error));
+        }
         finally
         {
             if (acquired) msiRequestGate.Release();
@@ -161,10 +164,12 @@ public partial class MainWindow
             var response = await ControlClient.Send(new ControlRequest("update-start", ApprovedVersion: approvedVersion));
             if (response.Code != "update_started")
                 throw new InvalidOperationException("A versão aprovada não está disponível.");
+            telemetry?.Record("update_install_started", "update", "success");
             ShowMsiUpdate(response);
         }
-        catch
+        catch (Exception error)
         {
+            telemetry?.Record("update_install_failed", "update", "failure", errorCode: DesktopTelemetry.Error(error));
             installingUpdate = false;
             ResumeWebViewAfterMaintenance();
             if (closed) return;
@@ -195,8 +200,9 @@ public partial class MainWindow
             exiting = true;
             System.Windows.Application.Current.Shutdown();
         }
-        catch
+        catch (Exception error)
         {
+            telemetry?.Record("update_install_failed", "update", "failure", errorCode: DesktopTelemetry.Error(error));
             closingForUpdate = false;
             installingUpdate = false;
             ResumeWebViewAfterMaintenance();

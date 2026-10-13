@@ -31,6 +31,15 @@ internal sealed class ApiSession : IDisposable
     private long generation;
     internal Guid? CurrentUserId => accessToken is not null && user.ValueKind == JsonValueKind.Object && user.TryGetProperty("id", out var id) && id.TryGetGuid(out var value) ? value : null;
     internal string NotificationStorePath(Guid userId) => sessionFile + "." + userId.ToString("N") + ".notifications";
+    internal string TelemetryStorePath(Guid userId) => sessionFile + "." + userId.ToString("N") + ".telemetry";
+    internal async Task<JsonElement> SendDesktopTelemetry(object body)
+    {
+        // Never expose this operation to the WebView bridge. The host constructs
+        // the closed event schema and reuses native token rotation.
+        var payload = JsonSerializer.SerializeToElement(new { method = "POST", path = "/desktop-telemetry/events", body }, Json);
+        var result = await Request(payload, nativeTelemetry: true);
+        return result is JsonElement value ? value : default;
+    }
     internal async Task<JsonElement> NotificationRequest(string method, string path, object? body = null)
     {
         var result = await Request(JsonSerializer.SerializeToElement(new { method, path, body }, Json));
@@ -188,11 +197,12 @@ internal sealed class ApiSession : IDisposable
         finally { gate.Release(); }
     }
 
-    private async Task<object?> Request(JsonElement payload)
+    private async Task<object?> Request(JsonElement payload, bool nativeTelemetry = false)
     {
         var method = payload.GetProperty("method").GetString() ?? "";
         var path = payload.GetProperty("path").GetString() ?? "";
-        if (!ApiRoutePolicy.Allows(method, path)) throw new ApiFailure(403, "unsupported_route");
+        if (nativeTelemetry ? method != "POST" || path != "/desktop-telemetry/events" : !ApiRoutePolicy.Allows(method, path))
+            throw new ApiFailure(403, "unsupported_route");
         object? body = payload.TryGetProperty("body", out var value) && value.ValueKind != JsonValueKind.Null ? value.Clone() : null;
         var token = await Access();
         var currentGeneration = generation;

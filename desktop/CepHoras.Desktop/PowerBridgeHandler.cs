@@ -18,7 +18,9 @@ internal sealed class PowerBridgeFailure(string code, string? correlationId = nu
     };
 }
 
-internal sealed class PowerBridgeHandler(ApiSession session, Func<ControlRequest, Task<ControlResponse>>? sender = null, TimeProvider? timeProvider = null)
+internal sealed class PowerBridgeHandler(ApiSession session, Func<ControlRequest, Task<ControlResponse>>? sender = null,
+    TimeProvider? timeProvider = null, Action<string, string, string, string?, string, Guid?>? telemetry = null,
+    Func<string, string, string, string?, string, Guid?, Task>? durableTelemetry = null)
 {
     // Bound the whole authorization, including refresh and the transport probe.
     // The renderer budget must exceed this plus the service budget.
@@ -33,6 +35,21 @@ internal sealed class PowerBridgeHandler(ApiSession session, Func<ControlRequest
     private long discoveryRevision;
     private EndingPermission? ending;
     private static readonly HashSet<string> Actions = new(StringComparer.Ordinal) { "shutdown", "restart", "hibernate" };
+    private void Emit(string code, string phase, string outcome, string? action, string error = "none", string? requestId = null)
+    {
+        try { telemetry?.Invoke(code, phase, outcome, action, error, Guid.TryParse(requestId, out var id) ? id : null); }
+        catch { /* Telemetry cannot change authorization or cancellation. */ }
+    }
+    private async Task EmitDurable(string code, string phase, string outcome, string? action, string? requestId)
+    {
+        try
+        {
+            if (durableTelemetry is not null)
+                await durableTelemetry(code, phase, outcome, action, "none", Guid.TryParse(requestId, out var id) ? id : null)
+                    .WaitAsync(TimeSpan.FromSeconds(1));
+        }
+        catch { /* The service result remains authoritative when the journal fails. */ }
+    }
 
     private sealed class Pending(string requestId, string action, Guid userId)
     {
@@ -126,12 +143,19 @@ internal sealed class PowerBridgeHandler(ApiSession session, Func<ControlRequest
             current = pending;
             discoveryRevision++;
         }
+        var authorizationCompleted = false;
         try
         {
             bool allowed;
             try { allowed = await Authorize(pending, kind).WaitAsync(AuthorizationBudget); }
             catch (TimeoutException) { throw new PowerBridgeFailure("power_authorization_timeout"); }
-            if (!allowed) throw new PowerBridgeFailure("power_not_authorized");
+            authorizationCompleted = true;
+            if (!allowed)
+            {
+                Emit("power_check_denied", "authorization", "denied", action, requestId: requestId);
+                throw new PowerBridgeFailure("power_not_authorized");
+            }
+            Emit("power_check_allowed", "authorization", "success", action, requestId: requestId);
 
             Task<ControlResponse> dispatch;
             lock (gate)
@@ -157,10 +181,17 @@ internal sealed class PowerBridgeHandler(ApiSession session, Func<ControlRequest
                     ? new EndingPermission(requestId, clock.GetTimestamp(), TimeSpan.FromSeconds(endingSeconds))
                     : null;
             }
+            await EmitDurable("power_schedule_confirmed", "schedule", "success", action, requestId);
             return new { requestId, action, executeAt = response.ExecuteAt.Value };
         }
-        catch
+        catch (Exception error)
         {
+            if (error is not PowerBridgeFailure { Code: "power_not_authorized" })
+            {
+                var phase = authorizationCompleted ? "schedule" : "authorization";
+                Emit(phase == "authorization" ? "power_check_failed" : "power_schedule_failed",
+                    phase, pending.Dispatched ? "uncertain" : "failure", action, DesktopTelemetry.Error(error), requestId);
+            }
             lock (gate)
             {
                 // A lost service reply may still represent a real scheduled action.
@@ -221,9 +252,16 @@ internal sealed class PowerBridgeHandler(ApiSession session, Func<ControlRequest
         }
         ControlResponse response;
         try { response = await send(new ControlRequest("power-status", requestId, BrokerInstanceId: pending.BrokerInstanceId)).WaitAsync(ServiceBudget); }
-        catch { throw new PowerBridgeFailure("native_power_uncertain"); }
-        if (response.RequestId != requestId || pending.Dispatched && !SameBrokerOrConfirmedCancellation(response, pending.BrokerInstanceId, requestId))
+        catch (Exception error)
+        {
+            Emit("power_recovery_required", "reconcile", "uncertain", pending.Action, DesktopTelemetry.Error(error), requestId);
             throw new PowerBridgeFailure("native_power_uncertain");
+        }
+        if (response.RequestId != requestId || pending.Dispatched && !SameBrokerOrConfirmedCancellation(response, pending.BrokerInstanceId, requestId))
+        {
+            Emit("power_recovery_required", "reconcile", "uncertain", pending.Action, "invalid_response", requestId);
+            throw new PowerBridgeFailure("native_power_uncertain");
+        }
         lock (gate)
         {
             if (current != pending) return new { requestId, state = "terminal" };
@@ -233,6 +271,8 @@ internal sealed class PowerBridgeHandler(ApiSession session, Func<ControlRequest
             {
                 current = null;
                 if (response.Code == "cancelled" && ending?.RequestId == requestId) ending = null;
+                Emit("power_reconciled", "reconcile", response.Code == "cancelled" ? "success" : "uncertain",
+                    pending.Action, requestId: requestId);
                 return new { requestId, state = "terminal" };
             }
             throw new PowerBridgeFailure("native_power_uncertain");
@@ -255,16 +295,27 @@ internal sealed class PowerBridgeHandler(ApiSession session, Func<ControlRequest
         ControlResponse response;
         try { response = await send(new ControlRequest("cancel", requestId, BrokerInstanceId: brokerInstanceId)).WaitAsync(ServiceBudget, token); }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
-        catch { throw new PowerBridgeFailure("native_power_uncertain"); }
+        catch (Exception error)
+        {
+            Emit("power_cancel_failed", "cancel", "uncertain", pending?.Action, DesktopTelemetry.Error(error),
+                pending is null ? null : requestId);
+            throw new PowerBridgeFailure("native_power_uncertain");
+        }
         if (response.Code != "cancelled" || !response.Cancelled || response.RequestId != requestId ||
             dispatched && !SameBrokerOrConfirmedCancellation(response, brokerInstanceId, requestId))
+        {
+            Emit("power_cancel_failed", "cancel", "uncertain", pending?.Action, "invalid_response",
+                pending is null ? null : requestId);
             throw new PowerBridgeFailure("native_power_uncertain");
+        }
         lock (gate)
         {
             if (current == pending) current = null;
             if (ending?.RequestId == requestId) ending = null;
             if (current is null) uncertainQuiescence = false;
         }
+        if (pending is not null)
+            await EmitDurable("power_cancel_confirmed", "cancel", "success", pending.Action, requestId);
     }
 
     private static bool SameBrokerOrConfirmedCancellation(ControlResponse response, string? originalBroker, string requestId) =>
@@ -293,6 +344,7 @@ internal sealed class PowerBridgeHandler(ApiSession session, Func<ControlRequest
             };
             ending = null;
         }
+        Emit("power_recovery_required", "reconcile", "uncertain", response.Action, "none", response.RequestId);
         throw new PowerBridgeFailure("power_recovery_required", requestId: response.RequestId);
     }
 

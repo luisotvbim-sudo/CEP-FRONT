@@ -37,6 +37,8 @@ Referência auditada em 04/10/2026: Front `main` `eb63dbdc7f7bf83d0a4b51ee5567ed
 
 A auditoria não encontrou release MSI estável nem comprovação de homologação completa entre versões. Consulte [aplicativo Windows](docs/aplicativo-windows.md), [contexto do instalador](docs/CONTEXTO-INSTALADOR.md), [instalador corporativo](docs/instalador-corporativo.md) e [menu de energia](docs/menu-energia.md) antes de instalar ou publicar. O [guia do atualizador MSI](docs/atualizador-msi.md) descreve a branch PR #9; sua presença documental não integra esse código à main.
 
+A [telemetria estruturada em desenvolvimento](docs/telemetria-desktop.md) usa o host nativo e exige API/migration compatíveis e um MSI posterior ao 0.4.19. Ela ainda não integra a versão publicada.
+
 ## Capacidades existentes
 
 - [Acompanhamento pessoal](docs/acompanhamento-pessoal.md) com consulta automática, situação/corte, dias de atenção e detalhe progressivo; requer o contrato aditivo da API.
