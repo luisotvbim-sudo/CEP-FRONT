@@ -17,13 +17,13 @@ test('public Windows download keeps only the title and download card without a s
     page.getByRole('link', { name: 'Baixar para Windows', exact: true }),
   ).toHaveAttribute(
     'href',
-    'https://github.com/luisotvbim-sudo/CEP-FRONT/releases/download/installer-v0.4.20/CEP-Horas-Windows-win-x64.msi',
+    'https://github.com/luisotvbim-sudo/CEP-FRONT/releases/download/installer-v0.4.21/CEP-Horas-Windows-win-x64.msi',
   )
-  await expect(page.getByText('Piloto manual · 0.4.20 · MSI', { exact: true })).toBeVisible()
+  await expect(page.getByText('Piloto manual · 0.4.21 · MSI', { exact: true })).toBeVisible()
   await expect(page.getByText('Windows 10 22H2 / Windows 11 24H2+ · x64', { exact: true })).toBeVisible()
   await expect(page.getByText('Pro / Enterprise / Education', { exact: true })).toBeVisible()
   await expect(page.getByText('Instalação pela TI · WebView2 por máquina.', { exact: true })).toBeVisible()
-  await expect(page.getByText(/O upgrade desta versão ainda precisa de validação no Windows 10 e 11/)).toBeVisible()
+  await expect(page.getByText(/O upgrade foi validado em uma estação Windows/)).toBeVisible()
   await expect(page.getByText(/registra eventos técnicos de falhas e ações críticas/)).toBeVisible()
   await expect(page.getByText(/O MSI não tem assinatura digital do editor \(Authenticode\)/)).toBeVisible()
   await expect(page.getByText(/não está no canal de atualização automática/)).toBeVisible()
