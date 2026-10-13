@@ -1,10 +1,13 @@
 CEP HORAS 0.4 - INSTALACAO CORPORATIVA PELA TI
 
-PACOTE 0.4.20 - PILOTO MANUAL WINDOWS 10/11
+PACOTE 0.4.21 - PILOTO MANUAL WINDOWS 10/11
 Instalacao manual de teste. Manifesto de atualizacao assinado pela identidade
 existente acompanha o kit. Esta prerelease nao e o canal automatico latest.
 MSI sem assinatura Authenticode; o Windows pode exibir aviso de confianca.
-TELEMETRIA E DIAGNOSTICO DO PILOTO 0.4.20
+CORRECAO DO SERVICO NO PRIMEIRO INICIO
+O servico atualiza a leitura da pasta protegida apos cria-la, antes de validar
+o atualizador. Isso evita tratar a primeira instalacao como manutencao pendente.
+TELEMETRIA E DIAGNOSTICO DO PILOTO 0.4.21
 Este pacote registra eventos estruturados de inicio, decisao de energia,
 agendamento, cancelamento, recuperacao e atualizacao. O host WPF envia lotes
 autenticados a CEP API quando ha sessao; falha de rede conserva fila local
