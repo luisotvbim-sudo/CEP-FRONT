@@ -1,9 +1,12 @@
 CEP HORAS 0.4 - INSTALACAO CORPORATIVA PELA TI
 
-PACOTE 0.4.21 - PILOTO MANUAL WINDOWS 10/11
+PACOTE 0.4.22 - PILOTO MANUAL WINDOWS 10/11
 Instalacao manual de teste. Manifesto de atualizacao assinado pela identidade
 existente acompanha o kit. Esta prerelease nao e o canal automatico latest.
 MSI sem assinatura Authenticode; o Windows pode exibir aviso de confianca.
+VERSAO VISIVEL NO APLICATIVO
+O rodape nativo do CEP Horas mostra a versao instalada do executavel, inclusive
+durante carregamento ou falha da interface WebView2.
 CORRECAO DO SERVICO NO PRIMEIRO INICIO
 O servico atualiza a leitura da pasta protegida apos cria-la, antes de validar
 o atualizador. Isso evita tratar a primeira instalacao como manutencao pendente.
