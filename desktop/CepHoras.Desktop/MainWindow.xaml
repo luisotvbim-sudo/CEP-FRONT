@@ -22,7 +22,15 @@
     </StackPanel>
     <Grid x:Name="BrowserContainer" Grid.Row="1"><wv:WebView2 x:Name="Browser" Visibility="Hidden" /></Grid>
     <Border Grid.Row="2" Padding="8,4" BorderThickness="0,1,0,0" BorderBrush="#E4E4DE">
-      <Button x:Name="ReloadInterfaceButton" Content="Recarregar interface" Click="ReloadWebView_Click" HorizontalAlignment="Center" Padding="12,4" ToolTip="Use se a página ficar em branco ou parar de responder" />
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <Button x:Name="ReloadInterfaceButton" Grid.Column="1" Content="Recarregar interface" Click="ReloadWebView_Click" Padding="12,4" ToolTip="Use se a página ficar em branco ou parar de responder" />
+        <TextBlock x:Name="InstalledVersionLabel" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="8,0,0,0" Foreground="#555750" FontSize="11" AutomationProperties.Name="Versão instalada do CEP Horas" />
+      </Grid>
     </Border>
   </Grid>
 </Window>
