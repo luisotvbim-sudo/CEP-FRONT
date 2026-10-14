@@ -5,8 +5,8 @@ import icon from '../assets/conceito-icon.png'
 import './download.css'
 
 const desktopRelease = {
-  version: '0.4.21',
-  download: 'https://github.com/luisotvbim-sudo/CEP-FRONT/releases/download/installer-v0.4.21/CEP-Horas-Windows-win-x64.msi',
+  version: '0.4.22',
+  download: 'https://github.com/luisotvbim-sudo/CEP-FRONT/releases/download/installer-v0.4.22/CEP-Horas-Windows-win-x64.msi',
 }
 
 export function DownloadPage() {

@@ -17,9 +17,9 @@ test('public Windows download keeps only the title and download card without a s
     page.getByRole('link', { name: 'Baixar para Windows', exact: true }),
   ).toHaveAttribute(
     'href',
-    'https://github.com/luisotvbim-sudo/CEP-FRONT/releases/download/installer-v0.4.21/CEP-Horas-Windows-win-x64.msi',
+    'https://github.com/luisotvbim-sudo/CEP-FRONT/releases/download/installer-v0.4.22/CEP-Horas-Windows-win-x64.msi',
   )
-  await expect(page.getByText('Piloto manual · 0.4.21 · MSI', { exact: true })).toBeVisible()
+  await expect(page.getByText('Piloto manual · 0.4.22 · MSI', { exact: true })).toBeVisible()
   await expect(page.getByText('Windows 10 22H2 / Windows 11 24H2+ · x64', { exact: true })).toBeVisible()
   await expect(page.getByText('Pro / Enterprise / Education', { exact: true })).toBeVisible()
   await expect(page.getByText('Instalação pela TI · WebView2 por máquina.', { exact: true })).toBeVisible()
