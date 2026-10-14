@@ -1,5 +1,7 @@
 # Aplicativo Windows — contexto atual do host
 
+Na evolução posterior à tag MSI 0.4.21, o rodapé nativo do WPF mostra `Versão X.Y.Z`, lida da versão do executável compilado. O rótulo permanece visível durante carregamento ou falha do WebView2. O build MSI define essa versão com `-p:Version`; a versão do site web é independente. A instalação 0.4.21 já publicada não recebe essa interface sem um novo pacote.
+
 Para senha diária, descoberta/cancelamento de pedidos e retomada de supervisão,
 a referência desta branch é a [PR #29](https://github.com/luisotvbim-sudo/CEP-FRONT/pull/29),
 `cebc15b`, e o [contrato Windows](feedback-senhas-windows.md). As bases auditadas

@@ -57,6 +57,7 @@ public partial class MainWindow : Window
     {
         this.forceVisibleAfterRecovery = forceVisibleAfterRecovery;
         InitializeComponent();
+        InstalledVersionLabel.Text = $"Versão {GetType().Assembly.GetName().Version?.ToString(3) ?? "desconhecida"}";
         Loaded += Initialize;
         SystemEvents.PowerModeChanged += OnPowerModeChanged;
         System.Windows.Application.Current.SessionEnding += OnSessionEnding;
