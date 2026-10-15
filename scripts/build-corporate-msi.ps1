@@ -73,12 +73,15 @@ try {
         & ./scripts/sign-msi-update.ps1 -PackagePath $msi -Version $Version -SigningKeyPath $UpdateSigningKeyPath
         $updateAssets = @((Join-Path $artifacts 'CEP-Horas-Windows-win-x64.manifest.json'), (Join-Path $artifacts 'CEP-Horas-Windows-win-x64.manifest.sig'))
     }
-    Copy-Item -LiteralPath (Join-Path $repo 'desktop\CepHoras.CorporateInstaller\LEIA-ME-TI.txt') -Destination $artifacts
+    $tiReadme = Get-Content -LiteralPath (Join-Path $repo 'desktop\CepHoras.CorporateInstaller\LEIA-ME-TI.txt') -Raw
+    if (-not $tiReadme.Contains('PACOTE {VERSION}')) { throw 'Guia TI sem marcador de versao.' }
+    [IO.File]::WriteAllText((Join-Path $artifacts 'LEIA-ME-TI.txt'), $tiReadme.Replace('{VERSION}', $Version))
     Copy-Item -LiteralPath (Join-Path $repo 'scripts\check-corporate-windows.ps1') -Destination (Join-Path $artifacts 'Verificar-Windows.ps1')
+    Copy-Item -LiteralPath (Join-Path $repo 'scripts\collect-windows-recovery-diagnostics.ps1') -Destination (Join-Path $artifacts 'Diagnostico-Windows.ps1')
     Copy-Item -LiteralPath (Join-Path $publish 'control') -Destination (Join-Path $artifacts 'RecuperacaoTI') -Recurse
     $hash = (Get-FileHash -LiteralPath $msi).Hash.ToLowerInvariant()
     [IO.File]::WriteAllText((Join-Path $artifacts 'SHA256SUMS.txt'), "$hash  CEP-Horas-Windows-win-x64.msi`n")
-    $tiFiles = @($msi, (Join-Path $artifacts 'LEIA-ME-TI.txt'), (Join-Path $artifacts 'Verificar-Windows.ps1'), (Join-Path $artifacts 'SHA256SUMS.txt'), (Join-Path $artifacts 'RecuperacaoTI')) + $updateAssets
+    $tiFiles = @($msi, (Join-Path $artifacts 'LEIA-ME-TI.txt'), (Join-Path $artifacts 'Verificar-Windows.ps1'), (Join-Path $artifacts 'Diagnostico-Windows.ps1'), (Join-Path $artifacts 'SHA256SUMS.txt'), (Join-Path $artifacts 'RecuperacaoTI')) + $updateAssets
     Compress-Archive -LiteralPath $tiFiles -DestinationPath (Join-Path $artifacts "CEP-Horas-Windows-$Version-TI.zip")
     Write-Output "Pacote: $artifacts; SHA-256=$hash"
     if ($UpdateSigningKeyPath) { Write-Output 'Manifesto e assinatura gerados. Publicação e homologação Windows ainda são etapas separadas.' }

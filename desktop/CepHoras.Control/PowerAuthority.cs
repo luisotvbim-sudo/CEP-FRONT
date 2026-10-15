@@ -41,6 +41,9 @@ internal sealed class PowerAuthority(
                 foreach (var entry in saved.Terminal) terminal.Add(entry.Key, entry.Value);
                 pending = saved.Pending;
                 inherited = pending is not null;
+                if (pending is not null)
+                    ControlAudit.TryWrite(audit,
+                        "power-recovered-at-start:" + pending.Action + ":" + pending.Phase, "SYSTEM");
             }
             initialized = true;
         }
@@ -100,7 +103,7 @@ internal sealed class PowerAuthority(
             var value = pending;
             Complete(value.RequestId, false, value.BrokerInstanceId);
             if (!Persist()) return false; // The old journal remains for explicit recovery.
-            ControlAudit.TryWrite(audit, "power-completed-at-system-shutdown:" + value.Action, value.OwnerSid);
+            ControlAudit.TryWrite(audit, "power-completed-at-system-shutdown:" + value.Action, "SYSTEM");
             return true;
         }
     }

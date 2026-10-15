@@ -25,9 +25,13 @@ internal static class PowerRecoveryChecks
         var result = first.Handle(new("schedule", id, "restart", 10, BrokerInstanceId: origin), Owner);
         Check(result.Code == "scheduled" && store.Read()!.Pending!.Phase == "scheduled", "completion is persisted after effect");
         var writes = store.Writes;
-        var restarted = Create();
+        var recoveredAudit = new List<string>();
+        var restarted = new PowerAuthority(() => config, () => true, power,
+            (code, _) => recoveredAudit.Add(code), () => now, store: store);
         restarted.Initialize();
         Check(store.Writes == writes && power.Scheduled == 1 && power.Cancelled == 0, "restart only reads and never replays/cancels");
+        Check(recoveredAudit.Contains("power-recovered-at-start:restart:scheduled"),
+            "Recovered journal phase must be diagnosable without exposing its owner or request ID");
         var recovered = restarted.Handle(new("status"), Owner);
         Check(recovered is { Code: "power_uncertain", RequestId: var recoveredId, OriginalBrokerInstanceId: var previous } && recoveredId == id && previous == origin,
             "new host can discover only its inherited identity and origin");
