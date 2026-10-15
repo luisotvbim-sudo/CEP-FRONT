@@ -64,6 +64,17 @@ try {
     } else { Write-Output 'Journal ausente ou nao acessivel.' }
 } catch { Write-Output ('Journal: ' + $_.Exception.GetType().Name) }
 
+Write-Output '=== POLITICA LOCAL (campos permitidos) ==='
+try {
+    $policyPath = Join-Path $ControlRoot 'policy.json'
+    if (Test-Path -LiteralPath $policyPath -PathType Leaf) {
+        Get-Content -LiteralPath $policyPath -Raw -ErrorAction Stop |
+            ConvertFrom-Json -ErrorAction Stop |
+            Select-Object Version, Active, Phase |
+            Format-Table -AutoSize | Out-String -Width 180 | Write-Output
+    } else { Write-Output 'Politica ausente ou nao acessivel.' }
+} catch { Write-Output ('Politica: ' + $_.Exception.GetType().Name) }
+
 Write-Output '=== AUDITORIA DO SERVICO (40 eventos, sem SID) ==='
 try {
     Read-JsonLines -Path (Join-Path $ControlRoot 'audit.jsonl') -Tail 40 |
