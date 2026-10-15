@@ -229,12 +229,15 @@ public partial class MainWindow
     {
         if (installingUpdate) { if (webViewFailed) recoveryDeferredForUpdate = true; return; }
         if (!hostSetupReady || browserCreationUnconfirmed || closed || exiting || restartingInterface || creatingWebView || closingWithPassword) return;
+        var readyBeforeRecovery = webViewLifecycle.Ready && Browser.Visibility == Visibility.Visible && !webViewFailed;
+        var powerPreflightComplete = false;
         restartingInterface = true;
         recoveryDelay?.Cancel();
         SetRecoveryButtons(false);
         try
         {
             await using var powerLease = power is null ? null : await power.QuiesceAsync(lifetime.Token);
+            powerPreflightComplete = true;
             if (closed || exiting || installingUpdate) return;
             WriteWebViewDiagnostic("recovery-" + stage.ToString().ToLowerInvariant());
             if (stage == WebViewRecoveryStage.Reload && Browser.CoreWebView2 is not null && !browserNeedsRecreation)
@@ -265,7 +268,15 @@ public partial class MainWindow
         }
         catch (Exception error)
         {
-            WriteWebViewDiagnostic("recovery-failed", error is PowerBridgeFailure failure ? failure.Code : error.GetType().Name);
+            var detail = error is PowerBridgeFailure failure ? failure.Code : error.GetType().Name;
+            if (!powerPreflightComplete && readyBeforeRecovery)
+            {
+                WriteWebViewDiagnostic("recovery-blocked", detail);
+                System.Windows.MessageBox.Show(this, WebViewRecoveryFeedback.Message(error),
+                    "CEP Horas — energia", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return; // The healthy WebView was never changed; keep it visible.
+            }
+            WriteWebViewDiagnostic("recovery-failed", detail);
             webViewFailed = false;
             ReviewPowerButton.Visibility = managedInstallation && error is PowerBridgeFailure
                 ? Visibility.Visible : Visibility.Collapsed;
