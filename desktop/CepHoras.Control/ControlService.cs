@@ -39,13 +39,20 @@ internal sealed class ControlService : ServiceBase
             () => new WindowsDesktopSessions().ActiveSessions());
         ServiceName = ControlWire.ServiceName;
         CanStop = true;
+        CanShutdown = true;
         CanHandleSessionChangeEvent = true;
         AutoLog = true;
     }
 
     protected override void OnStart(string[] args)
     {
-        authority.Initialize(); // Read/validate before IPC; no automatic startup power effect.
+        try { authority.Initialize(); } // Read/validate before IPC; no automatic startup power effect.
+        catch (Exception error)
+        {
+            PolicyStore.Audit("power-journal-initialization-failed:" + error.GetType().Name, "SYSTEM");
+            throw;
+        }
+        PolicyStore.Audit("control-service-started:" + GetType().Assembly.GetName().Version?.ToString(3), "SYSTEM");
         try { installationId = InstallationIdentity.ReadOrCreate(); }
         catch { installationId = null; /* Telemetry identity must not block service startup. */ }
         try { updates.Initialize(authority.CancelForMaintenance); }
@@ -91,6 +98,15 @@ internal sealed class ControlService : ServiceBase
         Task.WaitAll([listener ?? Task.CompletedTask, supervisor ?? Task.CompletedTask], TimeSpan.FromSeconds(10));
         updates.Dispose();
         system.Dispose();
+    }
+
+    protected override void OnShutdown()
+    {
+        // A normal service stop is not proof of Windows shutdown. Only this SCM
+        // notification may complete a durable request without a user's cancel.
+        try { authority.RecordSystemShutdown(); }
+        catch (Exception error) { PolicyStore.Audit("power-shutdown-record-failed:" + error.GetType().Name, "SYSTEM"); }
+        stop.Cancel();
     }
 
     internal static PipeSecurity CreateSecurity()
@@ -159,10 +175,12 @@ internal sealed class ControlService : ServiceBase
                                     _ => authority.Handle(request, sid)
                                 };
                             }
-                            catch
+                            catch (Exception error)
                             {
                                 response = new("service_error", "A operação não pôde ser concluída. Solicite suporte à TI.");
-                                PolicyStore.Audit("service-request-failed", sid);
+                                if (request.Operation == "status")
+                                    PolicyStore.Audit("service-status-failed:" + error.GetType().Name, "SYSTEM");
+                                else PolicyStore.Audit("service-request-failed", sid);
                             }
                         }
                         return request.Operation == "status" ? response with { InstallationId = installationId } : response;
