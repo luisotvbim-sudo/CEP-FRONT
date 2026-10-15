@@ -39,6 +39,7 @@ internal sealed class ControlService : ServiceBase
             () => new WindowsDesktopSessions().ActiveSessions());
         ServiceName = ControlWire.ServiceName;
         CanStop = true;
+        CanShutdown = true;
         CanHandleSessionChangeEvent = true;
         AutoLog = true;
     }
@@ -91,6 +92,15 @@ internal sealed class ControlService : ServiceBase
         Task.WaitAll([listener ?? Task.CompletedTask, supervisor ?? Task.CompletedTask], TimeSpan.FromSeconds(10));
         updates.Dispose();
         system.Dispose();
+    }
+
+    protected override void OnShutdown()
+    {
+        // A normal service stop is not proof of Windows shutdown. Only this SCM
+        // notification may complete a durable request without a user's cancel.
+        try { authority.RecordSystemShutdown(); }
+        catch (Exception error) { PolicyStore.Audit("power-shutdown-record-failed:" + error.GetType().Name, "SYSTEM"); }
+        stop.Cancel();
     }
 
     internal static PipeSecurity CreateSecurity()

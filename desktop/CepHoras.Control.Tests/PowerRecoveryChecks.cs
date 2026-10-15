@@ -52,6 +52,24 @@ internal static class PowerRecoveryChecks
         Check(third.Handle(new("cancel", id, BrokerInstanceId: origin), Owner) is { Code: "cancelled", Cancelled: true, OriginalBrokerInstanceId: var cancelledOrigin } && cancelledOrigin == origin,
             "proof of cancellation survives another restart");
 
+        // A real SCM shutdown notification completes the request before a new
+        // boot. Stopping or killing only the service never calls this path.
+        store = new FaultStore(); power = new FakePower();
+        var systemShutdown = Create(); id = Guid.NewGuid().ToString();
+        systemShutdown.Handle(new("schedule", id, "shutdown", 10), Owner);
+        Check(systemShutdown.RecordSystemShutdown() && power.Cancelled == 0 && store.Read()!.Pending is null,
+            "OS shutdown must complete the durable request without canceling its effect");
+        var afterSystemShutdown = Create();
+        Check(afterSystemShutdown.Handle(new("status"), Owner).Code == "ready" &&
+            afterSystemShutdown.Handle(new("power-status", id), Owner).Code == "not_pending",
+            "A new boot must not inherit a request completed by the OS shutdown notification");
+        store = new FaultStore(); power = new FakePower();
+        var failedShutdownRecord = Create(); id = Guid.NewGuid().ToString();
+        failedShutdownRecord.Handle(new("schedule", id, "restart", 10), Owner);
+        store.FailSave = _ => true;
+        Check(!failedShutdownRecord.RecordSystemShutdown() && store.Read()!.Pending?.RequestId == id,
+            "Failed shutdown journal write must retain explicit recovery on the next boot");
+
         // Crash between preparation and effect is deliberately uncertain, not replayable.
         store = new FaultStore(); power = new FakePower();
         store.Save(new(new(id, "shutdown", Owner, null, "preparing", origin), new()));

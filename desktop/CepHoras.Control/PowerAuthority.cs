@@ -88,6 +88,23 @@ internal sealed class PowerAuthority(
         }
     }
 
+    // Called only from the SCM system-shutdown notification, never from service
+    // stop or startup. The OS is ending this boot, so no scheduled action from
+    // this service instance can remain pending on the next boot.
+    internal bool RecordSystemShutdown()
+    {
+        lock (gate)
+        {
+            Initialize();
+            if (pending is null) return true;
+            var value = pending;
+            Complete(value.RequestId, false, value.BrokerInstanceId);
+            if (!Persist()) return false; // The old journal remains for explicit recovery.
+            ControlAudit.TryWrite(audit, "power-completed-at-system-shutdown:" + value.Action, value.OwnerSid);
+            return true;
+        }
+    }
+
     private ControlResponse HandleLocked(ControlRequest request, string sid)
     {
         if (request.Operation == "status")
