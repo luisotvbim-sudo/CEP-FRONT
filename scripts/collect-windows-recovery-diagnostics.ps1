@@ -18,6 +18,20 @@ function Read-JsonLines {
     return $items
 }
 
+function Read-WindowsEvents {
+    param([string]$LogName, [int[]]$Ids, [string]$SourcePattern = '.')
+    $since = (Get-Date).AddDays(-2)
+    try {
+        Get-WinEvent -FilterHashtable @{ LogName = $LogName; Id = $Ids; StartTime = $since } `
+            -MaxEvents 300 -ErrorAction Stop |
+            Where-Object { $_.Message -match $SourcePattern } |
+            Select-Object -First 30 TimeCreated, Id, ProviderName, LevelDisplayName
+    } catch [Exception] {
+        if ($_.FullyQualifiedErrorId -match 'NoMatchingEventsFound') { return @() }
+        throw
+    }
+}
+
 Write-Output '=== DIAGNOSTICO CEP HORAS (sem IDs, SID ou credenciais) ==='
 try {
     Get-Service -Name 'CepHorasControl' -ErrorAction Stop |
@@ -62,3 +76,19 @@ try {
         Select-Object at, code, detail, trigger, stage, elapsedMs, recoveryId |
         Format-Table -AutoSize | Out-String -Width 240 | Write-Output
 } catch { Write-Output ('WebView: ' + $_.Exception.GetType().Name) }
+
+Write-Output '=== EVENTOS WINDOWS (48h, sem mensagens) ==='
+foreach ($source in @(
+    @{ Label = 'Serviço'; Log = 'System'; Ids = @(7031, 7034, 7035, 7036); Pattern = 'CepHorasControl|CepHoras\.Control' },
+    @{ Label = 'Desligamento/reinício do Windows'; Log = 'System'; Ids = @(1074, 6005, 6006, 6008) },
+    @{ Label = 'Aplicativo'; Log = 'Application'; Ids = @(1000, 1001, 1026); Pattern = 'CepHoras|CEP Horas' },
+    @{ Label = 'Instalador'; Log = 'Application'; Ids = @(1033, 1034, 11707, 11708, 11724); Pattern = 'CEP Horas|CepHoras' }
+)) {
+    Write-Output ($source.Label + ':')
+    try {
+        Read-WindowsEvents -LogName $source.Log -Ids $source.Ids -SourcePattern $source.Pattern |
+            Format-Table -AutoSize | Out-String -Width 180 | Write-Output
+    } catch {
+        Write-Output ($_.Exception.GetType().Name)
+    }
+}
