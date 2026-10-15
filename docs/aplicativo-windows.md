@@ -1,5 +1,13 @@
 # Aplicativo Windows — contexto atual do host
 
+## Recuperação da interface e serviço de energia (15/10/2026)
+
+Ao recuperar uma falha do WebView2, o host consulta o serviço de energia antes de recarregar, recriar o navegador ou reiniciar o aplicativo. Uma solicitação herdada após reinício do serviço exige cancelamento explícito do titular; reiniciar o serviço não apaga o journal nem comprova que a ação acabou. Nessa condição, a tela de recuperação oferece **Verificar solicitação de energia**, a mesma consulta da bandeja do Windows, inclusive quando o React não carrega. Somente após o serviço confirmar a ausência ou o cancelamento o usuário deve recarregar a interface. Falhas do serviço continuam bloqueando a recuperação; a mensagem distingue solicitação recuperada, estado incerto e serviço reiniciado.
+
+O arquivo local `%LOCALAPPDATA%\Conceito\CepHoras\Diagnostics\webview.jsonl` registra a categoria sanitizada de falha da recuperação, sem identificadores ou conteúdo da solicitação. A auditoria do serviço fica em `%PROGRAMDATA%\Conceito.CepHoras.Control\audit.jsonl` e o journal privado em `power-journal.json`. Para diagnosticar um computador, correlacione horário, categoria do WebView, estado do serviço e fase da solicitação; não interprete o texto da tela sozinho como prova de desligamento pendente.
+
+Se uma consulta de ciclo de vida falhou durante um reinício do serviço, uma nova consulta versionada com estado `ready` e sem solicitação própria resolve a incerteza transitória do host. O host continua bloqueando pedidos herdados, de outra identidade ou com resposta inválida. Essa correção evita que **Verificar solicitação de energia** continue exibindo estado indisponível depois que o serviço comprovou ausência de pedido.
+
 Na evolução posterior à tag MSI 0.4.21, o rodapé nativo do WPF mostra `Versão X.Y.Z`, lida da versão do executável compilado. O rótulo permanece visível durante carregamento ou falha do WebView2. O build MSI define essa versão com `-p:Version`; a versão do site web é independente. A instalação 0.4.21 já publicada não recebe essa interface sem um novo pacote.
 
 Para senha diária, descoberta/cancelamento de pedidos e retomada de supervisão,

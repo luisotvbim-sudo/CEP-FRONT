@@ -29,3 +29,17 @@ internal static class ProtectedExitFeedback
         _ => "O fechamento falhou durante a preparação ou restauração dos controles. Mantenha o aplicativo aberto e solicite suporte à TI."
     };
 }
+
+internal static class WebViewRecoveryFeedback
+{
+    internal static string Message(Exception error) => error switch
+    {
+        PowerBridgeFailure { Code: "power_recovery_required" or "native_power_uncertain" } =>
+            "Há uma solicitação de energia cujo cancelamento não foi confirmado. Use Verificar solicitação de energia e, após a confirmação, recarregue a interface.",
+        PowerBridgeFailure { Code: "power_uncertain" } =>
+            "O serviço encontrou uma solicitação de energia que exige revisão pelo titular ou pela TI. Use Verificar solicitação de energia antes de recarregar a interface.",
+        PowerBridgeFailure { Code: "power_service_changed" } =>
+            "O serviço de energia reiniciou ou não confirmou sua identidade. Verifique a solicitação de energia e tente recarregar a interface após o serviço estabilizar.",
+        _ => "O serviço de energia não confirmou que é seguro recuperar a interface. Verifique a solicitação de energia ou solicite suporte à TI."
+    };
+}
