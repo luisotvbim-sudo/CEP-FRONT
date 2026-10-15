@@ -1,6 +1,6 @@
 CEP HORAS 0.4 - INSTALACAO CORPORATIVA PELA TI
 
-PACOTE 0.4.22 - PILOTO MANUAL WINDOWS 10/11
+PACOTE {VERSION} - PILOTO MANUAL WINDOWS 10/11
 Instalacao manual de teste. Manifesto de atualizacao assinado pela identidade
 existente acompanha o kit. Esta prerelease nao e o canal automatico latest.
 MSI sem assinatura Authenticode; o Windows pode exibir aviso de confianca.
@@ -10,7 +10,7 @@ durante carregamento ou falha da interface WebView2.
 CORRECAO DO SERVICO NO PRIMEIRO INICIO
 O servico atualiza a leitura da pasta protegida apos cria-la, antes de validar
 o atualizador. Isso evita tratar a primeira instalacao como manutencao pendente.
-TELEMETRIA E DIAGNOSTICO DO PILOTO 0.4.21
+TELEMETRIA E DIAGNOSTICO DO PILOTO
 Este pacote registra eventos estruturados de inicio, decisao de energia,
 agendamento, cancelamento, recuperacao e atualizacao. O host WPF envia lotes
 autenticados a CEP API quando ha sessao; falha de rede conserva fila local
@@ -21,6 +21,14 @@ nome do PC ou texto livre. O ID aleatorio da instalacao nao vem do hardware.
 Confirmacao de agendamento significa que o servico aceitou o pedido; nao prova
 que o Windows desligou. A auditoria SYSTEM ainda fica local. Para diagnostico,
 consulte docs/telemetria-desktop.md na branch desta versao.
+COLETA LOCAL PARA O PROXIMO PILOTO
+O kit TI inclui Diagnostico-Windows.ps1. Execute no PowerShell como
+administrador e informe -UserProfilePath se a conta elevada for diferente da
+conta que usa o CEP Horas. O script somente le versoes, inicio do Windows,
+estado do servico, fase/acao do journal e eventos recentes. A saida omite SID,
+IDs de pedidos, credenciais e conteudo bruto dos arquivos; confira a saida
+antes de compartilhar. Se a leitura protegida falhar, o script informa o tipo
+do erro sem mudar permissoes ou reiniciar o servico.
 PILOTO DE SENHA DIARIA, PIN E RECUPERACAO DE ENERGIA
 Aceite e acompanhamento: CEP-ORQUESTRADOR #41
 https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/41

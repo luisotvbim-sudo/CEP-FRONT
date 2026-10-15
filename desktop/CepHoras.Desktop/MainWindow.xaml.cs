@@ -112,6 +112,7 @@ public partial class MainWindow : Window
     {
         if (initialized) return;
         initialized = true;
+        WriteWebViewDiagnostic("host-start", GetType().Assembly.GetName().Version?.ToString(3));
         webViewHealthTimer.Tick += async (_, _) => await CheckWebViewContent();
         BeginWebViewLoading();
         try
