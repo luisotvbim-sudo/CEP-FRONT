@@ -96,7 +96,7 @@ internal sealed class PowerAuthority(
         lock (gate)
         {
             Initialize();
-            if (pending is null) return true;
+            if (pending is null) return !dirty || Persist();
             var value = pending;
             Complete(value.RequestId, false, value.BrokerInstanceId);
             if (!Persist()) return false; // The old journal remains for explicit recovery.
