@@ -1,13 +1,6 @@
 # Contexto atual do CEP-FRONT
 
-Em 07/10/2026, a branch `codex/windows-ui-parity-0.4.19` integra à base
-Windows do MSI 0.4.18 o histórico do período de Minha jornada já presente
-na `main` web. O MSI 0.4.19 foi construído, teve manifesto assinado com a
-identidade existente e substituiu o 0.4.18 em uma estação Windows 11 piloto.
-O usuário confirmou login, a nova seção e registros de hoje após revalidar
-Monday e VR Mais por 20 dias. O pacote ainda não foi publicado; restart do
-host, Windows 10, energia e canal automático não foram homologados nesta
-versão. [Issue #41](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/41).
+Em 19/10/2026, a branch de refatoração começa do MSI 0.4.22 e integra a `main` web. O merge preserva a implementação Windows/telemetria e traz o card `/download` da `main`, que referencia a prerelease manual 0.4.22. Ainda não há MSI novo, instalação ou publicação desta branch. O [programa central](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/54) exige reconferir versão implantada e testes por SHA antes de distribuir.
 
 A página pública `/download` já oferece o piloto manual 0.4.18 nos dois
 domínios, após autorização e implantação da `main` web. O convite continua
