@@ -466,10 +466,12 @@ async function unlockFixture(page: Page, status = 200) {
   })
   return requests
 }
-async function submitPin(page: Page, pin = '012345') {
+async function submitPin(page: Page, pin = '012345', expectMenuToRemain = true) {
   await menu(page).getByLabel('PIN administrativo', { exact: true }).fill(pin)
   await menu(page).getByRole('button', { name: 'Liberar por 5 minutos', exact: true }).click()
-  await expect(menu(page).getByLabel('PIN administrativo', { exact: true })).toHaveValue('')
+  // An expired session may unmount the menu before the input can be observed.
+  if (expectMenuToRemain)
+    await expect(menu(page).getByLabel('PIN administrativo', { exact: true })).toHaveValue('')
 }
 test('PIN format is exactly six ASCII digits and clears after invalid attempts', async ({
   page,
@@ -675,7 +677,7 @@ for (const scenario of [
       })
     })
     await openMenu(page)
-    await submitPin(page)
+    await submitPin(page, '012345', scenario.status !== 401)
     if (scenario.status === 401) {
       await expect(page.getByRole('status')).toContainText(scenario.expected)
       await expect(menu(page)).toHaveCount(0)
