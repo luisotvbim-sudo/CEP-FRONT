@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode, type FormEvent } from 'react'
 import { Power } from 'lucide-react'
-import { errorMessage, type AuthClient } from '../auth/auth-client'
+import { type AuthClient } from '../auth/auth-client'
+import { powerFailure } from './feedback'
 import { actionLabels, PowerApi, validPowerPin, type PowerAction, type PowerCheck } from './api'
 import { unlockRemaining, unlockTime, unlockWindow, type UnlockWindow } from './unlock-clock'
 import {
@@ -41,7 +42,7 @@ export function PowerMenu({ client }: { client: AuthClient }) {
   const [scheduled, setScheduled] = useState<ScheduledPower | null>(null)
   const [remaining, setRemaining] = useState(10)
   const [uncertain, setUncertain] = useState(false)
-  const active = useRef<{ host: NativePower; requestId: string } | null>(null)
+  const active = useRef<{ host: NativePower; requestId: string; recovered?: boolean } | null>(null)
   const mounted = useRef(true)
   const cancelButton = useRef<HTMLButtonElement>(null)
   const pinInput = useRef<HTMLInputElement>(null)
@@ -55,7 +56,7 @@ export function PowerMenu({ client }: { client: AuthClient }) {
       mounted.current = false
       if (pin) pin.value = ''
       const current = active.current
-      if (current) void current.host.cancel(current.requestId).catch(() => {})
+      if (current && !current.recovered) void current.host.cancel(current.requestId).catch(() => {})
     }
   }, [])
   useEffect(() => {
@@ -136,18 +137,57 @@ export function PowerMenu({ client }: { client: AuthClient }) {
     return () => clearInterval(timer)
   }, [unlock])
 
+  async function discover(host: NativePower): Promise<boolean> {
+    const result = await host.status()
+    if (!mounted.current) return true
+    if (result.state === 'recovery-required') {
+      active.current = { host, requestId: result.requestId, recovered: result.recovered }
+      setUncertain(true)
+      setNotice(
+        'Há uma solicitação de energia anterior. Cancele explicitamente antes de continuar.',
+      )
+      return true
+    }
+    if (result.state === 'unavailable') {
+      setNotice('O serviço não confirmou a ausência de solicitações. Solicite revisão à TI.')
+      return true
+    }
+    return false
+  }
+
+  async function discoverOnOpen() {
+    if (busy.current || active.current) return
+    const host = nativePower()
+    if (!host) return
+    busy.current = true
+    setPending(true)
+    try {
+      await discover(host)
+    } catch (error) {
+      if (mounted.current) setNotice(powerFailure(error, 'action'))
+    } finally {
+      busy.current = false
+      if (mounted.current) setPending(false)
+    }
+  }
+
   async function release(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const pin = pinInput.current?.value ?? ''
     if (pinInput.current) pinInput.current.value = ''
-    if (busy.current || active.current) return
+    if (busy.current || active.current) {
+      setNotice(
+        'Há uma operação de energia em andamento. Aguarde ou confirme seu cancelamento antes de liberar o PIN.',
+      )
+      return
+    }
     if (!validPowerPin(pin)) {
       setNotice('Informe exatamente 6 dígitos numéricos.')
       return
     }
     busy.current = true
     setPending(true)
-    setNotice('')
+    setNotice('Validando o PIN administrativo com o serviço…')
     setCheck(null)
     const requestedAt = performance.now()
     try {
@@ -158,12 +198,7 @@ export function PowerMenu({ client }: { client: AuthClient }) {
       setUnlockSeconds(unlockRemaining(window, performance.now()))
       setNotice('Liberação administrativa confirmada por 5 minutos para sua conta.')
     } catch (error) {
-      const failure = errorMessage(error)
-      if (mounted.current)
-        setNotice(
-          failure.message +
-            (failure.correlationId ? ` Código para suporte: ${failure.correlationId}` : ''),
-        )
+      if (mounted.current) setNotice(powerFailure(error, 'unlock'))
     } finally {
       busy.current = false
       if (mounted.current) setPending(false)
@@ -174,10 +209,14 @@ export function PowerMenu({ client }: { client: AuthClient }) {
     if (busy.current || active.current) return
     busy.current = true
     setPending(true)
-    setNotice('')
+    setNotice(
+      action ? 'Verificando autorização para a ação…' : 'Consultando o estado da liberação…',
+    )
     setCheck(null)
     const host = nativePower()
     try {
+      // Native recovery remains available even when API authorization is denied.
+      if (!action && host && (await discover(host))) return
       let authorization: Parameters<NativePower['schedule']>[1]
       try {
         const result = action ? await api.check(action) : await api.status()
@@ -187,7 +226,10 @@ export function PowerMenu({ client }: { client: AuthClient }) {
           setUnlock(null)
           setUnlockSeconds(0)
         }
-        if (!action || result.decision !== 'allowed') return
+        if (!action || result.decision !== 'allowed') {
+          setNotice('Consulta concluída. Nenhuma ação foi agendada.')
+          return
+        }
         authorization = { kind: 'api', check: result }
       } catch (error) {
         if (!action || !host || !mayVerifyOffline(error) || !(await host.verifyApiUnreachable()))
@@ -205,6 +247,9 @@ export function PowerMenu({ client }: { client: AuthClient }) {
         )
         return
       }
+      setNotice(
+        'Autorização recebida. O aplicativo está revalidando a permissão e solicitando o agendamento ao serviço Windows…',
+      )
       const job = await host.schedule(action, authorization)
       if (!mounted.current) {
         await host.cancel(job.requestId)
@@ -212,17 +257,17 @@ export function PowerMenu({ client }: { client: AuthClient }) {
       }
       active.current = { host, requestId: job.requestId }
       setScheduled(job)
+      setNotice(
+        authorization.kind === 'api-unreachable'
+          ? 'Agendamento confirmado em contingência de transporte. Você pode cancelar durante a contagem.'
+          : 'Agendamento confirmado pelo aplicativo. Você pode cancelar durante a contagem.',
+      )
     } catch (error) {
       if (error instanceof NativePowerUncertain && host && mounted.current) {
-        active.current = { host, requestId: error.requestId }
+        active.current = { host, requestId: error.requestId, recovered: error.recovered }
         setUncertain(true)
       }
-      const failure = errorMessage(error)
-      if (mounted.current)
-        setNotice(
-          failure.message +
-            (failure.correlationId ? ` Código para suporte: ${failure.correlationId}` : ''),
-        )
+      if (mounted.current) setNotice(powerFailure(error, 'action'))
     } finally {
       busy.current = false
       if (mounted.current) setPending(false)
@@ -232,6 +277,7 @@ export function PowerMenu({ client }: { client: AuthClient }) {
     if (busy.current || !active.current) return
     busy.current = true
     setPending(true)
+    setNotice('Solicitando cancelamento ao serviço Windows…')
     try {
       await active.current.host.cancel(active.current.requestId)
       active.current = null
@@ -241,7 +287,7 @@ export function PowerMenu({ client }: { client: AuthClient }) {
         setNotice('Ação cancelada pelo aplicativo.')
       }
     } catch (error) {
-      if (mounted.current) setNotice(errorMessage(error).message)
+      if (mounted.current) setNotice(powerFailure(error, 'cancel'))
     } finally {
       busy.current = false
       if (mounted.current) setPending(false)
@@ -249,7 +295,11 @@ export function PowerMenu({ client }: { client: AuthClient }) {
   }
   return (
     <section className="power-menu" aria-label="Energia do computador">
-      <details>
+      <details
+        onToggle={(event) => {
+          if (event.currentTarget.open) void discoverOnOpen()
+        }}
+      >
         <summary>
           <Power size={14} aria-hidden="true" /> Energia do computador
         </summary>

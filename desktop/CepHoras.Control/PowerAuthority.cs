@@ -57,7 +57,8 @@ internal sealed class PowerAuthority(
             if (request.Operation is "schedule" or "cancel" or "power-status" && request.BrokerInstanceId is not null &&
                 request.BrokerInstanceId != brokerInstanceId && !MatchesRecovery(request, sid))
                 return WithBroker(new("broker_changed", "O serviço foi reiniciado; confirme o estado da ação antes de continuar.", RequestId: request.RequestId));
-            return WithBroker(HandleLocked(request, sid));
+            var response = WithBroker(HandleLocked(request, sid));
+            return request.Operation == "status" ? response with { PowerStatusVersion = 1 } : response;
         }
     }
 
@@ -92,9 +93,12 @@ internal sealed class PowerAuthority(
         if (request.Operation == "status")
         {
             if (pending is not null && (inherited || pending.Phase == "preparing")) return Uncertain(sid);
+            ExpirePending();
+            if (pending is not null && pending.OwnerSid != sid) return Uncertain(sid);
             if (dirty && !Persist()) return StorageUnavailable();
             var active = configuration()?.Active == true && healthy();
-            return new(active ? "ready" : "inactive", active ? "Controle local de energia ativo." : "Controle local ainda não está ativo ou precisa de revisão.", active);
+            return new(active ? "ready" : "inactive", active ? "Controle local de energia ativo." : "Controle local ainda não está ativo ou precisa de revisão.", active,
+                pending?.RequestId, pending?.Action, pending?.ExecuteAt, OriginalBrokerInstanceId: pending?.BrokerInstanceId);
         }
         if (request.Operation == "power-status") return PendingStatus(request, sid);
         if (request.Operation == "cancel") return Cancel(request, sid);

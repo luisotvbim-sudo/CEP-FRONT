@@ -64,7 +64,7 @@ export class DesktopAuthClient implements AuthClient {
             parsed.code,
             parsed.status,
             failure.transportFailure === true,
-            failure.retryAfterSeconds,
+            failure.retryAfterSeconds ?? undefined,
           )
           if (failure.code === 'session_expired')
             this.listeners.forEach((listener) => listener(nativeError))

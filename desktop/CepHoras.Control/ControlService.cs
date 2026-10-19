@@ -20,6 +20,7 @@ internal sealed class ControlService : ServiceBase
     private Task? listener;
     private Task? supervisor;
     private int stopping;
+    private Guid? installationId;
     private bool InMaintenance => Volatile.Read(ref stopping) != 0 || updates.InMaintenance;
 
     internal ControlService()
@@ -45,6 +46,8 @@ internal sealed class ControlService : ServiceBase
     protected override void OnStart(string[] args)
     {
         authority.Initialize(); // Read/validate before IPC; no automatic startup power effect.
+        try { installationId = InstallationIdentity.ReadOrCreate(); }
+        catch { installationId = null; /* Telemetry identity must not block service startup. */ }
         try { updates.Initialize(authority.CancelForMaintenance); }
         catch (Exception error) { PolicyStore.Audit("update-initialization-failed:" + error.GetType().Name, "SYSTEM"); }
         try { desktopLifecycle.ProtectAtServiceStart(); }
@@ -137,33 +140,33 @@ internal sealed class ControlService : ServiceBase
                 try
                 {
                     await pipe.WaitForConnectionAsync(stop.Token);
-                    using var deadline = CancellationTokenSource.CreateLinkedTokenSource(stop.Token);
-                    deadline.CancelAfter(TimeSpan.FromSeconds(5));
-                    var request = await ControlWire.Read<ControlRequest>(pipe, deadline.Token);
-                    var sid = CallerSid(pipe);
-                    var client = sid is null ? null : TrustedClient(pipe, sid);
-                    ControlResponse response;
-                    if (sid is null || client is null)
-                        response = new("access_denied", "Somente o CEP Horas instalado pode solicitar esta operação.");
-                    else
+                    await ControlExchange.Run(pipe, request =>
                     {
-                        try
+                        var sid = CallerSid(pipe);
+                        var client = sid is null ? null : TrustedClient(pipe, sid);
+                        ControlResponse response;
+                        if (sid is null || client is null)
+                            response = new("access_denied", "Somente o CEP Horas instalado pode solicitar esta operação.");
+                        else
                         {
-                            response = request.Operation switch
+                            try
                             {
-                                "desktop-suspend" => desktopLifecycle.Suspend(client.SessionId, sid),
-                                "desktop-resume" => desktopLifecycle.Resume(client.SessionId, sid),
-                                "update-check" or "update-start" or "update-status" or "update-ready" => updates.Handle(request, client),
-                                _ => authority.Handle(request, sid)
-                            };
+                                response = request.Operation switch
+                                {
+                                    "desktop-suspend" => desktopLifecycle.Suspend(client.SessionId, sid),
+                                    "desktop-resume" => desktopLifecycle.Resume(client.SessionId, sid),
+                                    "update-check" or "update-start" or "update-status" or "update-ready" => updates.Handle(request, client),
+                                    _ => authority.Handle(request, sid)
+                                };
+                            }
+                            catch
+                            {
+                                response = new("service_error", "A operação não pôde ser concluída. Solicite suporte à TI.");
+                                PolicyStore.Audit("service-request-failed", sid);
+                            }
                         }
-                        catch
-                        {
-                            response = new("service_error", "A operação não pôde ser concluída. Solicite suporte à TI.");
-                            PolicyStore.Audit("service-request-failed", sid);
-                        }
-                    }
-                    await ControlWire.Write(pipe, response, deadline.Token);
+                        return request.Operation == "status" ? response with { InstallationId = installationId } : response;
+                    }, stop.Token);
                 }
                 catch (OperationCanceledException) { }
                 catch (IOException) { }

@@ -2,6 +2,43 @@ import { AuthError } from '../auth/auth-client'
 import { BridgeCallFailure, callBridge, type WebViewBridge } from '../auth/bridge-transport'
 import type { PowerAction, PowerCheck } from './api'
 
+export const nativePowerMessages: Record<string, string> = {
+  native_power_unavailable:
+    'A execução de energia exige a instalação corporativa do CEP Horas. Solicite suporte à TI.',
+  power_service_unavailable:
+    'Não foi possível comunicar com o serviço Windows de energia. Confira o estado no Windows e solicite à TI a verificação do serviço.',
+  power_service_timeout:
+    'O serviço Windows de energia não respondeu dentro do prazo. Confira o estado no Windows antes de tentar novamente.',
+  power_service_invalid_response:
+    'O serviço Windows de energia retornou uma resposta inválida. Confira o estado no Windows e solicite suporte à TI.',
+  native_power_timeout:
+    'O serviço de energia não confirmou a operação dentro do prazo. Confira o estado no Windows.',
+  invalid_native_response:
+    'O aplicativo retornou uma resposta de energia inválida. Confira o estado no Windows e solicite suporte à TI.',
+  invalid_power_response:
+    'A API retornou uma resposta inválida. Nenhuma ação foi agendada; use Verificar status.',
+  power_not_authorized:
+    'A revalidação recusou a ação. A liberação pode ter expirado ou o acesso mudado. Verifique o status antes de tentar novamente.',
+  update_maintenance:
+    'Uma atualização está em andamento. Aguarde seu término antes de solicitar energia.',
+  access_denied:
+    'O serviço Windows recusou o acesso do aplicativo. Solicite à TI a verificação da instalação.',
+  service_error:
+    'O serviço Windows falhou ao processar a operação. Confira o estado no Windows e solicite suporte à TI.',
+  inactive:
+    'A proteção de energia do aplicativo não está ativa. Solicite à TI a verificação do serviço.',
+  power_recovery_in_progress:
+    'O aplicativo está em recuperação. Aguarde antes de solicitar uma ação.',
+  power_request_cancelled: 'A solicitação foi interrompida pelo aplicativo.',
+  power_authorization_timeout: 'A verificação demorou para responder. Verifique novamente.',
+  session_expired: 'Sua sessão expirou. Entre novamente.',
+  power_service_changed:
+    'O serviço de energia precisa de atualização ou recuperação. Confira o estado no Windows.',
+  power_uncertain: 'Há uma solicitação de energia pendente de revisão pelo titular ou pela TI.',
+  power_storage_unavailable:
+    'Não foi possível registrar o estado de energia. Solicite suporte à TI.',
+}
+
 declare global {
   interface Window {
     __CEP_POWER_VERSION__?: number
@@ -10,14 +47,21 @@ declare global {
 export type PowerAuthorization = { kind: 'api'; check: PowerCheck } | { kind: 'api-unreachable' }
 export type ScheduledPower = { requestId: string; action: PowerAction; executeAt: string }
 export type PowerState = { requestId: string; state: 'pending' | 'terminal' }
+export type NativePowerStatus =
+  | { state: 'idle' | 'unavailable' }
+  | { state: 'recovery-required'; requestId: string; recovered: boolean }
 export interface NativePower {
+  status(): Promise<NativePowerStatus>
   verifyApiUnreachable(): Promise<boolean>
   schedule(action: PowerAction, authorization: PowerAuthorization): Promise<ScheduledPower>
   cancel(requestId: string): Promise<void>
   reconcile(requestId: string): Promise<PowerState>
 }
 export class NativePowerUncertain extends AuthError {
-  constructor(public readonly requestId: string) {
+  constructor(
+    public readonly requestId: string,
+    public readonly recovered = false,
+  ) {
     super(
       'O agendamento ou cancelamento não foi confirmado. Tente cancelar novamente e confira o estado no Windows.',
       undefined,
@@ -40,6 +84,31 @@ export function mayVerifyOffline(error: unknown) {
 
 export class NativePowerBridge implements NativePower {
   constructor(private readonly bridge: WebViewBridge) {}
+  async status(): Promise<NativePowerStatus> {
+    const result = await this.call('status')
+    if (!result || typeof result !== 'object' || !('state' in result))
+      throw new AuthError(
+        'O aplicativo não confirmou o estado de energia.',
+        undefined,
+        'invalid_native_response',
+      )
+    if (
+      result.state === 'recovery-required' &&
+      'requestId' in result &&
+      typeof result.requestId === 'string' &&
+      'recovered' in result &&
+      typeof result.recovered === 'boolean' &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(result.requestId)
+    )
+      return { state: result.state, requestId: result.requestId, recovered: result.recovered }
+    if ((result.state === 'idle' || result.state === 'unavailable') && !('requestId' in result))
+      return { state: result.state }
+    throw new AuthError(
+      'O aplicativo retornou um estado de energia inválido.',
+      undefined,
+      'invalid_native_response',
+    )
+  }
   private async call(operation: string, payload: object = {}): Promise<unknown> {
     // Host: authorization <= 65s (including refresh/probe), IPC <= 9s.
     // Probe: <= 5s. Cancellation never waits for API revalidation.
@@ -55,25 +124,16 @@ export class NativePowerBridge implements NativePower {
               error.failure.code === 'power_recovery_required') &&
             error.failure.requestId
           )
-            throw new NativePowerUncertain(error.failure.requestId)
-          const messages: Record<string, string> = {
-            power_recovery_in_progress:
-              'O aplicativo está em recuperação. Aguarde antes de solicitar uma ação.',
-            power_request_cancelled: 'A solicitação foi interrompida pelo aplicativo.',
-            power_authorization_timeout:
-              'A verificação demorou para responder. Verifique novamente.',
-            session_expired: 'Sua sessão expirou. Entre novamente.',
-            power_service_changed:
-              'O serviço de energia precisa de atualização ou recuperação. Confira o estado no Windows.',
-            power_uncertain:
-              'Há uma solicitação de energia pendente de revisão pelo titular ou pela TI.',
-            power_storage_unavailable:
-              'Não foi possível registrar o estado de energia. Solicite suporte à TI.',
-          }
+            throw new NativePowerUncertain(
+              error.failure.requestId,
+              error.failure.code === 'power_recovery_required',
+            )
+          const messages = nativePowerMessages
           throw new AuthError(
-            messages[error.failure.code ?? ''] ??
-              'O aplicativo não confirmou a operação de energia.',
-            error.failure.correlationId,
+            Object.hasOwn(messages, error.failure.code ?? '')
+              ? messages[error.failure.code!]
+              : 'O aplicativo não confirmou a operação de energia.',
+            error.failure.correlationId ?? undefined,
             error.failure.code ?? 'native_power_failed',
           )
         }
@@ -122,7 +182,11 @@ export class NativePowerBridge implements NativePower {
     } catch (error) {
       // A different ID identifies the host's existing action. It has not been
       // dispatched by this call and requires the user's explicit Cancel action.
-      if (error instanceof NativePowerUncertain && error.requestId !== requestId) throw error
+      if (
+        error instanceof NativePowerUncertain &&
+        (error.recovered || error.requestId !== requestId)
+      )
+        throw error
       // Uncertain scheduling must never be repeated silently.
       try {
         await this.cancel(requestId)
@@ -140,7 +204,11 @@ export class NativePowerBridge implements NativePower {
       !('cancelled' in result) ||
       result.cancelled !== true
     )
-      throw new AuthError('O cancelamento não foi confirmado. Tente cancelar novamente.')
+      throw new AuthError(
+        'O cancelamento não foi confirmado. Tente cancelar novamente.',
+        undefined,
+        'native_power_uncertain',
+      )
   }
   async reconcile(requestId: string): Promise<PowerState> {
     const result = await this.call('reconcile', { requestId })

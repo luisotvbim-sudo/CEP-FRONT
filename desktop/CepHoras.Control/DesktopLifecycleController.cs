@@ -46,6 +46,8 @@ internal sealed class DesktopLifecycleController(
     {
         lock (gate)
         {
+            if (!state.MayResume(sessionId, sid))
+                return new("access_denied", "A supervisão desta sessão exige revisão da TI.");
             if (maintenance?.Invoke() == true)
                 return new("update_maintenance", "Aguarde o término da atualização.");
             applyPolicy();

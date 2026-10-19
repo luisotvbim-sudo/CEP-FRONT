@@ -18,6 +18,12 @@ internal static class ServiceReliabilityChecks
             (_, _) => throw new IOException("fixture audit unavailable"), () => now);
         var id = Guid.NewGuid().ToString();
         Assert(authority.Handle(new("schedule", id, "shutdown", 10), "owner").Code == "scheduled", "audit failure cannot hide a scheduled action");
+        var discovery = authority.Handle(new("status"), "owner");
+        Assert(discovery is { Code: "ready", Active: true, RequestId: var discovered, Action: "shutdown" } && discovered == id &&
+            discovery.OriginalBrokerInstanceId == discovery.BrokerInstanceId,
+            "host restart discovers its scheduled request without service restart or new authorization");
+        Assert(authority.Handle(new("status"), "other") is { Code: "power_uncertain", RequestId: null, Action: null, OriginalBrokerInstanceId: null },
+            "discovery does not reveal a different SID's scheduled request");
         Assert(authority.Handle(new("power-status", id), "owner") is { Code: "pending", RequestId: var statusId, Action: "shutdown" } && statusId == id,
             "status preserves owner/id/action/deadline");
         Assert(authority.Handle(new("power-status", id), "other") is { Code: "not_pending", Action: null }, "status does not expose another owner action");
@@ -313,8 +319,17 @@ internal static class ServiceReliabilityChecks
 
     private static void CheckOwnershipAndSupport()
     {
-        Assert(WindowsSupport.IsSupported(true, 26100, "Client", "Professional"), "supported Windows preflight");
-        Assert(!WindowsSupport.IsSupported(true, 26099, "Client", "Professional") &&
+        Assert(WindowsSupport.IsSupported(true, 19045, "Client", "Professional") &&
+            WindowsSupport.IsSupported(true, 19045, "Client", "Enterprise") &&
+            WindowsSupport.IsSupported(true, 19045, "Client", "Education") &&
+            WindowsSupport.IsSupported(true, 26100, "Client", "Professional") &&
+            WindowsSupport.IsSupported(true, 26200, "Client", "Enterprise"), "supported Windows 10/11 preflight");
+        Assert(!WindowsSupport.IsSupported(true, 19044, "Client", "Professional") &&
+            !WindowsSupport.IsSupported(true, 22000, "Client", "Professional") &&
+            !WindowsSupport.IsSupported(true, 26099, "Client", "Professional") &&
+            !WindowsSupport.IsSupported(true, 19045, "Client", "Core") &&
+            !WindowsSupport.IsSupported(true, 19045, "Server", "Enterprise") &&
+            !WindowsSupport.IsSupported(false, 19045, "Client", "Professional") &&
             !WindowsSupport.IsSupported(true, 26100, "Client", "Core") && !WindowsSupport.IsSupported(true, 26100, "Server", "Enterprise") &&
             !WindowsSupport.IsSupported(false, 26100, "Client", "Professional"), "unsupported build/edition/server/architecture fails preflight");
         Assert(InstalledLayout.FromServiceImage("\"D:\\CEP Pilot\\control\\CepHoras.Control.exe\" --service") == "D:\\CEP Pilot",

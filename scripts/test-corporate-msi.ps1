@@ -54,7 +54,8 @@ if ([int]$stop[0].Values[2] -ge [int]$rollbackRestore[0].Values[2] -or [int]$rol
 $serviceControl = Read-Rows 'SELECT `Name`, `Event`, `Wait` FROM `ServiceControl`' 3
 if (-not ($serviceControl | Where-Object { $_.Values[0] -eq 'CepHorasControl' -and (([int]$_.Values[1]) -band 0x22) -eq 0x22 -and $_.Values[2] -eq '1' })) { throw 'MSI precisa aguardar StopServices tanto em manutenção quanto na remoção.' }
 $conditions = Read-Rows 'SELECT `Condition` FROM `LaunchCondition`' 1
-if (-not ($conditions | Where-Object { $_.Values[0] -match 'CEP_WINDOWS_BUILD >= 26100' -and $_.Values[0] -match 'CEP_WINDOWS_TYPE' -and $_.Values[0] -match 'CEP_WINDOWS_EDITION' }) -or -not ($conditions | Where-Object { $_.Values[0] -match 'CEP_WEBVIEW2_MACHINE' -and $_.Values[0] -match '0.0.0.0' })) { throw 'Preflight de Windows/edição e Runtime WebView2 por máquina deve preceder os efeitos.' }
+$supportedWindows = 'Installed OR ((CEP_WINDOWS_BUILD = 19045 OR CEP_WINDOWS_BUILD >= 26100) AND CEP_WINDOWS_TYPE = "Client" AND (CEP_WINDOWS_EDITION << "Professional" OR CEP_WINDOWS_EDITION << "Enterprise" OR CEP_WINDOWS_EDITION << "Education"))'
+if (-not ($conditions | Where-Object { $_.Values[0] -ceq $supportedWindows }) -or -not ($conditions | Where-Object { $_.Values[0] -match 'CEP_WEBVIEW2_MACHINE' -and $_.Values[0] -match '0.0.0.0' })) { throw 'Preflight de Windows 10/11, edição e Runtime WebView2 por máquina deve preceder os efeitos.' }
 $searches = Read-Rows 'SELECT `Root`, `Key`, `Name`, `Type` FROM `RegLocator`' 4
 if (-not ($searches | Where-Object { $_.Values[0] -eq '2' -and $_.Values[1] -eq 'SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}' -and $_.Values[2] -eq 'pv' -and $_.Values[3] -eq '2' })) { throw 'Runtime precisa ser pesquisado em HKLM na visão 32-bit oficial, não somente HKCU.' }
 $launch = @($sequence | Where-Object { $_.Values[0] -eq 'LaunchConditions' })
@@ -64,4 +65,14 @@ $locks = Read-Rows 'SELECT `SDDLText` FROM `MsiLockPermissionsEx`' 1
 if (-not ($locks | Where-Object { $_.Values[0] -eq 'D:PAI(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;OICI;0x1200a9;;;BU)' })) { throw 'ACL protegida de Program Files ausente.' }
 $filesTable = Read-Rows 'SELECT `File` FROM `File`' 1
 if (-not ($filesTable | Where-Object { $_.Values[0] -eq 'ControlExe' }) -or -not ($filesTable | Where-Object { $_.Values[0] -eq 'AppExe' })) { throw 'Payload incompleto.' }
-Write-Output 'PASS: MSI único por máquina, preflight Windows/WebView2, política com rollback, serviço LocalSystem parado/aguardado antes de restaurar/remover, ACL e payload. Nenhuma instalação executada.'
+$icons = Read-Rows 'SELECT `Name` FROM `Icon`' 1
+if (-not ($icons | Where-Object { $_.Values[0] -eq 'CepHoras.ico' })) { throw 'Ícone corporativo ausente do MSI.' }
+$shortcuts = Read-Rows 'SELECT `Shortcut`, `Directory_`, `Icon_` FROM `Shortcut`' 3
+foreach ($expected in @(@('StartMenuShortcut', 'ProgramMenuFolder'), @('DesktopShortcut', 'DesktopFolder'))) {
+    if (-not ($shortcuts | Where-Object { $_.Values[0] -eq $expected[0] -and $_.Values[1] -eq $expected[1] -and $_.Values[2] -eq 'CepHoras.ico' })) {
+        throw "Atalho com ícone corporativo ausente: $($expected[0])"
+    }
+}
+$arpIcon = Read-Rows 'SELECT `Value` FROM `Property` WHERE `Property` = ''ARPPRODUCTICON''' 1
+if ($arpIcon.Count -ne 1 -or $arpIcon[0].Values[0] -ne 'CepHoras.ico') { throw 'Ícone do aplicativo instalado ausente.' }
+Write-Output 'PASS: MSI único por máquina, ícones/atalhos, preflight Windows/WebView2, política com rollback, serviço LocalSystem parado/aguardado antes de restaurar/remover, ACL e payload. Nenhuma instalação executada.'

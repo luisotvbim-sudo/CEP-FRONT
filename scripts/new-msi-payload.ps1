@@ -56,7 +56,12 @@ foreach ($file in (Get-ChildItem -LiteralPath $publish -File -Recurse | Sort-Obj
     $fileElement = Add-Element $component 'File' @{ Id = $fileId; Source = $file.FullName; KeyPath = $fileKeyPath }
     if ($relative -eq 'CepHoras.exe') {
         $shortcutName = if ($Corporate) { 'CEP Horas' } else { 'CEP Horas (Teste MSI)' }
-        $null = Add-Element $fileElement 'Shortcut' @{ Id = 'StartMenuShortcut'; Directory = 'ProgramMenuFolder'; Name = $shortcutName; Advertise = 'yes'; WorkingDirectory = 'INSTALLFOLDER' }
+        $shortcutAttributes = @{ Id = 'StartMenuShortcut'; Directory = 'ProgramMenuFolder'; Name = $shortcutName; Advertise = 'yes'; WorkingDirectory = 'INSTALLFOLDER' }
+        if ($Corporate) { $shortcutAttributes.Icon = 'CepHoras.ico' }
+        $null = Add-Element $fileElement 'Shortcut' $shortcutAttributes
+        if ($Corporate) {
+            $null = Add-Element $fileElement 'Shortcut' @{ Id = 'DesktopShortcut'; Directory = 'DesktopFolder'; Name = $shortcutName; Advertise = 'yes'; WorkingDirectory = 'INSTALLFOLDER'; Icon = 'CepHoras.ico' }
+        }
     }
     if ($isControl) {
         $null = Add-Element $fileElement 'Shortcut' @{ Id = 'AdminShortcut'; Directory = 'ProgramMenuFolder'; Name = 'CEP Horas - Recuperacao TI'; Advertise = 'yes'; Arguments = '--configure'; WorkingDirectory = 'INSTALLFOLDER' }

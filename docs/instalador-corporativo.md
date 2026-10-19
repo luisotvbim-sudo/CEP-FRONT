@@ -1,6 +1,21 @@
 # Instalador corporativo do CEP Horas
 
+O contrato de saída, consulta de pedidos próprios e retomada nesta branch segue
+a [PR #29](https://github.com/luisotvbim-sudo/CEP-FRONT/pull/29), `cebc15b`, com
+[compatibilidade IPC e limites](feedback-senhas-windows.md). A matriz de pacotes
+abaixo conserva bases históricas; esse código não identifica um MSI distribuído,
+upgrade homologado ou política aplicada em uma máquina.
+
+O [candidato 0.4.16](icone-windows-0.4.16.md) adiciona o ícone da marca ao
+executável e aos atalhos do menu Iniciar e da área de trabalho, mantendo as
+políticas e a identidade de upgrade do MSI.
+
 Referência Windows conferida em 06/10/2026: [contexto do instalador](CONTEXTO-INSTALADOR.md) e [auditoria 0.4.12](AUDITORIA-INSTALADOR-2026-10-06.md). As matrizes datadas de 04/10 abaixo são históricas; a auditoria separa código, draft, checks e homologação pendente.
+
+Na branch `codex/windows10-compat`, o candidato 0.4.14 aceita também Windows 10
+22H2 x64 Pro/Enterprise/Education. Os requisitos e os ensaios ainda necessários
+estão em [windows10-msi-0.4.14.md](windows10-msi-0.4.14.md). A seção histórica
+abaixo descreve o controle auditado antes desta mudança.
 
 
 Reconciliado em 04/10/2026. Este guia descreve o MSI por máquina, serviço e políticas. Use o [contexto do instalador](CONTEXTO-INSTALADOR.md) para identificar a branch antes de construir ou distribuir.

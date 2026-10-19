@@ -1,5 +1,23 @@
 # Menu de energia: contrato e execução
 
+A branch `codex/windows-password-causes` adiciona consulta nativa de solicitações
+próprias ao abrir o menu/Verificar status e na bandeja, sem depender de nova
+autorização API para cancelar explicitamente um pedido recuperado. Consulta e
+cancelamento não autorizam nova ação. Serviço antigo sem marcador de estado não
+comprova ausência; ver [compatibilidade IPC e correções](feedback-senhas-windows.md).
+
+A branch `codex/password-feedback` sobre `installer-v0.4.16` melhora os
+[avisos de senha diária e PIN](feedback-senhas-windows.md): progresso, recusas,
+sessão expirada, respostas incertas e falhas do serviço. O PIN continua liberando
+somente ações no menu CEP por cinco minutos; não libera controles nativos Windows.
+Contratos e critérios de autorização permanecem os da base.
+
+O candidato MSI 0.4.15 corrige no cliente Windows a interpretação de campos
+opcionais nulos do erro HTTP devolvido pelo bridge. A mensagem genérica
+“O aplicativo retornou uma resposta inválida” no 0.4.14 pode ter ocultado
+`invalid_admin_pin`, limite de tentativas, PIN não configurado ou outro erro;
+ela não comprova a causa da recusa. Ver [entrega 0.4.15](pin-admin-bridge-0.4.15.md).
+
 Referência Windows conferida em 06/10/2026: [contexto do instalador](CONTEXTO-INSTALADOR.md) e [auditoria 0.4.12](AUDITORIA-INSTALADOR-2026-10-06.md). As matrizes datadas de 04/10 abaixo são históricas; a auditoria separa código, draft, checks e homologação pendente.
 
 
@@ -47,15 +65,17 @@ O WebView envia operações `cep-power` correlacionadas por `id`. A interface n�
 |---|---|---|
 | `schedule` | `requestId` UUID, `action`, `delaySeconds: 10`, `authorization` | Validar origem/sessão e refazer a verificação autenticada; só então pedir ação fixa ao serviço. A decisão anexada pelo JavaScript não é credencial. |
 | `cancel` | `requestId` UUID | Confirmar aborto ou ausência de agendamento correspondente; preservar tratamento de incerteza. |
+| `status` | Vazio | Descobrir pedido próprio no serviço, sem nova autorização API; não executar nem cancelar. Exige `PowerStatusVersion: 1`; estado desconhecido não vira ausência. |
+| `reconcile` | `requestId` UUID | Consultar o pedido já conhecido do host e validar titular/broker; prazo visual não confirma cancelamento. |
 | `verify-api-unreachable` | Vazio | Fazer verificação de transporte independente. Não confiar num indicador do renderer. |
 
-O sucesso do agendamento devolve `requestId`, `action` e `executeAt` UTC. A contagem de dez segundos deriva desse horário e pode ser cancelada. Cancelamento falho/incerto mantém o identificador e permite repetir; novas ações permanecem bloqueadas enquanto a interface não confirmou o aborto. Timeout do protocolo não significa sucesso nem prova API offline. Em agendamento sem confirmação, o adaptador tenta cancelar pelo mesmo ID.
+O sucesso do agendamento devolve `requestId`, `action` e `executeAt` UTC. A contagem de dez segundos deriva desse horário e pode ser cancelada. Cancelamento falho/incerto mantém o identificador e permite repetir; novas ações permanecem bloqueadas enquanto a interface não confirmou o aborto. Timeout do protocolo não significa sucesso nem prova API offline. Em agendamento próprio sem confirmação, o adaptador tenta cancelar pelo mesmo ID; pedido recuperado exige escolha explícita e não é cancelado automaticamente.
 
 O host só aceita uma resposta normal válida com `within_tolerance`, `override: false`, prazo nulo e análise, ou override válido com `administrative_override`, `override: true`, prazo e análise nula. Não aceita permissão inventada pelo JavaScript. A API continua soberana sobre a regra e o período; o WPF verifica a estrutura necessária para executar.
 
-O serviço autentica o cliente interativo e o caminho do executável instalado, verifica controle ativo/políticas, aceita apenas `shutdown`, `restart`, `hibernate` e dez segundos. Cancelamento pertence à mesma identidade Windows. Há idempotência e intenção de cancelamento no estado em memória do serviço; não prometer histórico durável de pedidos após reinício. Desligamento/reinício usam o agendamento do Windows; hibernação tem temporizador cancelável.
+O serviço autentica o cliente interativo e o caminho do executável instalado, verifica controle ativo/políticas, aceita apenas `shutdown`, `restart`, `hibernate` e dez segundos. Cancelamento pertence à mesma identidade Windows. Na base da [PR #29](https://github.com/luisotvbim-sudo/CEP-FRONT/pull/29), `cebc15b`, o journal privado grava a intenção antes do efeito e conserva pedido/resultado de cancelamento para recuperação após reinício. Pedido herdado ou efeito sem confirmação exige cancelamento explícito do titular; persistência não comprova execução ou aborto. Desligamento/reinício usam o agendamento do Windows; hibernação tem temporizador cancelável. Ver [estado, compatibilidade e limites](feedback-senhas-windows.md).
 
-Ao sair da conta, interface/host solicitam cancelamento. Se o processo ou serviço falhar, não inferir execução ou aborto pelo estado visual: tratar como operação incerta e obter confirmação do serviço. PIN e token não atravessam o named pipe.
+Ao sair da conta, interface/host solicitam cancelamento dos pedidos próprios conhecidos da instância atual. Pedido recuperado não é cancelado na desmontagem, saída ou manutenção: o titular escolhe Cancelar no menu ou confirma o cancelamento na bandeja, inclusive sem sessão API. Se o processo ou serviço falhar, não inferir execução ou aborto pelo estado visual: tratar como operação incerta e obter confirmação do serviço. PIN e token não atravessam o named pipe.
 
 ## Contingência de transporte
 

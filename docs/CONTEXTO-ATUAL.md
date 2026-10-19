@@ -1,15 +1,54 @@
 # Contexto atual do CEP-FRONT
 
-Em 07/10/2026, a [prerelease MSI 0.4.19](https://github.com/luisotvbim-sudo/CEP-FRONT/releases/tag/installer-v0.4.19) está disponível para instalação manual acompanhada, com manifesto assinado e sem Authenticode ou `latest`. Esta branch altera apenas o card `/download` para apontar ao pacote novo e informar que seu piloto específico ocorreu em Windows 11; Windows 10 ainda requer teste desta versão. A implantação web da mudança é etapa separada. [Preparação](download-msi-0.4.19.md).
+Em 19/10/2026, a branch de refatoração começa do MSI 0.4.22 e integra a `main` web. O merge preserva a implementação Windows/telemetria e traz o card `/download` da `main`, que referencia a prerelease manual 0.4.22. Ainda não há MSI novo, instalação ou publicação desta branch. O [programa central](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/54) exige reconferir versão implantada e testes por SHA antes de distribuir.
 
-Em 07/10/2026, o card público `/download` foi implantado para a prerelease MSI 0.4.18 com aviso de piloto manual, ausência de Authenticode e nenhuma atualização automática. O convite da API segue apontando à página, sem versão; template e backend não mudaram. A página foi publicada após autorização específica, CI da main e verificação nos dois domínios. [Publicação](download-msi-0.4.18.md).
+A página pública `/download` já oferece o piloto manual 0.4.18 nos dois
+domínios, após autorização e implantação da `main` web. O convite continua
+apontando à página, sem versão fixa. [Entrega web](download-msi-0.4.18.md).
 
-Em 06/10/2026, o código da página pública `/download` passou a apontar à prerelease MSI 0.4.16, com Windows 10 22H2 e Windows 11 24H2+ x64 Pro/Enterprise/Education. O link do convite da API permanece `/download`; a troca pública do site exige integração, CI e implantação web separadas da release do MSI. [Entrega web](download-msi-0.4.16.md).
+A branch `codex/windows-signed-pilot-0.4.18` prepara um novo piloto a partir do
+0.4.17, com manifesto RSA-PSS assinado pela identidade existente. O MSI segue
+sem Authenticode. A release permanece prerelease e não ativa `latest` nem o
+atualizador automático; instalação e upgrade em Windows ainda exigem piloto.
 
-Preparação beta 0.4.13 anterior em 06/10/2026: [pacote e distribuição](beta-msi-0.4.13.md)
-consolidaram interface main `18aa262` e auditoria Windows `32983a5`.
-O destino 0.4.13 em `/download` foi sucedido no código pelo 0.4.16.
-Piloto Windows e distribuição a 40 usuários são etapas distintas da geração do pacote.
+A branch `codex/windows-password-pilot-0.4.17`, sobre `a7e7426`, prepara o
+[piloto MSI 0.4.17](piloto-windows-0.4.17.md) com os PRs #28–#30 para download
+manual. Publicação prerelease, CI/revisão do pacote e homologação Windows são
+etapas distintas; não altera web, API, canal automático ou main.
+
+A branch `codex/windows-password-refactor`, sobre PR #29 `cebc15b`, remove
+validações repetidas de discovery e um wrapper sem uso em produção, preservando
+F01/F02/F03 e o contrato Windows. Consulte o [mapa de uso e compatibilidade](feedback-senhas-windows.md).
+
+Na branch `codex/windows-password-causes`, sobre PR #28 `d10a30a`, a
+[correção das falhas de estado Windows](feedback-senhas-windows.md) separa prazos
+IPC, reconcilia saída incerta, descobre pedidos próprios sem nova autorização API
+e evita confirmar retomada de suspensão de outro SID. O status nativo exige
+marcador compatível do serviço; cancelamento recuperado é explícito pelo menu ou
+bandeja. Não representa merge, MSI distribuído, upgrade ou produção.
+
+Na branch `codex/password-feedback`, baseada em `installer-v0.4.16` (`f197abb`),
+a [entrega de avisos de senha/PIN](feedback-senhas-windows.md) acrescenta
+feedback explícito e sanitizado na saída diária e no menu Energia, preservando
+contratos, cinco minutos e revalidação. Não declara nova versão instalada;
+homologação corporativa Windows 10/11 permanece pendente.
+
+Na branch `codex/app-icon-windows`, o candidato MSI 0.4.16 aplica a marca ao
+[ícone nativo, bandeja e atalhos](icone-windows-0.4.16.md), preservando a
+correção 0.4.15 e a matriz Windows 10/11. Na branch anterior
+`codex/power-pin-bridge-error`, o candidato MSI 0.4.15 corrige o
+mascaramento de erros HTTP no bridge nativo. Ver
+[correção do PIN/bridge](pin-admin-bridge-0.4.15.md). O pacote conserva a
+compatibilidade Windows 10 22H2 x64 Pro/Enterprise/Education e Windows 11
+24H2+ da [entrega 0.4.14](windows10-msi-0.4.14.md). A página `/download`
+continua ligada à release beta 0.4.13 publicada; este candidato não muda
+automaticamente a distribuição pública.
+
+Preparação beta 0.4.13 em 06/10/2026: [pacote e distribuição](beta-msi-0.4.13.md)
+consolidam interface main `18aa262` e auditoria Windows `32983a5`. Esta branch
+mantém senha 6–200 e a UI atual; `/download` aponta ao MSI beta 0.4.13 no GitHub.
+Publicar o draft deve preceder a implantação desse link. Piloto Windows e
+distribuição a 40 usuários são etapas distintas da geração do pacote.
 
 Mapa de manutenção e auditoria da base de testes: [limpeza do Front](mapa-front-limpeza.md). A fixture de acompanhamento pessoal fica em `tests/fixtures/overview.ts`; não é um módulo de execução do produto. Matrizes datadas abaixo são evidências históricas, e a auditoria identifica separadamente main, web de teste e desktop mock.
 
@@ -17,9 +56,9 @@ Na branch de refatoração web, `AccountControls` apresenta a conta e `useLogout
 
 Membro/Líder acessam avisos pessoais pelo sino no cabeçalho, com contagem de não lidas e dropdown paginado. “Ver meus avisos” abre o dropdown; a central completa e o destino nativo continuam disponíveis. Abrir/expandir não marca leitura nem recebimento. Administração conserva sua navegação atual. Ver [notificações](notificacoes-implementacao.md).
 
-Membro/Líder usam “Revalidar Monday e VR Mais (20 dias)” em Meu histórico. O bloco pessoal mostra o botão, a orientação e o estado de cada fonte, sem painéis técnicos. Uma fonte concluída recarrega a lista de pessoas e o histórico com os filtros atuais, sem repetir a submissão. A operação normal de 20 dias inclusivos e o acesso à própria associação sem time vigente dependem da API #27. Coordenador conserva a tela administrativa e opção de até 90 dias.
+Membro/Líder usam o botão “Reprocessar dados do Monday” em Meu histórico, com a orientação “Use este botão sempre que editar registros no Monday para atualizar os dados no CEP.” O bloco pessoal mostra somente o botão, a orientação e feedback acessível de andamento, conclusão/resultado parcial ou erro, sem painéis técnicos por fonte. A operação normal continua consultando Monday e VR Mais por 17 dias; o rótulo não restringe a API ao Monday. Sucesso total ou parcial recarrega o histórico com os filtros atuais, sem repetir a submissão. Coordenador conserva a tela administrativa e opção de até 90 dias.
 
-Sincronização normal: botão administrativo “Atualizar últimos 20 dias” e botão pessoal “Revalidar Monday e VR Mais (20 dias)”, janela móvel de hoje e 19 dias anteriores, dependente da API #27. A janela de coleta não muda os períodos oficiais de análise da sprint (1–14/15–fim do mês); reprocessamento administrativo permanece até 90 dias.
+Sincronização normal: botão administrativo “Atualizar sprint” e botão pessoal “Reprocessar dados do Monday”, janela móvel de 17 dias incluindo hoje, dependente da API com essa política. O nome do botão não muda os períodos oficiais de análise da sprint (1–14/15–fim do mês); reprocessamento administrativo permanece até 90 dias.
 
 Detalhe de registro Monday: somente Início/Fim, origem informada Manual/Cronômetro e link da atividade quando disponível. Título, duração e estado continuam fora do detalhe; VR mostra apenas horários conhecidos/batidas informadas, link e origem explícita, sem metadados complementares nem pareamento inferido. Ausência de flags de origem não permite inferir cronômetro. Ver [histórico diário](historico-diario.md).
 
@@ -45,13 +84,13 @@ O instalador CEP Horas está neste repositório. O projeto separado CEP Hub/01-C
 
 | Área | Comportamento atual |
 |---|---|
-| Pública | Login, recuperação/redefinição, ativação de convite; `/download` apresenta o MSI beta 0.4.16 sem autenticar/consultar a API |
+| Pública | Login, recuperação/redefinição, ativação de convite; `/download` apresenta o MSI beta 0.4.13 sem autenticar/consultar a API |
 | Coordenador (`organizationAdmin`) | Pessoas, associação/convite, sincronização, times/vínculos, histórico, usuários, auditoria, central própria, análises/erros, envio e configurações globais |
 | Membro (`user`) | Minha jornada, Meu histórico com botão de reprocessamento, sino/central pessoal e análises próprias |
 | Líder (`user` com vínculo `manager`) | Visão pessoal mais times geridos, histórico das pessoas visíveis e análises dos times |
 | Administrador técnico (`systemAdmin`) | Organizações, configurações globais e central própria; seleciona organização para operações de pessoas/envio/histórico/administração |
 
-Vínculos considerados pela autorização de colegas são os vigentes hoje em times ativos, inclusive ao consultar registros antigos. A própria pessoa associada poderá ler sua pessoa/histórico sem vínculo ativo após API #27. Não interpretar ausência de associação ou registros como zero horas nem inventar atribuição histórica ao time. A política pós-transferência continua parcialmente pendente na especificação.
+Vínculos considerados pela autorização são os vigentes hoje em times ativos, inclusive ao consultar registros antigos. Usuário sem vínculo ativo pode não receber pessoa/histórico mesmo tendo associação. Não interpretar esse vazio como zero horas ou inventar atribuição histórica dos registros ao time. A política pós-transferência continua parcialmente pendente na especificação.
 
 ## Sessão e transporte
 
@@ -69,7 +108,7 @@ Desde a entrega em branch de 05/10/2026, Minha jornada usa [acompanhamento pesso
 
 Diretórios Monday/VR são paginados no backend; a interface escolhe IDs internos ativos e ainda não associados. Correspondência por e-mail exato/único é sugestão, exige confirmação humana. Nomes iguais não criam associação automática. Associar/convidar enfileira e-mail, sem provar entrega.
 
-Atualização normal reavalia hoje e os 19 dias anteriores após API #27; reprocessamento completo/carga inicial administrativa cobre até 90 dias. Não é delta puro por cursor. Fontes apresentam tentativa, resultado, contagens/cobertura e falhas independentes; última tentativa não significa último sucesso. Membro/Líder não recebem a opção de reprocessamento administrativo, e sua última tentativa é a que solicitaram.
+Atualização normal reavalia hoje e os 16 dias anteriores; reprocessamento completo/carga inicial administrativa cobre até 90 dias. Não é delta puro por cursor. Fontes apresentam tentativa, resultado, contagens/cobertura e falhas independentes; última tentativa não significa último sucesso. Membro/Líder não recebem a opção de reprocessamento administrativo, e sua última tentativa é a que solicitaram.
 
 `GET /organization/time-control/history` aceita até 90 dias inclusivos e retorna registros mais resumos diários da API. `DailyHistory`/`history-data.ts` agrupam/apresentam, sem calcular totais. Filtro de fonte restringe detalhes/dias encontrados; resumo de cada dia usa ambas as identidades. Datas civis preservam o dia da API; instantes usam São Paulo e durações mantêm segundos/sinal, inclusive acima de 24h.
 
@@ -118,4 +157,4 @@ Pendências de produto conservadas em RN/RF/CA/D: calendário e exceções, sobr
 
 Inspeção de código/contratos e consistência documental. Nenhum build, instalação, envio de e-mail/aviso, operação autenticada de produção ou ação de energia foi executado por esta limpeza. CI e testes históricos devem ser consultados no commit correspondente, sem reapresentá-los como resultados atuais.
 
-/download mantém somente título e card de download, sem seções de passos/FAQ. O card identifica MSI beta 0.4.16 e Windows 10 22H2 / Windows 11 24H2+ x64 Pro/Enterprise/Education. O MSI já foi publicado como prerelease, mas a mudança de código exige publicação web separada e não ativa o canal do atualizador.
+/download mantém somente título e card de download, sem seções de passos/FAQ. O card identifica MSI beta 0.4.13 e Windows 11 x64 Pro/Enterprise/Education 24H2+. Alterar o destino na branch não publica o MSI nem ativa canal do atualizador.

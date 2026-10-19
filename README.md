@@ -1,8 +1,13 @@
 # CEP Horas — web, Windows e instalador
 
-A prerelease manual MSI 0.4.19 foi publicada após piloto Windows 11 e CI aprovada. Esta branch prepara `/download` para apontar a ela; a página produtiva ainda oferece 0.4.18 até a implantação web. O convite da API permanece apontando à página, sem versão fixa. MSI e web têm ciclos de publicação separados, e `releases/latest` continua fechado. [Preparação da página](docs/download-msi-0.4.19.md) e [publicação anterior](docs/download-msi-0.4.18.md).
+Esta branch de refatoração reúne a base do MSI 0.4.22 e a `main` web que aponta `/download` para essa prerelease manual. A integração do código não instala nem publica um pacote novo. O aplicativo Windows, a web e a API possuem versões independentes; conferir cada ambiente antes de homologar a distribuição. O [programa de refatoração](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/54) registra as etapas e o teste independente.
 
-A publicação web de 06/10/2026 do histórico pessoal está registrada com SHA implantado, CI, saúde pública e limite da conferência autenticada em [publicação do histórico](docs/publicacao-web-historico-2026-10-06.md).
+Na branch `codex/app-icon-windows`, o candidato MSI 0.4.16 aplica a logomarca
+reduzida ao executável, barra de tarefas, bandeja e atalhos Windows. Mantém a
+correção do [bridge 0.4.15](docs/pin-admin-bridge-0.4.15.md) e a matriz
+[Windows 10/11 0.4.14](docs/windows10-msi-0.4.14.md). Consulte a
+[entrega do ícone](docs/icone-windows-0.4.16.md); os estados publicados
+abaixo permanecem registrados com seus commits e datas.
 
 Referência Windows conferida em 06/10/2026: [contexto do instalador](docs/CONTEXTO-INSTALADOR.md) e [auditoria 0.4.12](docs/AUDITORIA-INSTALADOR-2026-10-06.md). As matrizes datadas de 04/10 abaixo são históricas; a auditoria separa código, draft, checks e homologação pendente.
 
@@ -24,12 +29,14 @@ Referência auditada em 04/10/2026: Front `main` `eb63dbdc7f7bf83d0a4b51ee5567ed
 
 A auditoria não encontrou release MSI estável nem comprovação de homologação completa entre versões. Consulte [aplicativo Windows](docs/aplicativo-windows.md), [contexto do instalador](docs/CONTEXTO-INSTALADOR.md), [instalador corporativo](docs/instalador-corporativo.md) e [menu de energia](docs/menu-energia.md) antes de instalar ou publicar. O [guia do atualizador MSI](docs/atualizador-msi.md) descreve a branch PR #9; sua presença documental não integra esse código à main.
 
+A [telemetria estruturada em desenvolvimento](docs/telemetria-desktop.md) usa o host nativo e exige API/migration compatíveis e um MSI posterior ao 0.4.19. Ela ainda não integra a versão publicada.
+
 ## Capacidades existentes
 
 - [Acompanhamento pessoal](docs/acompanhamento-pessoal.md) com consulta automática, situação/corte, dias de atenção e detalhe progressivo; requer o contrato aditivo da API.
 
 - Login web/nativo, retomada, refresh rotativo, logout, recuperação/redefinição de senha e [ativação de convite sem emissão de sessão](docs/contrato-ativacao-convite.md).
-- Pessoas, associação por IDs Monday/VR, convite e [reenvio administrativo](docs/contrato-reenvio-convite.md), diretórios paginados e sincronização normal de 20 dias inclusivos ou administrativa de até 90 dias. A janela normal e o acesso à própria associação sem time vigente dependem da [API #27](https://github.com/luisotvbim-sudo/CEP-API/pull/27).
+- Pessoas, associação por IDs Monday/VR, convite e [reenvio administrativo](docs/contrato-reenvio-convite.md), diretórios paginados e sincronização normal de 17 dias ou administrativa de até 90 dias.
 - Administração de organizações, usuários, times, vínculos com vigência e auditoria; Membro/Líder recebem respostas autorizadas pela API.
 - [Histórico diário](docs/historico-diario.md) com detalhes de origem e totais retornados pelo servidor; valores desconhecidos permanecem nulos.
 - [Configurações/agendas globais, envio manual, central pessoal e análises persistidas](docs/notificacoes-implementacao.md). Consultar uma análise não executa nova leitura das fontes.

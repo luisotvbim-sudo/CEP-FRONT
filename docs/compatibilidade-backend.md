@@ -21,6 +21,7 @@ Revisão documental de 04/10/2026. Front auditado: `main` `eb63dbdc7f7bf83d0a4b5
 | Análises/notificações | Configurações/agendas globais, prévia/envio, caixa pessoal, leitura/recebimento, histórico e snapshots de análise |
 | Acompanhamento pessoal | GET autenticado próprio, períodos oficiais, situação, corte e valores/limites das fontes; [contrato do consumidor](acompanhamento-pessoal.md) |
 | Energia | Decisão pessoal, verificação/status e liberação PIN temporária; execução local requer MSI corporativo compatível |
+| Telemetria desktop em desenvolvimento | POST nativo `/desktop-telemetry/events` e consulta administrativa no contrato novo da API; exige migration e MSI posterior ao 0.4.19. O renderer não acessa o POST. Veja [contrato e limites](telemetria-desktop.md). |
 
 GET de análises consulta resultados persistidos, sem nova importação. Histórico armazenado não certifica completude/atualidade das fontes. O cliente apresenta `null`, qualidade, períodos e cortes retornados; não recalcula saldo, tolerância, destinatários ou autorização.
 

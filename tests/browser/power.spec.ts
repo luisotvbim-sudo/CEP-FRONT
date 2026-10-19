@@ -96,20 +96,22 @@ async function nativeFixture(
               throw new Error('Fixture rejected stale document')
             messages.push(message)
             const result =
-              message.operation === 'schedule'
-                ? {
-                    requestId: message.payload.requestId,
-                    action: message.payload.action,
-                    executeAt: new Date(Date.now() + 10_000).toISOString(),
-                  }
-                : message.operation === 'cancel'
-                  ? { cancelled: !cancelFails }
-                  : message.operation === 'reconcile'
-                    ? {
-                        requestId: message.payload.requestId,
-                        state: (window as any).powerTerminal ? 'terminal' : 'pending',
-                      }
-                    : { unreachable }
+              message.operation === 'status'
+                ? ((window as any).nativeStatus ?? { state: 'idle' })
+                : message.operation === 'schedule'
+                  ? {
+                      requestId: message.payload.requestId,
+                      action: message.payload.action,
+                      executeAt: new Date(Date.now() + 10_000).toISOString(),
+                    }
+                  : message.operation === 'cancel'
+                    ? { cancelled: !cancelFails }
+                    : message.operation === 'reconcile'
+                      ? {
+                          requestId: message.payload.requestId,
+                          state: (window as any).powerTerminal ? 'terminal' : 'pending',
+                        }
+                      : { unreachable }
             const reply = () => {
               if (message.operation === 'schedule')
                 result.executeAt = new Date(Date.now() + 10_000).toISOString()
@@ -129,9 +131,102 @@ async function nativeFixture(
 const menu = (page: Page) => page.getByRole('region', { name: 'Energia do computador' })
 async function openMenu(page: Page) {
   await menu(page).locator('summary').click()
+  if (await page.evaluate(() => window.__CEP_POWER_VERSION__ === 1)) {
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () =>
+            ((window as any).powerMessages || []).filter((m: any) => m.operation === 'status')
+              .length,
+        ),
+      )
+      .toBeGreaterThan(0)
+    await expect(menu(page).getByText('Consultando…', { exact: true })).toHaveCount(0)
+  }
 }
 const operations = (page: Page) =>
-  page.evaluate(() => ((window as any).powerMessages || []).map((m: any) => m.operation))
+  page.evaluate(() =>
+    ((window as any).powerMessages || [])
+      .map((m: any) => m.operation)
+      .filter((operation: string) => operation !== 'status'),
+  )
+
+test('inherited request is discovered without API authorization and only explicitly cancelled', async ({
+  page,
+}) => {
+  await fixture(page)
+  const api = await apiFixture(page, 'indeterminate')
+  await nativeFixture(page)
+  const requestId = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
+  await page.evaluate((requestId) => {
+    ;(window as any).nativeStatus = { state: 'recovery-required', requestId, recovered: true }
+  }, requestId)
+  await openMenu(page)
+  await expect(menu(page).getByRole('button', { name: 'Cancelar', exact: true })).toBeVisible()
+  expect(api).toHaveLength(0)
+  expect(await operations(page)).not.toContain('schedule')
+  expect(await operations(page)).not.toContain('cancel')
+  await menu(page).getByRole('button', { name: 'Cancelar', exact: true }).click()
+  await expect(menu(page)).toContainText('Ação cancelada')
+  expect((await operations(page)).filter((x: string) => x === 'cancel')).toHaveLength(1)
+})
+
+for (const recovered of [true, false]) {
+  test(`discovery recovered=${recovered} preserves cancellation policy on unmount`, async ({
+    page,
+  }) => {
+    await fixture(page)
+    await nativeFixture(page)
+    await page.evaluate((recovered) => {
+      ;(window as any).nativeStatus = {
+        state: 'recovery-required',
+        requestId: crypto.randomUUID(),
+        recovered,
+      }
+    }, recovered)
+    await openMenu(page)
+    await expect(menu(page).getByRole('button', { name: 'Cancelar', exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Sair da conta', exact: true }).click()
+    await expect(menu(page)).toHaveCount(0)
+    expect((await operations(page)).filter((x: string) => x === 'cancel')).toHaveLength(
+      recovered ? 0 : 1,
+    )
+  })
+}
+
+test('Verify status discovers pending request even when API is indeterminate', async ({ page }) => {
+  await fixture(page)
+  const calls = await apiFixture(page, 'indeterminate')
+  await nativeFixture(page)
+  await openMenu(page)
+  await expect(
+    menu(page).getByRole('button', { name: 'Verificar status', exact: true }),
+  ).toBeEnabled()
+  await page.evaluate(() => {
+    ;(window as any).nativeStatus = {
+      state: 'recovery-required',
+      requestId: crypto.randomUUID(),
+      recovered: true,
+    }
+  })
+  await menu(page).getByRole('button', { name: 'Verificar status', exact: true }).click()
+  await expect(menu(page).getByRole('button', { name: 'Cancelar', exact: true })).toBeVisible()
+  expect(calls).toHaveLength(0)
+})
+
+test('foreign or unsupported native state never supplies a cancellation identifier', async ({
+  page,
+}) => {
+  await fixture(page)
+  await nativeFixture(page)
+  await page.evaluate(() => {
+    ;(window as any).nativeStatus = { state: 'unavailable' }
+  })
+  await openMenu(page)
+  await expect(menu(page)).toContainText('não confirmou a ausência')
+  await expect(menu(page).getByRole('button', { name: 'Cancelar', exact: true })).toHaveCount(0)
+  expect(await operations(page)).not.toContain('cancel')
+})
 
 for (const profile of [
   { role: 'organizationAdmin' },
@@ -321,7 +416,9 @@ for (const unreachable of [true, false]) {
     await openMenu(page)
     await menu(page).getByRole('button', { name: 'Desligar', exact: true }).click()
     await expect(menu(page)).toContainText(
-      unreachable ? 'Ação permitida em contingência' : 'Não foi possível conectar',
+      unreachable
+        ? 'Agendamento confirmado em contingência'
+        : 'A operação de energia não foi confirmada',
     )
     expect(await operations(page)).toEqual(
       unreachable ? ['verify-api-unreachable', 'schedule'] : ['verify-api-unreachable'],
@@ -405,10 +502,10 @@ for (const status of [403, 429, 503]) {
     await submitPin(page)
     await expect(menu(page)).toContainText(
       status === 403
-        ? 'PIN administrativo inválido'
+        ? 'PIN administrativo recusado'
         : status === 429
-          ? 'Limite de liberações atingido'
-          : 'PIN administrativo ainda não foi configurado',
+          ? 'Limite de tentativas atingido'
+          : 'PIN administrativo não está configurado',
     )
     await expect(menu(page)).not.toContainText('liberados temporariamente por')
     expect(await operations(page)).toEqual([])
@@ -526,7 +623,7 @@ test('failed PIN does not extend an existing window; status remains GET only', a
   await page.clock.runFor(60_000)
   await unlockFixture(page, 403)
   await submitPin(page, '654321')
-  await expect(menu(page)).toContainText('PIN administrativo inválido')
+  await expect(menu(page)).toContainText('PIN administrativo recusado')
   await expect(menu(page)).toContainText('liberados temporariamente por 4:00')
   let requests = 0
   await page.route('**/api/v1/me/time-control/power-action-status**', (route) => {
@@ -548,4 +645,70 @@ test('failed PIN does not extend an existing window; status remains GET only', a
   await expect(menu(page)).toContainText('Liberado.')
   expect(requests).toBe(1)
   expect(await operations(page)).toEqual([])
+})
+
+for (const scenario of [
+  { name: 'expired session', status: 401, code: 'session_expired', expected: 'Entre novamente' },
+  { name: 'invalid success response', status: 200, code: '', expected: 'não pôde ser validada' },
+  {
+    name: 'API unavailable over HTTP',
+    status: 500,
+    code: 'unexpected_error',
+    expected: 'indisponível para validar o PIN',
+  },
+  { name: 'transport failure', status: 0, code: '', expected: 'não foi recebida' },
+]) {
+  test(`PIN feedback for ${scenario.name} never schedules or probes`, async ({ page }) => {
+    await fixture(page)
+    await nativeFixture(page)
+    let attempts = 0
+    if (scenario.status === 401)
+      await page.route('**/api/v1/auth/web/refresh', (route) =>
+        route.fulfill({ status: 401, json: { code: 'session_expired' } }),
+      )
+    await page.route('**/api/v1/me/time-control/power-action-unlock', async (route) => {
+      attempts++
+      if (!scenario.status) return route.abort('connectionfailed')
+      await route.fulfill({
+        status: scenario.status,
+        json: { code: scenario.code, detail: 'private fixture payload' },
+      })
+    })
+    await openMenu(page)
+    await submitPin(page)
+    if (scenario.status === 401) {
+      await expect(page.getByRole('status')).toContainText(scenario.expected)
+      await expect(menu(page)).toHaveCount(0)
+    } else {
+      await expect(menu(page)).toContainText(scenario.expected)
+      await expect(menu(page)).not.toContainText('private fixture payload')
+      await expect(menu(page)).not.toContainText('liberados temporariamente por')
+    }
+    expect(await operations(page)).toEqual([])
+    expect(attempts).toBe(1)
+  })
+}
+
+test('PIN validation announces progress and prevents overlapping attempts', async ({ page }) => {
+  await fixture(page)
+  let release!: () => void
+  const hold = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  let attempts = 0
+  await page.route('**/api/v1/me/time-control/power-action-unlock', async (route) => {
+    attempts++
+    await hold
+    await route.fulfill({ json: unlockResponse })
+  })
+  await openMenu(page)
+  await submitPin(page)
+  await expect(menu(page)).toContainText('Validando o PIN administrativo')
+  await expect(
+    menu(page).getByRole('button', { name: 'Liberar por 5 minutos', exact: true }),
+  ).toBeDisabled()
+  await expect(menu(page).getByRole('button', { name: 'Desligar', exact: true })).toBeDisabled()
+  release()
+  await expect(menu(page)).toContainText('Liberação administrativa confirmada por 5 minutos')
+  expect(attempts).toBe(1)
 })

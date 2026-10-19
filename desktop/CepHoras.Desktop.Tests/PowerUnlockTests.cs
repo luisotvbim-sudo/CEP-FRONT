@@ -9,12 +9,17 @@ using CepHoras.Desktop;
 
 internal static class PowerUnlockTests
 {
+    private static async Task QuiesceAndRelease(PowerBridgeHandler host)
+    {
+        await using var lease = await host.QuiesceAsync();
+    }
+
     // Fixture only: never use the production PIN or a real Windows power operation.
     private const string FixturePin = "012345";
     private const string Broker = "dddddddd-bbbb-cccc-dddd-eeeeeeeeeeee";
     private static PowerBridgeHandler Host(ApiSession session, Func<ControlRequest, Task<ControlResponse>> sender) =>
         new(session, async request => request.Operation == "status"
-            ? new ControlResponse("ready", "fixture", Active: true, BrokerInstanceId: Broker)
+            ? new ControlResponse("ready", "fixture", Active: true, BrokerInstanceId: Broker, PowerStatusVersion: 1)
             : (await sender(request)) with { BrokerInstanceId = Broker });
     private static readonly Uri Api = new("https://power-fixture.invalid");
     private static readonly object User = new { id = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"), role = "user" };
@@ -81,7 +86,7 @@ internal static class PowerUnlockTests
             });
             foreach (var action in new[] { "shutdown", "restart", "hibernate" }) {
                 await host.Execute("schedule", Schedule(action));
-                await host.CancelCurrent();
+                await QuiesceAndRelease(host);
             }
             check(checks.SequenceEqual(new[] { "shutdown", "restart", "hibernate" }), "Every native action needs fresh API revalidation");
             check(commands.Count(x => x.Operation == "schedule") == 3, "Three actions must reach the fake service");

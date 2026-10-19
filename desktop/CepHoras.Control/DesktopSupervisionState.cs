@@ -23,6 +23,12 @@ internal sealed class DesktopSupervisionState
         }
     }
 
+    internal bool MayResume(uint sessionId, string sid)
+    {
+        lock (gate)
+            return !suspended.TryGetValue(sessionId, out var owner) || string.Equals(owner, sid, StringComparison.Ordinal);
+    }
+
     internal bool ResumeSession(uint sessionId)
     {
         lock (gate)

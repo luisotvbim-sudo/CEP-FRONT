@@ -9,15 +9,21 @@ Contexto reescrito em 04/10/2026 após revisão do código. Comece por [CONTEXTO
 
 | Documento | Finalidade |
 |---|---|
+| [Piloto MSI 0.4.19](piloto-windows-0.4.19.md) | Paridade das telas web no Windows, upgrade local e limites antes de distribuição manual |
+| [Piloto MSI 0.4.18](piloto-windows-0.4.18.md) | Pacote com manifesto de atualização assinado, sem promoção automática |
+| [Piloto MSI 0.4.17](piloto-windows-0.4.17.md) | Pacote manual com PRs #28–#30, integridade e limites de homologação |
+| [Avisos de senha diária e PIN](feedback-senhas-windows.md) | Feedback sanitizado sobre a base 0.4.16 e limites de homologação Windows |
 | [Página MSI 0.4.19](download-msi-0.4.19.md) | Link da prerelease manual 0.4.19, aviso de piloto Windows 10 e dependência de implantação web |
 | [Contexto atual](CONTEXTO-ATUAL.md) | Funcionamento, arquitetura, sessão, escopos, bases e pendências para retomar |
 | [Beta MSI 0.4.13](beta-msi-0.4.13.md) | Integração web/auditoria, pacote, GitHub sem latest, dependência do convite e aceite do piloto Windows |
 | [Página MSI 0.4.18](download-msi-0.4.18.md) | Piloto manual, aviso de Authenticode e publicação web conferida |
-| [Página de download MSI 0.4.16](download-msi-0.4.16.md) | Destino do convite na web, compatibilidade exibida e publicação separada do canal automático |
+| [Página de download MSI 0.4.16](download-msi-0.4.16.md) | Destino do convite na web e compatibilidade exibida |
+| [Candidato MSI 0.4.14 para Windows 10](windows10-msi-0.4.14.md) | Escopo 22H2 x64, preservação do instalador, verificações e piloto Windows pendente |
+| [Correção PIN/bridge MSI 0.4.15](pin-admin-bridge-0.4.15.md) | Campos opcionais nulos do erro nativo, mensagem correta ao usuário e diagnóstico pendente da resposta real da API |
+| [Ícone nativo Windows MSI 0.4.16](icone-windows-0.4.16.md) | Marca no executável, janela/barra de tarefas, bandeja e atalhos do MSI |
 | [Mapa e limpeza do Front](mapa-front-limpeza.md) | Auditoria de código e consumidores na base de testes, mudanças isoladas e candidatos preservados |
 | [Refatoração estrutural do Front](refatoracao-front.md) | Separação de responsabilidades, commits selecionáveis, checks e imagem aplicada somente nos Docker de teste |
 | [Revisão para publicação web](publicacao-web-2026-10-06.md) | Integração do PR #18, revisão de segurança/deploy e distinção entre preparação e publicação efetiva |
-| [Publicação web do histórico pessoal](publicacao-web-historico-2026-10-06.md) | PRs #25/#26, CI, SHA e imagem implantados, saúde pública e limite da conferência autenticada |
 | [Especificação](produto/especificacao-funcional.md) | Intenção de produto, estado implementado/planejado e IDs RN/RF/CA/D |
 | [Compatibilidade](compatibilidade-backend.md) | API de referência e processo de alinhamento do contrato |
 | [OpenAPI real](openapi-backend-current.json) / [consumido](openapi.json) | Contrato técnico, incluindo o acompanhamento pessoal aditivo |

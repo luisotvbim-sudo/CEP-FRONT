@@ -1,9 +1,21 @@
 # Aplicativo Windows — contexto atual do host
 
+Na evolução posterior à tag MSI 0.4.21, o rodapé nativo do WPF mostra `Versão X.Y.Z`, lida da versão do executável compilado. O rótulo permanece visível durante carregamento ou falha do WebView2. O build MSI define essa versão com `-p:Version`; a versão do site web é independente. A instalação 0.4.21 já publicada não recebe essa interface sem um novo pacote.
+
+Para senha diária, descoberta/cancelamento de pedidos e retomada de supervisão,
+a referência desta branch é a [PR #29](https://github.com/luisotvbim-sudo/CEP-FRONT/pull/29),
+`cebc15b`, e o [contrato Windows](feedback-senhas-windows.md). As bases auditadas
+de 04/10 abaixo são históricas; não comprovam integração à main, versão instalada
+ou publicação das correções F01/F02/F03.
+
+O [candidato MSI 0.4.16](icone-windows-0.4.16.md) incorpora a logomarca
+reduzida ao executável, à janela/barra de tarefas e à bandeja, além dos
+atalhos do instalador corporativo.
+
 Referência Windows conferida em 06/10/2026: [contexto do instalador](CONTEXTO-INSTALADOR.md) e [auditoria 0.4.12](AUDITORIA-INSTALADOR-2026-10-06.md). As matrizes datadas de 04/10 abaixo são históricas; a auditoria separa código, draft, checks e homologação pendente.
 
 
-Revisão de 04/10/2026, com base `main` Front `eb63dbd` e API `b36c6e1`. WPF/WebView2 compartilha telas React com web e assume sessão, bridge, bandeja, popup e integração com serviço local. Instalação e publicação têm ciclos próprios; [instalador](instalador-corporativo.md) e [menu de energia](menu-energia.md) definem políticas/contratos.
+Revisão de 04/10/2026, com base `main` Front `eb63dbd` e API `b36c6e1`. WPF/WebView2 compartilha telas React com web e assume sessão, bridge, bandeja, popup e integração com serviço local. Instalação e publicação têm ciclos próprios; [instalador](instalador-corporativo.md) e [menu de energia](menu-energia.md) definem políticas/contratos. O [candidato MSI 0.4.14](windows10-msi-0.4.14.md) acrescenta Windows 10 22H2 x64 ao preflight, com homologação real pendente.
 
 ## Bases e capacidades
 
