@@ -128,7 +128,8 @@ export function Analyses({
           >
             <p>
               Esta tela mostra análises já geradas pelo processamento diário ou por envios. Ela não
-              confere Monday e VR Mais agora. Sem análise gerada, não há conclusão sobre suas horas.
+              confere Monday e VR Mais agora. Sem análise gerada, não há conclusão sobre{' '}
+              {ownUserId ? 'suas horas' : 'as horas das pessoas consultadas'}.
             </p>
             {onOpenJourney && (
               <button type="button" className="secondary-button" onClick={onOpenJourney}>
