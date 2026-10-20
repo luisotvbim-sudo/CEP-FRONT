@@ -109,7 +109,9 @@ internal sealed class PowerBridgeHandler(ApiSession session, Func<ControlRequest
                 return new { state = "recovery-required", requestId = current.RequestId, recovered = true };
             }
             if (response.Code == "power_uncertain") return new { state = "unavailable" };
-            if (uncertainQuiescence) return new { state = "unavailable" };
+            // A fresh, versioned service status with no request resolves an earlier
+            // failed lifecycle probe. Keep unknown or foreign requests unavailable.
+            uncertainQuiescence = false;
             return new { state = "idle" };
         }
     }

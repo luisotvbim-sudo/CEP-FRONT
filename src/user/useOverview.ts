@@ -14,11 +14,7 @@ export function useOverview(api: OverviewApi) {
   }>({ pending: true, error: null })
   useEffect(() => {
     let active = true
-    setState((previous) => ({
-      data: previous.data?.period === period ? previous.data : undefined,
-      pending: true,
-      error: null,
-    }))
+    setState((previous) => ({ ...previous, pending: true, error: null }))
     const timer = setTimeout(() => {
       void api.load(period).then(
         (data) => {

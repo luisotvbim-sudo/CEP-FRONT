@@ -29,6 +29,10 @@ foreach (var failure in new Exception[] {
     Check(!string.IsNullOrWhiteSpace(feedback) && !feedback.Contains("private fixture"), "Exit exceptions must be visible and sanitized");
 }
 Check(ProtectedExitFeedback.Failure(new PowerBridgeFailure("power_recovery_required")).Contains("tente cancelar"), "Uncertain power requires explicit cancellation");
+Check(WebViewRecoveryFeedback.Message(new PowerBridgeFailure("power_recovery_required")).Contains("Verificar solicitação de energia"),
+    "Recovered power requests must offer the native status path even when WebView2 is unavailable");
+Check(!WebViewRecoveryFeedback.Message(new PowerBridgeFailure("power_service_changed")).Contains("cancelamento não foi confirmado"),
+    "A service restart alone must not be described as failed cancellation");
 foreach (var (failure, code) in new (Exception, string)[] {
     (new OperationCanceledException("private"), "power_service_timeout"),
     (new TimeoutException("private"), "power_service_timeout"),

@@ -28,23 +28,33 @@ export function HistoryView({
     source,
     setSource,
     result,
+    resultSource,
+    resultPersonId,
+    dirty,
     validation,
     action,
     changed: change,
     submit,
-  } = useHistory(api, nested ? undefined : daysBeforeToday(19))
+  } = useHistory(api, nested ? undefined : daysBeforeToday(19), true)
   const seenRevision = useRef(0)
   const submitRef = useRef(submit)
   submitRef.current = submit
   useEffect(() => {
-    if (refreshRevision === 0 || seenRevision.current === refreshRevision || action.pending || !person.id) return
+    if (
+      refreshRevision === 0 ||
+      seenRevision.current === refreshRevision ||
+      action.pending ||
+      !person.id
+    )
+      return
     const timer = setTimeout(() => {
       seenRevision.current = refreshRevision
       submitRef.current(person.id)
     }, 0)
     return () => clearTimeout(timer)
   }, [refreshRevision, action.pending, person.id])
-  const entry = result?.people?.find((value) => value.workforcePersonId === person.id)
+  const visibleResult = resultPersonId === person.id ? result : null
+  const entry = visibleResult?.people?.find((value) => value.workforcePersonId === person.id)
   const records = entry?.records ?? []
   return (
     <>
@@ -80,14 +90,25 @@ export function HistoryView({
             </HistoryFields>
           </fieldset>
           <p className="muted">
-            Até 90 dias inclusivos para consulta. A revalidação pessoal coleta os últimos 20 dias inclusivos.
+            Até 90 dias inclusivos para consulta. A revalidação pessoal coleta os últimos 20 dias
+            inclusivos.
           </p>
           <FormNotice error={validation || action.error} />
         </form>
       </div>
-      {action.pending ? (
+      {visibleResult && (dirty || action.pending || validation || action.error) && (
+        <p className="history-summary" role="status">
+          {action.pending
+            ? 'Consultando novos registros. '
+            : action.error
+              ? 'Não foi possível atualizar os registros. '
+              : 'Filtros alterados. '}
+          Abaixo está a consulta anterior de {date(visibleResult.from)} a {date(visibleResult.to)}.
+        </p>
+      )}
+      {action.pending && !visibleResult ? (
         <Loading text="Consultando registros…" />
-      ) : !result ? (
+      ) : !visibleResult ? (
         <div className="admin-panel">
           <Empty title="Escolha o período da consulta">
             <p>Os dados exibidos respeitam o acesso vigente no servidor.</p>
@@ -97,9 +118,9 @@ export function HistoryView({
         <>
           <div className="history-summary">
             <span>
-              {date(result.from)} a {date(result.to)}
+              {date(visibleResult.from)} a {date(visibleResult.to)}
             </span>
-            <span>Consulta gerada em {timestamp(result.generatedAt)}</span>
+            <span>Consulta gerada em {timestamp(visibleResult.generatedAt)}</span>
           </div>
           {records.length === 0 ? (
             <div className="admin-panel">
@@ -112,7 +133,7 @@ export function HistoryView({
           ) : (
             <section className="admin-panel">
               <h2>Registros de {entry?.displayName || person.displayName || 'pessoa associada'}</h2>
-              {entry && <DailyHistory person={entry} source={source} />}
+              {entry && <DailyHistory person={entry} source={resultSource} />}
             </section>
           )}
           <p className="page-footnote">

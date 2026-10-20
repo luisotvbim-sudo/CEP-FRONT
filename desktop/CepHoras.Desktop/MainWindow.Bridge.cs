@@ -44,7 +44,7 @@ public partial class MainWindow
                     case "open-inbox": OpenWindow(true); break;
                     case "exit": exiting = true; Close(); break;
                     case "reload-ui": await ReloadWebView(); break;
-                    case "recreate-ui": await RecoverWebView(WebViewRecoveryStage.Recreate, false); break;
+                    case "recreate-ui": await RecoverWebView(WebViewRecoveryStage.Recreate, false, WebViewRecoveryTrigger.Renderer); break;
                     case "resume-ui": webViewLifecycle.Resume(Environment.TickCount64); break;
                     case "reset-recovery-budget": webViewRecovery.Reset(); break;
                     case "update-downloading": installingUpdate = true; break;

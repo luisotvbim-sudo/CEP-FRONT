@@ -7,6 +7,8 @@ using Microsoft.Web.WebView2.Core;
 
 namespace CepHoras.Desktop;
 
+internal enum WebViewRecoveryTrigger { Automatic, UserReload, UserRepair, Renderer }
+
 public partial class MainWindow
 {
     private readonly DispatcherTimer webViewHealthTimer = new() { Interval = TimeSpan.FromSeconds(1) };
@@ -30,6 +32,7 @@ public partial class MainWindow
         if (closed || exiting) return;
         webViewLifecycle.Begin(navigationId, Environment.TickCount64);
         webViewFailed = false;
+        ReviewPowerButton.Visibility = Visibility.Collapsed;
         Browser.Visibility = Visibility.Hidden;
         StartupPanel.Visibility = Visibility.Visible;
         WebViewLoadingIndicator.Visibility = Visibility.Visible;
@@ -45,6 +48,7 @@ public partial class MainWindow
         ForceRestartButton.IsEnabled = enabled;
         ReloadInterfaceButton.IsEnabled = enabled;
         RepairProfileButton.IsEnabled = enabled;
+        ReviewPowerButton.IsEnabled = enabled && power is not null;
     }
 
     private async Task CreateWebView()
@@ -78,6 +82,7 @@ public partial class MainWindow
         var core = Browser.CoreWebView2;
         if (!WebViewProfileRecovery.SamePath(core.Environment.UserDataFolder, webViewDataFolder))
             throw new InvalidOperationException("The WebView2 profile override conflicts with the owned profile.");
+        WriteWebViewDiagnostic("runtime-ready", core.Environment.BrowserVersionString);
         core.Settings.IsPasswordAutosaveEnabled = false;
         core.Settings.IsGeneralAutofillEnabled = false;
 #if !DEBUG
@@ -125,7 +130,8 @@ public partial class MainWindow
         core.ProcessFailed += (_, args) =>
         {
             if (instance != browserGeneration || closed || exiting || installingUpdate) return;
-            WriteWebViewDiagnostic("process-failed", args.ProcessFailedKind.ToString());
+            WriteWebViewDiagnostic("process-failed",
+                $"{args.ProcessFailedKind}:{args.Reason}:0x{args.ExitCode:X8}");
             if (args.ProcessFailedKind == CoreWebView2ProcessFailedKind.BrowserProcessExited) browserNeedsRecreation = true;
             if (args.ProcessFailedKind is CoreWebView2ProcessFailedKind.BrowserProcessExited or
                 CoreWebView2ProcessFailedKind.RenderProcessExited or CoreWebView2ProcessFailedKind.RenderProcessUnresponsive)
@@ -176,7 +182,7 @@ public partial class MainWindow
         }
     }
 
-    private void FailWebView(string message, string code, bool recover = true)
+    private void FailWebView(string message, string code, bool recover = true, bool appendRetryHint = true)
     {
         if (closed || exiting || webViewFailed) return;
         webViewFailed = true;
@@ -188,7 +194,7 @@ public partial class MainWindow
         WriteWebViewDiagnostic(code);
         if (recover && installingUpdate) recoveryDeferredForUpdate = true;
         var step = recover && !installingUpdate ? webViewRecovery.Next() : null;
-        StartupStatus.Text = !hostSetupReady || browserCreationUnconfirmed ? message : step is null ? message + " Use Recarregar interface ou solicite suporte à TI."
+        StartupStatus.Text = !hostSetupReady || browserCreationUnconfirmed || !appendRetryHint ? message : step is null ? message + " Use Recarregar interface ou solicite suporte à TI."
             : message + " Tentando recuperar automaticamente…";
         if (recoveryDeferredForUpdate) StartupStatus.Text = message + " A recuperação aguarda o término da atualização.";
         if (step is not null) _ = RecoverAfterDelay(step.Value);
@@ -212,28 +218,40 @@ public partial class MainWindow
         try
         {
             await Task.Delay(step.Delay, recoveryDelay.Token);
-            if (!closed && !exiting && webViewFailed) await RecoverWebView(step.Stage, false);
+            if (!closed && !exiting && webViewFailed) await RecoverWebView(step.Stage, false, WebViewRecoveryTrigger.Automatic);
         }
         catch (OperationCanceledException) { }
     }
 
     private async void ReloadWebView_Click(object sender, RoutedEventArgs e) => await ReloadWebView();
+    private async void ReviewPowerButton_Click(object sender, RoutedEventArgs e) => await ReviewNativePowerRequest();
     private Task ReloadWebView() => RecoverWebView(browserNeedsRecreation || Browser.CoreWebView2 is null
-        ? WebViewRecoveryStage.Recreate : WebViewRecoveryStage.Reload, false);
-    private async void RepairProfile_Click(object sender, RoutedEventArgs e) => await RecoverWebView(WebViewRecoveryStage.Restart, true);
+        ? WebViewRecoveryStage.Recreate : WebViewRecoveryStage.Reload, false, WebViewRecoveryTrigger.UserReload);
+    private async void RepairProfile_Click(object sender, RoutedEventArgs e) => await RecoverWebView(WebViewRecoveryStage.Restart, true, WebViewRecoveryTrigger.UserRepair);
 
-    private async Task RecoverWebView(WebViewRecoveryStage stage, bool resetProfile)
+    private async Task RecoverWebView(WebViewRecoveryStage stage, bool resetProfile, WebViewRecoveryTrigger trigger)
     {
         if (installingUpdate) { if (webViewFailed) recoveryDeferredForUpdate = true; return; }
         if (!hostSetupReady || browserCreationUnconfirmed || closed || exiting || restartingInterface || creatingWebView || closingWithPassword) return;
+        var readyBeforeRecovery = webViewLifecycle.Ready && Browser.Visibility == Visibility.Visible && !webViewFailed;
+        var powerPreflightComplete = false;
+        var recoveryId = Guid.NewGuid();
+        var recoveryStarted = Stopwatch.GetTimestamp();
+        var source = trigger.ToString().ToLowerInvariant();
+        var stepName = stage.ToString().ToLowerInvariant();
+        WriteWebViewDiagnostic("recovery-requested", readyBeforeRecovery ? "ready" : "not-ready",
+            recoveryId, source, stepName);
         restartingInterface = true;
         recoveryDelay?.Cancel();
         SetRecoveryButtons(false);
         try
         {
             await using var powerLease = power is null ? null : await power.QuiesceAsync(lifetime.Token);
+            powerPreflightComplete = true;
+            WriteWebViewDiagnostic("power-preflight-confirmed", null, recoveryId, source, stepName,
+                (long)Stopwatch.GetElapsedTime(recoveryStarted).TotalMilliseconds);
             if (closed || exiting || installingUpdate) return;
-            WriteWebViewDiagnostic("recovery-" + stage.ToString().ToLowerInvariant());
+            WriteWebViewDiagnostic("recovery-" + stepName, null, recoveryId, source, stepName);
             if (stage == WebViewRecoveryStage.Reload && Browser.CoreWebView2 is not null && !browserNeedsRecreation)
             {
                 Browser.CoreWebView2.Stop();
@@ -262,12 +280,26 @@ public partial class MainWindow
         }
         catch (Exception error)
         {
-            WriteWebViewDiagnostic("recovery-failed", error.GetType().Name);
+            var detail = error is PowerBridgeFailure failure ? failure.Code : error.GetType().Name;
+            if (!powerPreflightComplete && readyBeforeRecovery)
+            {
+                WriteWebViewDiagnostic("recovery-blocked", detail, recoveryId, source, stepName,
+                    (long)Stopwatch.GetElapsedTime(recoveryStarted).TotalMilliseconds);
+                System.Windows.MessageBox.Show(this, WebViewRecoveryFeedback.Message(error),
+                    "CEP Horas — energia", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return; // The healthy WebView was never changed; keep it visible.
+            }
+            WriteWebViewDiagnostic("recovery-failed", detail, recoveryId, source, stepName,
+                (long)Stopwatch.GetElapsedTime(recoveryStarted).TotalMilliseconds);
             webViewFailed = false;
+            ReviewPowerButton.Visibility = managedInstallation && error is PowerBridgeFailure
+                ? Visibility.Visible : Visibility.Collapsed;
             FailWebView(error is PowerBridgeFailure
-                ? "Não foi possível confirmar o cancelamento da ação de energia. A interface foi preservada."
+                ? WebViewRecoveryFeedback.Message(error)
                 : browserCreationUnconfirmed ? "O navegador não confirmou a inicialização. Abra o aplicativo novamente ou solicite suporte à TI."
-                : "Não foi possível recuperar automaticamente a interface.", "recovery-failed", !browserCreationUnconfirmed && error is not PowerBridgeFailure && stage != WebViewRecoveryStage.Restart);
+                : "Não foi possível recuperar automaticamente a interface.", "recovery-failed",
+                !browserCreationUnconfirmed && error is not PowerBridgeFailure && stage != WebViewRecoveryStage.Restart,
+                error is not PowerBridgeFailure);
         }
         finally
         {
@@ -309,7 +341,8 @@ public partial class MainWindow
         pendingBrowserObservation = null;
     }
 
-    private static void WriteWebViewDiagnostic(string code, string? detail = null)
+    private static void WriteWebViewDiagnostic(string code, string? detail = null, Guid? recoveryId = null,
+        string? trigger = null, string? stage = null, long? elapsedMs = null)
     {
         RecordNativeEvent("webview-" + code);
         try
@@ -326,7 +359,8 @@ public partial class MainWindow
             Directory.CreateDirectory(directory);
             var path = Path.Combine(directory, "webview.jsonl");
             if (File.Exists(path) && new FileInfo(path).Length > 262_144) File.Move(path, path + ".previous", true);
-            File.AppendAllText(path, JsonSerializer.Serialize(new { at = DateTimeOffset.UtcNow, code, detail }) + Environment.NewLine);
+            File.AppendAllText(path, JsonSerializer.Serialize(new { at = DateTimeOffset.UtcNow, code, detail,
+                recoveryId, trigger, stage, elapsedMs }) + Environment.NewLine);
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or System.Security.SecurityException) { }
     }

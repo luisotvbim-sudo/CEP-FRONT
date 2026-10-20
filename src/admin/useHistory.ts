@@ -4,11 +4,14 @@ import { useAction } from '../hooks/async'
 import type { AdminApi, History, Source } from './api'
 import { today, validatePeriod } from './format'
 
-export function useHistory(api: AdminApi, initialFrom?: string) {
+export function useHistory(api: AdminApi, initialFrom?: string, retainOnFilterChange = false) {
   const [from, setFrom] = useState(() => initialFrom ?? `${today().slice(0, 7)}-01`)
   const [to, setTo] = useState(today)
   const [source, setSource] = useState<Source | ''>('')
   const [result, setResult] = useState<History | null>(null)
+  const [resultSource, setResultSource] = useState<Source | ''>('')
+  const [resultPersonId, setResultPersonId] = useState<string | undefined>()
+  const [dirty, setDirty] = useState(false)
   const [validation, setValidation] = useState<AuthError | null>(null)
   const revision = useRef(0)
   const action = useAction()
@@ -21,7 +24,8 @@ export function useHistory(api: AdminApi, initialFrom?: string) {
 
   function changed() {
     revision.current++
-    setResult(null)
+    if (!retainOnFilterChange) setResult(null)
+    setDirty(true)
     setValidation(null)
     action.clear()
   }
@@ -31,7 +35,7 @@ export function useHistory(api: AdminApi, initialFrom?: string) {
     if (message) return
     void action.run(async () => {
       const current = ++revision.current
-      setResult(null)
+      if (!retainOnFilterChange) setResult(null)
       try {
         const data = await api.history({
           from,
@@ -40,7 +44,12 @@ export function useHistory(api: AdminApi, initialFrom?: string) {
           workforcePersonId: personId,
           search: search?.trim() || undefined,
         })
-        if (current === revision.current) setResult(data)
+        if (current === revision.current) {
+          setResult(data)
+          setResultSource(source)
+          setResultPersonId(personId)
+          setDirty(false)
+        }
       } catch (failure) {
         if (current === revision.current) throw failure
       }
@@ -54,6 +63,9 @@ export function useHistory(api: AdminApi, initialFrom?: string) {
     source,
     setSource,
     result,
+    resultSource,
+    resultPersonId,
+    dirty,
     validation,
     action,
     changed,

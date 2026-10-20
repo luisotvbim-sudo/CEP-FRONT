@@ -154,12 +154,7 @@ export function UserShell({
                   description="Registros importados e associação da sua conta."
                 />
               )}
-              <SyncPage
-                api={api}
-                allowFull={false}
-                embedded
-                onCompleted={onSyncCompleted}
-              />
+              <SyncPage api={api} allowFull={false} embedded onCompleted={onSyncCompleted} />
               <QueryError error={people.error} retry={people.reload} />
               {people.pending && !self ? (
                 <Loading text="Localizando sua associação…" />
@@ -167,9 +162,8 @@ export function UserShell({
                 <div className="admin-panel">
                   <Empty title="Seus registros ainda não estão disponíveis">
                     <p>
-                      Não encontramos uma pessoa associada à sua conta.
-                      Isso não significa zero horas. Peça ao coordenador para conferir a associação
-                      e seu acesso.
+                      Não encontramos uma pessoa associada à sua conta. Isso não significa zero
+                      horas. Peça ao coordenador para conferir a associação e seu acesso.
                     </p>
                   </Empty>
                 </div>
@@ -246,7 +240,12 @@ export function UserShell({
             />
           )}
           {activePage === 'analyses' && (
-            <Analyses api={notifications} peopleApi={api} ownUserId={session.user.id} />
+            <Analyses
+              api={notifications}
+              peopleApi={api}
+              ownUserId={session.user.id}
+              onOpenJourney={() => setPage('mine')}
+            />
           )}
           {activePage === 'teamAnalyses' && <Analyses api={notifications} peopleApi={api} />}
         </main>
