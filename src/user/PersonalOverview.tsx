@@ -50,11 +50,12 @@ export function PersonalOverview({
   retryAssociation(): void
 }) {
   const query = useOverview(overviewApi(client))
-  const value = query.data?.period === query.period ? query.data : undefined
+  const value = query.data
+  const previousPeriod = value && value.period !== query.period
   const message = value && messages[value.status]
   const analysis = value?.analysis
   const difference = mondayDifference(analysis?.deltaSeconds)
-  const selectedPeriod = value?.periods?.find((item) => item.period === query.period)
+  const selectedPeriod = value?.periods?.find((item) => item.period === value.period)
   return (
     <>
       <PageHeading
@@ -95,7 +96,18 @@ export function PersonalOverview({
             Conferir agora
           </button>
         </div>
-        {query.pending && (
+        {value && (query.pending || previousPeriod) && (
+          <p className="overview-notice" role="status">
+            {query.error && previousPeriod
+              ? `A consulta de ${periodLabels[query.period]} não foi concluída. `
+              : query.pending
+                ? `Atualizando ${periodLabels[query.period]}. `
+                : `Preparando a consulta de ${periodLabels[query.period]}. `}
+            O resultado de {periodLabels[value.period]} abaixo foi conferido até{' '}
+            {timestamp(value.cutoff)}.
+          </p>
+        )}
+        {query.pending && !value && (
           <Loading text="Conferindo suas fontes. Esta consulta pode levar alguns instantes…" />
         )}
         {query.error && (

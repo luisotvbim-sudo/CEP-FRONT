@@ -510,3 +510,19 @@ test('native inbox intent is acknowledged after commit and while already open', 
   ])
   expect(await page.evaluate(() => window.__CEP_INBOX_INTENT__)).toBeUndefined()
 })
+
+test('empty personal analysis explains its snapshot and links to the live journey', async ({
+  page,
+}) => {
+  await fixture(page, { role: 'user' })
+  await page.route('**/organization/time-control/analyses?**', (route) =>
+    route.fulfill({ json: { items: [], total: 0, page: 1, pageSize: 20 } }),
+  )
+  await page.getByRole('button', { name: 'Minha análise' }).click()
+  await expect(
+    page.getByRole('heading', { name: 'Nenhuma análise gerada para estes filtros' }),
+  ).toBeVisible()
+  await expect(page.getByText('Ela não confere Monday e VR Mais agora.')).toBeVisible()
+  await page.getByRole('button', { name: 'Conferir minha jornada agora' }).click()
+  await expect(page.getByRole('heading', { name: 'Minha jornada' })).toBeVisible()
+})

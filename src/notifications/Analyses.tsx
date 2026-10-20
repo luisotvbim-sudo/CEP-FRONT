@@ -11,10 +11,12 @@ export function Analyses({
   api,
   peopleApi,
   ownUserId,
+  onOpenJourney,
 }: {
   api: NotificationApi
   peopleApi: AdminApi
   ownUserId?: string
+  onOpenJourney?: () => void
 }) {
   const [period, setPeriod] = useState<Period>('daily')
   const [personId, setPersonId] = useState('')
@@ -119,11 +121,20 @@ export function Analyses({
           ))
         )}
         {!people.pending && !result.pending && result.data?.total === 0 && (
-          <Empty title="Nenhuma análise disponível">
+          <Empty
+            title={
+              ownUserId ? 'Nenhuma análise gerada para estes filtros' : 'Nenhuma análise disponível'
+            }
+          >
             <p>
-              O processamento diário e os envios geram análises. Ausência de resultado não significa
-              horas corretas ou zero horas.
+              Esta tela mostra análises já geradas pelo processamento diário ou por envios. Ela não
+              confere Monday e VR Mais agora. Sem análise gerada, não há conclusão sobre suas horas.
             </p>
+            {onOpenJourney && (
+              <button type="button" className="secondary-button" onClick={onOpenJourney}>
+                Conferir minha jornada agora
+              </button>
+            )}
           </Empty>
         )}
         <Pagination
