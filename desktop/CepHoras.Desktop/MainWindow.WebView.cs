@@ -252,7 +252,7 @@ public partial class MainWindow
                 (long)Stopwatch.GetElapsedTime(recoveryStarted).TotalMilliseconds);
             if (closed || exiting || installingUpdate) return;
             WriteWebViewDiagnostic("recovery-" + stepName, null, recoveryId, source, stepName);
-            if (stage == WebViewRecoveryStage.Reload && Browser.CoreWebView2 is not null && !browserNeedsRecreation)
+            if (stage == WebViewRecoveryStage.Reload && !browserNeedsRecreation && Browser.CoreWebView2 is not null)
             {
                 Browser.CoreWebView2.Stop();
                 Browser.CoreWebView2.Navigate($"{AppOrigin}/index.html?reload={Guid.NewGuid():N}");
@@ -317,7 +317,15 @@ public partial class MainWindow
 
     private async Task DisposeWebView()
     {
-        var core = Browser.CoreWebView2;
+        CoreWebView2? core = null;
+        try { core = Browser.CoreWebView2; }
+        catch (InvalidOperationException) when (browserNeedsRecreation)
+        {
+            // After BrowserProcessExited the control can reject its CoreWebView2
+            // getter. The browser is already known dead; proceed to dispose the
+            // control without treating the stale getter as a recovery failure.
+            WriteWebViewDiagnostic("dispose-core-unavailable");
+        }
         var ids = Array.Empty<int>();
         var browserId = 0;
         if (core is not null)

@@ -1,5 +1,11 @@
 # Aplicativo Windows — contexto atual do host
 
+## Correção do encerramento inesperado do WebView2 (03/11/2026)
+
+No piloto MSI 0.4.23, finalizar o processo de navegador do WebView2 deixava a tela de recuperação aberta. O evento `BrowserProcessExited` marcava a necessidade de recriar o controle, mas a tentativa automática ainda lia `CoreWebView2`; nessa condição, o getter lança `InvalidOperationException`. A mesma leitura no início do descarte impedia a recriação. O host agora consulta primeiro a marca de processo encerrado e trata esse getter indisponível durante o descarte, mantendo a conferência de processos pertencentes ao aplicativo e o preflight do serviço de energia.
+
+Em 03/11, um host Debug isolado reproduziu a falha antes da alteração. Após a correção, encerrar somente seu processo de navegador gerou `BrowserProcessExited`, `dispose-core-unavailable` e `ready` cerca de dois segundos depois. Nenhuma ação de energia foi acionada. A suíte `CepHoras.Desktop.Tests` passou (475 verificações). Este resultado valida a recuperação do host isolado; upgrade MSI e início do serviço na estação ainda precisam de piloto da nova versão.
+
 ## Recuperação da interface e serviço de energia (15/10/2026)
 
 Ao recuperar uma falha do WebView2, o host consulta o serviço de energia antes de recarregar, recriar o navegador ou reiniciar o aplicativo. Uma solicitação herdada após reinício do serviço exige cancelamento explícito do titular; reiniciar o serviço não apaga o journal nem comprova que a ação acabou. Nessa condição, a tela de recuperação oferece **Verificar solicitação de energia**, a mesma consulta da bandeja do Windows, inclusive quando o React não carrega. Somente após o serviço confirmar a ausência ou o cancelamento o usuário deve recarregar a interface. Falhas do serviço continuam bloqueando a recuperação; a mensagem distingue solicitação recuperada, estado incerto e serviço reiniciado.
