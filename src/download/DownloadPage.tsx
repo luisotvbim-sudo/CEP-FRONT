@@ -5,8 +5,8 @@ import icon from '../assets/conceito-icon.png'
 import './download.css'
 
 const desktopRelease = {
-  version: '0.4.22',
-  download: 'https://github.com/luisotvbim-sudo/CEP-FRONT/releases/download/installer-v0.4.22/CEP-Horas-Windows-win-x64.msi',
+  version: '0.4.24',
+  download: 'https://github.com/luisotvbim-sudo/CEP-FRONT/releases/download/installer-v0.4.24/CEP-Horas-Windows-win-x64.msi',
 }
 
 export function DownloadPage() {
@@ -30,8 +30,8 @@ export function DownloadPage() {
             <h2>CEP Horas para Windows</h2>
             <p className="download-platform"><Monitor size={16} aria-hidden="true" /> Windows 10 22H2 / Windows 11 24H2+ · x64</p>
             <p className="download-platform">Pro / Enterprise / Education</p>
-            <p className="download-platform">Instalação pela TI · WebView2 por máquina.</p>
-            <span className="download-test-badge">Piloto manual · {desktopRelease.version} · MSI</span>
+            <p className="download-platform">Instalação e atualização pela TI · WebView2 por máquina.</p>
+            <span className="download-test-badge">Beta manual · {desktopRelease.version} · MSI</span>
             <a className="download-primary" href={desktopRelease.download}><ArrowDownToLine size={20} aria-hidden="true" /> Baixar para Windows</a>
           </div>
         </section>
