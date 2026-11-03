@@ -428,6 +428,22 @@ internal static class PowerBridgeTests
 
     private static async Task DiscoveryChecks(Action<bool, string> check, string root)
     {
+        using (var transientSession = await Session(root, "discovery-after-service-restart"))
+        {
+            var probeCalls = 0;
+            var host = new PowerBridgeHandler(transientSession, request =>
+                ++probeCalls == 1
+                    ? Task.FromException<ControlResponse>(new IOException("service restarting"))
+                    : Task.FromResult(new ControlResponse("ready", "fixture", Active: true,
+                        BrokerInstanceId: Broker, PowerStatusVersion: 1)));
+            try { await host.QuiesceAsync(); throw new InvalidOperationException("Expected service interruption"); }
+            catch (IOException) { }
+            var status = JsonSerializer.SerializeToElement(await host.Execute("status", JsonSerializer.SerializeToElement(new { })));
+            check(status.GetProperty("state").GetString() == "idle",
+                "A confirmed empty service state must clear a stale uncertain lifecycle probe");
+            await using var lease = await host.QuiesceAsync();
+            check(probeCalls == 3, "A recovered lifecycle must verify the service again");
+        }
         foreach (var code in new[] { "ready", "power_uncertain" })
         foreach (var authenticated in new[] { false, true })
         {

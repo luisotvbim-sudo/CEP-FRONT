@@ -41,6 +41,9 @@ internal sealed class PowerAuthority(
                 foreach (var entry in saved.Terminal) terminal.Add(entry.Key, entry.Value);
                 pending = saved.Pending;
                 inherited = pending is not null;
+                if (pending is not null)
+                    ControlAudit.TryWrite(audit,
+                        "power-recovered-at-start:" + pending.Action + ":" + pending.Phase, "SYSTEM");
             }
             initialized = true;
         }
@@ -85,6 +88,23 @@ internal sealed class PowerAuthority(
             Complete(value.RequestId, true, value.BrokerInstanceId);
             ControlAudit.TryWrite(audit, "power-cancelled-for-update:" + value.Action, value.OwnerSid);
             if (!Persist()) throw new IOException("Cancelamento confirmado; persistência pendente antes da manutenção.");
+        }
+    }
+
+    // Called only from the SCM system-shutdown notification, never from service
+    // stop or startup. The OS is ending this boot, so no scheduled action from
+    // this service instance can remain pending on the next boot.
+    internal bool RecordSystemShutdown()
+    {
+        lock (gate)
+        {
+            Initialize();
+            if (pending is null) return !dirty || Persist();
+            var value = pending;
+            Complete(value.RequestId, false, value.BrokerInstanceId);
+            if (!Persist()) return false; // The old journal remains for explicit recovery.
+            ControlAudit.TryWrite(audit, "power-completed-at-system-shutdown:" + value.Action, "SYSTEM");
+            return true;
         }
     }
 

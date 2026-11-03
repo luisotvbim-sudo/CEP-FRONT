@@ -108,7 +108,10 @@ test('daily history groups sources, expands with keyboard, preserves seconds and
   await monday.getByText('Detalhes do registro').nth(1).click()
   await expect(monday.getByText('Manual', { exact: true })).toBeVisible()
   await expect(monday.getByText('Cronômetro', { exact: true })).toBeVisible()
-  await expect(monday.getByRole('link', { name: 'Abrir atividade' })).toHaveAttribute('href', 'https://example.test/activity')
+  await expect(monday.getByRole('link', { name: 'Abrir atividade' })).toHaveAttribute(
+    'href',
+    'https://example.test/activity',
+  )
   await expect(monday.getByText('Importado em', { exact: true })).toHaveCount(0)
   await expect(monday.getByText('Referência externa', { exact: true })).toHaveCount(0)
   const vr = page.getByRole('region', { name: 'VR Mais em 01/09/2026', exact: true })
@@ -144,6 +147,21 @@ for (const leader of [false, true]) {
     await expect(page.getByText('Dados insuficientes', { exact: true })).toBeVisible()
   })
 }
+
+test('personal history retains the labelled previous query while dates are corrected', async ({
+  page,
+}) => {
+  await fixture(page, { role: 'user' })
+  await page.getByRole('button', { name: 'Meu histórico', exact: true }).click()
+  await page.getByRole('button', { name: 'Consultar histórico' }).click()
+  await expect(page.getByRole('button', { name: 'Expandir dia 20/09/2026' })).toBeVisible()
+  await page.getByLabel('De', { exact: true }).fill('2026-01-01')
+  await expect(page.locator('.history-summary[role="status"]')).toContainText('consulta anterior')
+  await expect(page.getByRole('button', { name: 'Expandir dia 20/09/2026' })).toBeVisible()
+  await page.getByRole('button', { name: 'Consultar histórico' }).click()
+  await expect(page.getByRole('alert')).toContainText('até 90 dias')
+  await expect(page.getByRole('button', { name: 'Expandir dia 20/09/2026' })).toBeVisible()
+})
 
 test('older API keeps expandable records without locally invented totals', async ({ page }) => {
   await fixture(page)

@@ -1,6 +1,10 @@
 # Contexto atual do CEP-FRONT
 
-Em 19/10/2026, a branch de refatoração começa do MSI 0.4.22 e integra a `main` web. O merge preserva a implementação Windows/telemetria e traz o card `/download` da `main`, que referencia a prerelease manual 0.4.22. Ainda não há MSI novo, instalação ou publicação desta branch. O [programa central](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/54) exige reconferir versão implantada e testes por SHA antes de distribuir.
+Em 19/10/2026, a branch `codex/refactor-cep-20261019` parte do MSI 0.4.22 e integra a `main` web. O merge `9adfeac` preserva Windows/telemetria e traz o card `/download`, que referencia a prerelease manual 0.4.22. A recuperação Windows do antigo PR #43 foi reaplicada em sete commits posteriores, como código sujeito a nova revisão e homologação. O build 0.4.23 desta branch é apenas de inspeção local, sem instalação ou publicação. O [programa central](https://github.com/luisotvbim-sudo/CEP-ORQUESTRADOR/issues/54) registra resultados por SHA antes de distribuir.
+
+## Histórico anterior à base de 19/10
+
+Os parágrafos abaixo descrevem estados e propostas de datas anteriores. Eles não substituem a base acima nem comprovam a versão instalada em um computador ou implantada na web.
 
 A página pública `/download` já oferece o piloto manual 0.4.18 nos dois
 domínios, após autorização e implantação da `main` web. O convite continua

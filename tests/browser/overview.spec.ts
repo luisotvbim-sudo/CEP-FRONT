@@ -20,8 +20,12 @@ for (const [status, title] of [
     await expect(page.getByText(/Conferido até/)).toBeVisible()
     expect(calls.filter((call) => call.path.includes('/overview')).length).toBe(1)
     if (status === 'incomplete') {
-      await expect(page.locator('.overview-metrics').getByText('Indisponível', { exact: true })).toHaveCount(3)
-      await expect(page.locator('.overview-metrics').getByText('Diferença indisponível')).toBeVisible()
+      await expect(
+        page.locator('.overview-metrics').getByText('Indisponível', { exact: true }),
+      ).toHaveCount(3)
+      await expect(
+        page.locator('.overview-metrics').getByText('Diferença indisponível'),
+      ).toBeVisible()
     } else if (status === 'difference') {
       await expect(page.locator('.overview-metrics').getByText('Faltando no Monday')).toBeVisible()
     } else if (status === 'regular') {
@@ -44,7 +48,9 @@ for (const [status, title] of [
 
 test('positive Monday delta is shown as extra time relative to VR Mais', async ({ page }) => {
   await fixture(page, { role: 'user' })
-  await expect(page.getByRole('heading', { name: 'Dentro da tolerância neste corte' })).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: 'Dentro da tolerância neste corte' }),
+  ).toBeVisible()
   const response = personalOverview('difference')
   response.analysis = {
     ...response.analysis!,
@@ -52,9 +58,7 @@ test('positive Monday delta is shown as extra time relative to VR Mais', async (
     mondaySeconds: 10800,
     deltaSeconds: 3600,
   }
-  await page.route('**/me/time-control/overview?**', (route) =>
-    route.fulfill({ json: response }),
-  )
+  await page.route('**/me/time-control/overview?**', (route) => route.fulfill({ json: response }))
   await page.getByRole('button', { name: 'Conferir agora' }).click()
   const card = page.locator('.overview-metrics').getByText('Sobrando no Monday').locator('..')
   await expect(card).toContainText('01:00')
@@ -79,6 +83,41 @@ test('failed refresh preserves previous cutoff and does not expose source intern
   await page.getByRole('button', { name: 'Conferir agora' }).click()
   await expect(page.getByRole('heading', { name: 'Há diferenças para conferir' })).toBeVisible()
   await expect(page.getByRole('alert')).toHaveCount(0)
+})
+
+test('period change keeps the previous result visibly labelled until the new result arrives', async ({
+  page,
+}) => {
+  await fixture(page, { role: 'user' })
+  await expect(
+    page.getByRole('heading', { name: 'Dentro da tolerância neste corte' }),
+  ).toBeVisible()
+  let finish: (() => void) | undefined
+  await page.route(
+    '**/me/time-control/overview?period=previousDay',
+    (route) =>
+      new Promise<void>((resolve) => {
+        finish = () => {
+          void route.fulfill({ json: personalOverview('difference', 'previousDay') }).then(resolve)
+        }
+      }),
+  )
+  await page.getByLabel('Período oficial').selectOption('previousDay')
+  await expect(page.locator('.overview-notice[role="status"]')).toContainText(
+    'O resultado de Diário abaixo',
+  )
+  await expect(
+    page.getByRole('heading', { name: 'Dentro da tolerância neste corte' }),
+  ).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Histórico do período' })).toContainText(
+    '21/09/2026 a 21/09/2026',
+  )
+  await expect.poll(() => Boolean(finish)).toBe(true)
+  finish?.()
+  await expect(page.getByRole('heading', { name: 'Há diferenças para conferir' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Histórico do período' })).toContainText(
+    '20/09/2026 a 20/09/2026',
+  )
 })
 
 test('older API and retry-after have explicit recovery without polling', async ({ page }) => {
@@ -156,7 +195,9 @@ test('history failure offers retry without hiding the live overview', async ({ p
   })
   await page.getByLabel('Período oficial').selectOption('previousDay')
   await expect(history.getByRole('button', { name: 'Tentar novamente' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Dentro da tolerância neste corte' })).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: 'Dentro da tolerância neste corte' }),
+  ).toBeVisible()
   await history.getByRole('button', { name: 'Tentar novamente' }).click()
   await expect(history.getByRole('button', { name: 'Expandir dia 20/09/2026' })).toBeVisible()
   expect(attempts).toBe(2)
