@@ -154,6 +154,3 @@
 .hours-table button[aria-pressed='true'] {
   text-decoration: underline;
 }
-.hours-overview > button {
-  justify-self: start;
-}

@@ -1,5 +1,5 @@
 import writeXlsxFile, { type Sheet, type Row } from 'write-excel-file/browser'
-import type { HoursSummary, HoursTotals } from './hours-api'
+import type { HoursReportData, HoursTotals } from './hours-api'
 import { timestamp } from './format'
 import { issueLabels } from '../notifications/labels'
 
@@ -27,25 +27,9 @@ const cells = (totals: HoursTotals) => [
   totals.aboveToleranceDays,
 ]
 
-export async function buildHoursWorkbook(report: HoursSummary, teamId?: string) {
-  const team = teamId ? report.teams.find(({ id }) => id === teamId) : undefined
-  if (teamId && !team) throw new Error('O resumo não contém o time selecionado.')
-  const teams = team ? [team] : report.teams
-  const teamMembers = new Map(team?.members.map((member) => [member.personId, member]))
-  const people = team
-    ? report.people.flatMap((person) => {
-        const member = teamMembers.get(person.id)
-        if (!member) return []
-        const days = new Set(member.days)
-        return [
-          {
-            ...person,
-            totals: member.totals,
-            days: person.days.filter(({ day }) => day !== undefined && days.has(day)),
-          },
-        ]
-      })
-    : report.people
+async function buildHoursWorkbook(report: HoursReportData) {
+  const team = 'team' in report ? report.team : undefined
+  const totals = 'team' in report ? report.team.totals : report.organization
   const sheets: Sheet<File | Blob | ArrayBuffer>[] = []
   const addSheet = (
     name: string,
@@ -80,7 +64,7 @@ export async function buildHoursWorkbook(report: HoursSummary, teamId?: string) 
     team ? 'Resumo do time' : 'Organização',
     ['Escopo', ...headers],
     [1, 2, 3, 4],
-    [[team?.name ?? 'Total da organização', ...cells(team?.totals ?? report.organization)]],
+    [[team?.name ?? 'Total da organização', ...cells(totals)]],
   )
   summary.push(
     [],
@@ -93,33 +77,35 @@ export async function buildHoursWorkbook(report: HoursSummary, teamId?: string) 
       ? ['Vínculos', 'Somente os dias em que a pessoa fazia parte deste time.']
       : ['Times', 'Vínculos atuais, recortados pela vigência. Times podem compartilhar pessoas.'],
   )
-  if (!team)
+  if ('teams' in report)
     addSheet(
       'Times',
       ['Time', ...headers],
       [1, 2, 3, 4],
-      teams.map((item) => [item.name, ...cells(item.totals)]),
+      report.teams.map((item) => [item.name, ...cells(item.totals)]),
     )
   addSheet(
     team ? 'Pessoas do time' : 'Pessoas',
     ['Pessoa', ...headers],
     [1, 2, 3, 4],
-    people.map((person) => [person.name, ...cells(person.totals)]),
+    report.people.map((person) => [person.name, ...cells(person.totals)]),
   )
   const memberships = new Map<string, string[]>()
-  const byPerson = new Map(people.map((person) => [person.id, person.name]))
-  const rowsByTeam = teams.flatMap((item) =>
-    item.members.map((member) => {
-      for (const day of member.days) {
-        const key = `${member.personId}/${day}`
-        const names = memberships.get(key) ?? []
-        names.push(item.name)
-        memberships.set(key, names)
-      }
-      return [item.name, byPerson.get(member.personId) ?? 'Pessoa', ...cells(member.totals)]
-    }),
-  )
-  if (!team) addSheet('Pessoas por time', ['Time', 'Pessoa', ...headers], [2, 3, 4, 5], rowsByTeam)
+  if ('teams' in report) {
+    const byPerson = new Map(report.people.map((person) => [person.id, person.name]))
+    const rowsByTeam = report.teams.flatMap((item) =>
+      item.members.map((member) => {
+        for (const day of member.days) {
+          const key = `${member.personId}/${day}`
+          const names = memberships.get(key) ?? []
+          names.push(item.name)
+          memberships.set(key, names)
+        }
+        return [item.name, byPerson.get(member.personId) ?? 'Pessoa', ...cells(member.totals)]
+      }),
+    )
+    addSheet('Pessoas por time', ['Time', 'Pessoa', ...headers], [2, 3, 4, 5], rowsByTeam)
+  }
   addSheet(
     'Detalhe diário',
     [
@@ -133,11 +119,11 @@ export async function buildHoursWorkbook(report: HoursSummary, teamId?: string) 
       'Ocorrências',
     ],
     [3, 4, 5],
-    people.flatMap((person) =>
+    report.people.flatMap((person) =>
       person.days.map((day) => [
         person.name,
         day.day ?? '',
-        memberships.get(`${person.id}/${day.day}`)?.join(', ') ?? '',
+        team?.name ?? memberships.get(`${person.id}/${day.day}`)?.join(', ') ?? '',
         hours(day.mondaySeconds),
         hours(day.vrSeconds),
         hours(day.deltaSeconds),
@@ -149,17 +135,13 @@ export async function buildHoursWorkbook(report: HoursSummary, teamId?: string) 
   return writeXlsxFile(sheets).toBlob()
 }
 
-export async function downloadHoursWorkbook(
-  report: HoursSummary,
-  canDownload: () => boolean,
-  teamId?: string,
-) {
-  const file = await buildHoursWorkbook(report, teamId)
+export async function downloadHoursWorkbook(report: HoursReportData, canDownload: () => boolean) {
+  const file = await buildHoursWorkbook(report)
   if (!canDownload()) return
   const url = URL.createObjectURL(file)
   const link = document.createElement('a')
   link.href = url
-  link.download = `cep-horas${teamId ? '-time' : ''}-${report.from}-a-${report.to}.xlsx`
+  link.download = `cep-horas${'team' in report ? '-time' : ''}-${report.from}-a-${report.to}.xlsx`
   document.body.append(link)
   link.click()
   link.remove()

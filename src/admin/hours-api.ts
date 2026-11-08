@@ -4,7 +4,8 @@ import type { components } from '../auth/api-schema'
 
 export type HoursTotals = components['schemas']['HoursTotals']
 export type HoursSummary = components['schemas']['HoursSummaryResponse']
-type HoursTeamSummary = components['schemas']['HoursTeamSummaryResponse']
+export type HoursTeamSummary = components['schemas']['HoursTeamSummaryResponse']
+export type HoursReportData = HoursSummary | HoursTeamSummary
 
 export const getHoursSummary = (
   client: AuthClient,
@@ -20,15 +21,9 @@ export const getHoursSummary = (
     ),
   )
 
-export async function getTeamHoursSummary(
-  client: AuthClient,
-  teamId: string,
-  from: string,
-  to: string,
-): Promise<HoursSummary> {
-  const { team, ...result } = await client.request<HoursTeamSummary>(
+export function getTeamHoursSummary(client: AuthClient, teamId: string, from: string, to: string) {
+  return client.request<HoursTeamSummary>(
     'GET',
     `/organization/time-control/teams/${encodeURIComponent(teamId)}/hours-summary${query({ from, to })}`,
   )
-  return { ...result, organization: team.totals, teams: [team] }
 }
