@@ -36,19 +36,6 @@ import {
   useOpenInbox,
 } from '../notifications'
 
-type Page =
-  | 'people'
-  | 'invite'
-  | 'sync'
-  | 'teams'
-  | 'history'
-  | 'hoursSummary'
-  | 'users'
-  | 'audit'
-  | 'notifications'
-  | 'settings'
-  | 'send'
-  | 'analyses'
 const navigation = [
   { id: 'people', label: 'Pessoas', icon: Users },
   { id: 'invite', label: 'Associar e convidar', icon: Link2 },
@@ -61,7 +48,10 @@ const navigation = [
   { id: 'analyses', label: 'Análises e erros', icon: History },
   { id: 'send', label: 'Enviar aviso', icon: ClipboardList },
   { id: 'settings', label: 'Configurações globais', icon: ShieldCheck },
+  { id: 'hoursSummary', label: 'Resumo', icon: History },
 ] as const
+type Page = (typeof navigation)[number]['id']
+const desktopNavigation = navigation.filter(({ id }) => id !== 'hoursSummary')
 
 const workspaces: {
   label: string
@@ -76,7 +66,6 @@ const workspaces: {
 ]
 
 function pageLabel(page: Page) {
-  if (page === 'hoursSummary') return 'Resumo'
   return navigation.find((item) => item.id === page)?.label
 }
 
@@ -135,7 +124,7 @@ export function AdminShell({
                   {area.label}
                 </button>
               ))
-            : navigation.map((item) => (
+            : desktopNavigation.map((item) => (
                 <button
                   key={item.id}
                   aria-current={page === item.id ? 'page' : undefined}

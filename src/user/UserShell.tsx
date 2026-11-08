@@ -59,7 +59,7 @@ export function UserShell({
   }, [reloadPeople, reloadTeams])
   const logout = useLogout(client, onLogout)
   const self = people.data?.find((person) => person.userId === session.user.id)
-  const managed = teams.data ?? []
+  const managed = teams.error ? [] : (teams.data ?? [])
   const selectedTeam =
     managed.find((team) => team.id === teamId) ??
     (webTeamSummary && !teamId && managed.length === 1 ? managed[0] : null)
@@ -72,7 +72,8 @@ export function UserShell({
       ? [{ id: 'teamAnalyses' as const, label: 'Análises dos times', icon: UsersRound }]
       : []),
   ]
-  const activePage = page === 'teams' && !managed.length ? 'mine' : page
+  const activePage =
+    (page === 'teams' || page === 'teamAnalyses') && !managed.length ? 'mine' : page
 
   return (
     <div className="admin-app user-app">
