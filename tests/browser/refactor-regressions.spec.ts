@@ -118,6 +118,7 @@ test('late team history cannot appear after returning to the personal view', asy
   })
   await page.getByRole('button', { name: 'Meus times' }).click()
   await page.getByRole('button', { name: 'Projetos de teste' }).click()
+  await page.getByRole('button', { name: 'Histórico por pessoa' }).click()
   await page.getByRole('button', { name: /Bia Exemplo/ }).click()
   await page.getByRole('button', { name: 'Consultar histórico' }).click()
   await expect.poll(() => started).toBe(true)

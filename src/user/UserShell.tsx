@@ -9,6 +9,7 @@ import { FormNotice } from '../components/FormNotice'
 import { AdminApi } from '../admin/api'
 import { HistoryView } from './HistoryView'
 import { TeamHistory } from './TeamHistory'
+import { HoursSummaryPage } from '../admin/HoursSummaryPage'
 import { PersonalOverview } from './PersonalOverview'
 import { SyncPage } from '../admin/SyncPage'
 import { today } from '../admin/format'
@@ -48,6 +49,8 @@ export function UserShell({
     setPage('notifications')
   })
   const [teamId, setTeamId] = useState<string | null>(null)
+  const [teamView, setTeamView] = useState<'summary' | 'history'>('summary')
+  const webTeamSummary = !window.__CEP_DESKTOP__
   const [historyRevision, setHistoryRevision] = useState(0)
   const onSyncCompleted = useCallback(() => {
     reloadPeople()
@@ -57,7 +60,9 @@ export function UserShell({
   const logout = useLogout(client, onLogout)
   const self = people.data?.find((person) => person.userId === session.user.id)
   const managed = teams.data ?? []
-  const selectedTeam = managed.find((team) => team.id === teamId) ?? null
+  const selectedTeam =
+    managed.find((team) => team.id === teamId) ??
+    (webTeamSummary && !teamId && managed.length === 1 ? managed[0] : null)
   const navigation = [
     { id: 'mine' as const, label: 'Minha jornada', icon: History },
     { id: 'history' as const, label: 'Meu histórico', icon: History },
@@ -154,12 +159,7 @@ export function UserShell({
                   description="Registros importados e associação da sua conta."
                 />
               )}
-              <SyncPage
-                api={api}
-                allowFull={false}
-                embedded
-                onCompleted={onSyncCompleted}
-              />
+              <SyncPage api={api} allowFull={false} embedded onCompleted={onSyncCompleted} />
               <QueryError error={people.error} retry={people.reload} />
               {people.pending && !self ? (
                 <Loading text="Localizando sua associação…" />
@@ -167,9 +167,8 @@ export function UserShell({
                 <div className="admin-panel">
                   <Empty title="Seus registros ainda não estão disponíveis">
                     <p>
-                      Não encontramos uma pessoa associada à sua conta.
-                      Isso não significa zero horas. Peça ao coordenador para conferir a associação
-                      e seu acesso.
+                      Não encontramos uma pessoa associada à sua conta. Isso não significa zero
+                      horas. Peça ao coordenador para conferir a associação e seu acesso.
                     </p>
                   </Empty>
                 </div>
@@ -206,14 +205,41 @@ export function UserShell({
                             type="button"
                             className="secondary-button"
                             aria-pressed={selectedTeam?.id === team.id}
-                            onClick={() => setTeamId(team.id!)}
+                            onClick={() => {
+                              setTeamId(team.id!)
+                              setTeamView('summary')
+                            }}
                           >
                             {team.name || 'Time sem nome'}
                           </button>
                         ))}
                       </div>
                     </div>
-                    {people.error ? (
+                    {webTeamSummary && selectedTeam?.id && (
+                      <div className="hours-view" role="group" aria-label="Visão do time">
+                        <button
+                          type="button"
+                          aria-pressed={teamView === 'summary'}
+                          onClick={() => setTeamView('summary')}
+                        >
+                          Resumo do time
+                        </button>
+                        <button
+                          type="button"
+                          aria-pressed={teamView === 'history'}
+                          onClick={() => setTeamView('history')}
+                        >
+                          Histórico por pessoa
+                        </button>
+                      </div>
+                    )}
+                    {webTeamSummary && selectedTeam?.id && teamView === 'summary' ? (
+                      <HoursSummaryPage
+                        key={selectedTeam.id}
+                        client={client}
+                        teamId={selectedTeam.id}
+                      />
+                    ) : people.error ? (
                       <QueryError error={people.error} retry={people.reload} />
                     ) : people.pending ? (
                       <Loading text="Consultando pessoas autorizadas…" />

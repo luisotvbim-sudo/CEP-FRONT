@@ -238,6 +238,7 @@ test('leader keeps personal view and inspects only a member of a managed team', 
   await page.getByRole('button', { name: 'Meus times' }).click()
   await expect(page.getByRole('heading', { name: 'Meus times' })).toBeVisible()
   await page.getByRole('button', { name: 'Projetos de teste' }).click()
+  await page.getByRole('button', { name: 'Histórico por pessoa' }).click()
   await page.getByRole('button', { name: /Bia Exemplo/ }).click()
   await page.getByRole('button', { name: 'Consultar histórico' }).click()
   await expect(page.getByRole('heading', { name: 'Registros de Bia Exemplo' })).toBeVisible()
@@ -252,6 +253,7 @@ test('leader loses a selected member when the managed-team link disappears', asy
   await fixture(page, { role: 'user', leader: true })
   await page.getByRole('button', { name: 'Meus times' }).click()
   await page.getByRole('button', { name: 'Projetos de teste' }).click()
+  await page.getByRole('button', { name: 'Histórico por pessoa' }).click()
   await page.getByRole('button', { name: /Bia Exemplo/ }).click()
   await expect(page.getByRole('heading', { name: 'Histórico da pessoa' })).toBeVisible()
   await page.route(`**/teams/${ids.team}/assignments?*`, (route) => route.fulfill({ json: [] }))
@@ -264,6 +266,7 @@ test('server denial does not reveal a managed member history', async ({ page }) 
   await fixture(page, { role: 'user', leader: true })
   await page.getByRole('button', { name: 'Meus times' }).click()
   await page.getByRole('button', { name: 'Projetos de teste' }).click()
+  await page.getByRole('button', { name: 'Histórico por pessoa' }).click()
   await page.getByRole('button', { name: /Bia Exemplo/ }).click()
   await page.route('**/time-control/history?*', (route) =>
     route.fulfill({ status: 403, json: { code: 'forbidden' } }),

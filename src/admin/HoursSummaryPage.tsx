@@ -5,7 +5,12 @@ import { FormNotice } from '../components/FormNotice'
 import { useAction, useQuery } from '../hooks/async'
 import { issueLabels } from '../notifications/labels'
 import { date, daysBeforeToday, duration, timestamp, today, validatePeriod } from './format'
-import { getHoursSummary, type HoursSummary, type HoursTotals } from './hours-api'
+import {
+  getHoursSummary,
+  getTeamHoursSummary,
+  type HoursSummary,
+  type HoursTotals,
+} from './hours-api'
 import { AdminApi } from './api'
 import { DailyHistory } from './DailyHistory'
 import { HoursCharts } from './HoursCharts'
@@ -93,9 +98,9 @@ function DayRecords({ api, personId, day }: { api: AdminApi; personId: string; d
   )
 }
 
-function Report({ report, api }: { report: HoursSummary; api: AdminApi }) {
-  const [view, setView] = useState<View>('organization')
-  const [selected, setSelected] = useState<string | null>(null)
+function Report({ report, api, teamId }: { report: HoursSummary; api: AdminApi; teamId?: string }) {
+  const [view, setView] = useState<View>(teamId ? 'teams' : 'organization')
+  const [selected, setSelected] = useState<string | null>(teamId ?? null)
   const [member, setMember] = useState<string | null>(null)
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
   const team = view === 'teams' ? report.teams.find((row) => row.id === selected) : undefined
@@ -129,23 +134,25 @@ function Report({ report, api }: { report: HoursSummary; api: AdminApi }) {
   return (
     <>
       <section className="admin-panel hours-overview" aria-label="Totais do período">
-        <div className="hours-view" role="group" aria-label="Agrupar resumo por">
-          {(Object.keys(views) as View[]).map((item) => (
-            <button
-              type="button"
-              key={item}
-              aria-pressed={view === item}
-              onClick={() => {
-                setView(item)
-                setSelected(null)
-                setMember(null)
-                setSelectedDay(null)
-              }}
-            >
-              {views[item]}
-            </button>
-          ))}
-        </div>
+        {!teamId && (
+          <div className="hours-view" role="group" aria-label="Agrupar resumo por">
+            {(Object.keys(views) as View[]).map((item) => (
+              <button
+                type="button"
+                key={item}
+                aria-pressed={view === item}
+                onClick={() => {
+                  setView(item)
+                  setSelected(null)
+                  setMember(null)
+                  setSelectedDay(null)
+                }}
+              >
+                {views[item]}
+              </button>
+            ))}
+          </div>
+        )}
         <h2>{scope}</h2>
         <p className="muted">
           {date(report.from)} a {date(report.to)} · Consultado em {timestamp(report.generatedAt)}
@@ -177,7 +184,7 @@ function Report({ report, api }: { report: HoursSummary; api: AdminApi }) {
           </p>
         </section>
       )}
-      {view !== 'organization' && (
+      {!teamId && view !== 'organization' && (
         <section className="admin-panel hours-overview">
           <h2>{view === 'teams' ? 'Por time' : 'Por pessoa'}</h2>
           {view === 'teams' && (
@@ -205,6 +212,11 @@ function Report({ report, api }: { report: HoursSummary; api: AdminApi }) {
       {team && (
         <section className="admin-panel hours-overview">
           <h2>Pessoas de {team.name}</h2>
+          {teamId && (
+            <p className="muted">
+              Pessoas com vínculo vigente, com horas somente nos dias de vínculo com este time.
+            </p>
+          )}
           {team.members.length ? (
             <TotalsTable
               rows={team.members.map((m) => ({
@@ -284,17 +296,22 @@ function Report({ report, api }: { report: HoursSummary; api: AdminApi }) {
 export function HoursSummaryPage({
   client,
   organizationId,
+  teamId,
 }: {
   client: AuthClient
   organizationId?: string
+  teamId?: string
 }) {
   const api = useMemo(() => new AdminApi(client, organizationId), [client, organizationId])
   const [period, setPeriod] = useState(initialDates)
   const [draft, setDraft] = useState(period)
   const [validation, setValidation] = useState('')
   const result = useQuery(
-    () => getHoursSummary(client, period.from, period.to, organizationId),
-    [client, organizationId, period.from, period.to],
+    () =>
+      teamId
+        ? getTeamHoursSummary(client, teamId, period.from, period.to)
+        : getHoursSummary(client, period.from, period.to, organizationId),
+    [client, organizationId, teamId, period.from, period.to],
   )
   const action = useAction()
   const mounted = useRef(false)
@@ -325,18 +342,25 @@ export function HoursSummaryPage({
   return (
     <>
       <PageHeading
-        title="Resumo de horas"
-        description="Compare os registros importados do Monday e do VR Mais por pessoa, time ou organização."
+        level={teamId ? 'h2' : 'h1'}
+        title={teamId ? 'Resumo do time' : 'Resumo de horas'}
+        description={
+          teamId
+            ? 'Consulte as horas importadas do Monday e do VR Mais para o time selecionado.'
+            : 'Compare os registros importados do Monday e do VR Mais por pessoa, time ou organização.'
+        }
         action={
-          <button
-            className="primary-button compact"
-            type="button"
-            onClick={exportReport}
-            disabled={!result.data?.people.length || result.pending || action.pending}
-          >
-            <Download size={17} aria-hidden="true" />
-            {action.pending ? 'Gerando Excel…' : 'Exportar Excel'}
-          </button>
+          !teamId && (
+            <button
+              className="primary-button compact"
+              type="button"
+              onClick={exportReport}
+              disabled={!result.data?.people.length || result.pending || action.pending}
+            >
+              <Download size={17} aria-hidden="true" />
+              {action.pending ? 'Gerando Excel…' : 'Exportar Excel'}
+            </button>
+          )
         }
       />
       <form className="admin-panel hours-period" onSubmit={apply}>
@@ -368,7 +392,14 @@ export function HoursSummaryPage({
       <FormNotice error={action.error} />
       <QueryError error={result.error} retry={result.reload} />
       {result.pending && <Loading text="Consultando registros importados…" />}
-      {result.data && <Report key={`${period.from}/${period.to}`} report={result.data} api={api} />}
+      {result.data && (!teamId || !result.error) && (
+        <Report
+          key={`${teamId}/${period.from}/${period.to}`}
+          report={result.data}
+          api={api}
+          teamId={teamId}
+        />
+      )}
     </>
   )
 }

@@ -315,6 +315,28 @@ export async function fixture(
             : { ...team, name: body.name },
       })
     if (path.endsWith('/teams/' + ids.team)) return route.fulfill({ json: { ...team, ...body } })
+    if (path.endsWith(`/teams/${ids.team}/hours-summary`) && method === 'GET') {
+      const { from, to, generatedAt, toleranceMinutes } = mockHours
+      const summaryTeam = mockHours.teams[0]!
+      const person = mockHours.people[0]!
+      const member = summaryTeam.members[0]!
+      return route.fulfill({
+        json: {
+          from,
+          to,
+          generatedAt,
+          toleranceMinutes,
+          team: summaryTeam,
+          people: [
+            {
+              ...person,
+              totals: member.totals,
+              days: person.days.filter(({ day }) => day !== undefined && member.days.includes(day)),
+            },
+          ],
+        },
+      })
+    }
     if (path.endsWith('/hours-summary') && method === 'GET')
       return route.fulfill({ json: mockHours })
     if (path.endsWith('/history'))

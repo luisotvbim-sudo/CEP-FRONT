@@ -1,6 +1,27 @@
 import { expect, test } from '@playwright/test'
 import { readFile } from 'node:fs/promises'
-import { fixture, mockHours } from './admin-fixture'
+import { fixture, ids, mockHours } from './admin-fixture'
+
+test('leader sees the team summary without organization totals', async ({ page }) => {
+  const calls = await fixture(page, { role: 'user', leader: true })
+  await page.getByRole('button', { name: 'Meus times' }).click()
+  await expect(page.getByRole('heading', { name: 'Resumo do time' })).toBeVisible()
+  await expect(
+    page
+      .getByRole('figure', { name: 'Horas conhecidas por fonte' })
+      .getByText('08:00 h', { exact: true }),
+  ).toHaveCount(2)
+  await expect(page.getByRole('button', { name: 'Exportar Excel' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Toda a organização' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Pessoa teste horas', exact: true }).click()
+  await expect(page.getByRole('button', { name: '20/09/2026', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: '19/09/2026', exact: true })).toHaveCount(0)
+  expect(
+    calls
+      .filter(({ path }) => path.includes('/hours-summary'))
+      .every(({ path }) => path.includes(`/teams/${ids.team}/hours-summary`)),
+  ).toBe(true)
+})
 
 test('summary drills into the team membership period and exports the loaded report', async ({
   page,
