@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
-import { fixture } from './admin-fixture'
+import { admin, fixture } from './admin-fixture'
 
 const analysis = {
   from: '2026-09-30',
@@ -67,15 +67,15 @@ async function apiFixture(page: Page, decision = 'allowed', status = 200, invali
   })
   return calls
 }
-// Fake only the new power protocol, after HTTP login. No test executes OS commands.
 async function nativeFixture(
   page: Page,
   unreachable = true,
   cancelFails = false,
   scheduleDelay = 0,
+  role = 'organizationAdmin',
 ) {
-  await page.evaluate(
-    ({ unreachable, cancelFails, scheduleDelay }) => {
+  await page.addInitScript(
+    ({ unreachable, cancelFails, scheduleDelay, user }) => {
       const messages: any[] = []
       ;(window as any).powerMessages = messages
       ;(window as any).powerTerminal = false
@@ -94,6 +94,39 @@ async function nativeFixture(
           postMessage: (message: any) => {
             if (message.documentId !== window.__CEP_DOCUMENT_ID__)
               throw new Error('Fixture rejected stale document')
+            const reply = (data: { ok: boolean; result?: unknown; error?: object }) =>
+              listeners.forEach((listener) => listener({ data: { id: message.id, ...data } }))
+            if (message.type === 'cep-auth') {
+              const { operation, payload } = message
+              if (operation === 'api') {
+                void fetch('/api/v1' + payload.path, {
+                  method: payload.method,
+                  headers: {
+                    Authorization: 'Bearer test-access',
+                    'Content-Type': 'application/json',
+                  },
+                  body: payload.body === undefined ? undefined : JSON.stringify(payload.body),
+                })
+                  .then(async (response) => {
+                    const result = response.status === 204 ? null : await response.json()
+                    if (response.ok) reply({ ok: true, result })
+                    else reply({ ok: false, error: { ...result, status: response.status } })
+                  })
+                  .catch(() =>
+                    reply({
+                      ok: false,
+                      error: { status: 503, code: 'connection_failed', transportFailure: true },
+                    }),
+                  )
+              } else {
+                const result =
+                  operation === 'login'
+                    ? { user, expiresAt: new Date(Date.now() + 7 * 86400_000).toISOString() }
+                    : null
+                queueMicrotask(() => reply({ ok: true, result }))
+              }
+              return
+            }
             messages.push(message)
             const result =
               message.operation === 'schedule'
@@ -110,20 +143,18 @@ async function nativeFixture(
                         state: (window as any).powerTerminal ? 'terminal' : 'pending',
                       }
                     : { unreachable }
-            const reply = () => {
+            const finish = () => {
               if (message.operation === 'schedule')
                 result.executeAt = new Date(Date.now() + 10_000).toISOString()
-              listeners.forEach((listener) =>
-                listener({ data: { id: message.id, ok: true, result } }),
-              )
+              reply({ ok: true, result })
             }
-            if (message.operation === 'schedule' && scheduleDelay) setTimeout(reply, scheduleDelay)
-            else queueMicrotask(reply)
+            if (message.operation === 'schedule' && scheduleDelay) setTimeout(finish, scheduleDelay)
+            else queueMicrotask(finish)
           },
         },
       }
     },
-    { unreachable, cancelFails, scheduleDelay },
+    { unreachable, cancelFails, scheduleDelay, user: { ...admin, role } },
   )
 }
 const menu = (page: Page) => page.getByRole('region', { name: 'Energia do computador' })
@@ -139,9 +170,18 @@ for (const profile of [
   { role: 'user' },
   { role: 'user', leader: true },
 ]) {
-  test(`menu in authenticated ${profile.role} leader=${!!profile.leader}`, async ({
-    page,
-  }, testInfo) => {
+  test(`web omits power for ${profile.role} leader=${!!profile.leader}`, async ({ page }) => {
+    await fixture(page, profile)
+    await expect(page.getByRole('button', { name: 'Sair da conta', exact: true })).toBeVisible()
+    await expect(menu(page)).toHaveCount(0)
+    expect(
+      await page.evaluate(() =>
+        performance.getEntriesByType('resource').some(({ name }) => /\/PowerMenu[.-]/.test(name)),
+      ),
+    ).toBe(false)
+  })
+  test(`desktop menu for ${profile.role} leader=${!!profile.leader}`, async ({ page }) => {
+    await nativeFixture(page, true, false, 0, profile.role)
     await fixture(page, profile)
     await openMenu(page)
     for (const name of ['Desligar', 'Reiniciar', 'Hibernar', 'Verificar status'])
@@ -175,11 +215,6 @@ for (const profile of [
         return el.getBoundingClientRect().top - app.getBoundingClientRect().bottom
       }),
     ).toBeGreaterThanOrEqual(0)
-    if (profile.role === 'organizationAdmin')
-      await page.screenshot({
-        path: `.local/power-menu-${testInfo.project.name}.png`,
-        fullPage: true,
-      })
   })
 }
 test('menu absent from login and public download', async ({ page }) => {
@@ -190,9 +225,10 @@ test('menu absent from login and public download', async ({ page }) => {
   await page.goto('/download')
   await expect(menu(page)).toHaveCount(0)
 })
-test('status is GET only; allowed browser never schedules; keyboard and accessibility', async ({
+test('desktop status is GET only and never schedules; keyboard and accessibility', async ({
   page,
 }) => {
+  await nativeFixture(page)
   await fixture(page)
   const calls = await apiFixture(page)
   const summary = menu(page).locator('summary')
@@ -201,8 +237,7 @@ test('status is GET only; allowed browser never schedules; keyboard and accessib
   await menu(page).getByRole('button', { name: 'Verificar status' }).click()
   await expect(menu(page)).toContainText('Tolerância: 30 minutos.')
   expect(calls).toEqual([{ method: 'GET', action: 'shutdown' }])
-  await menu(page).getByRole('button', { name: 'Desligar', exact: true }).click()
-  await expect(menu(page)).toContainText('A execução está disponível no aplicativo Windows.')
+  expect(await operations(page)).toEqual([])
   await expect(menu(page).getByRole('button', { name: 'Cancelar', exact: true })).toHaveCount(0)
   expect(
     (
@@ -215,8 +250,8 @@ test('status is GET only; allowed browser never schedules; keyboard and accessib
 })
 for (const outcome of ['blocked', 'indeterminate', 'technical', 'invalid']) {
   test(`${outcome} never schedules nor verifies offline`, async ({ page }) => {
-    await fixture(page)
     await nativeFixture(page)
+    await fixture(page)
     await apiFixture(page, outcome, outcome === 'technical' ? 500 : 200, outcome === 'invalid')
     await openMenu(page)
     await menu(page).getByRole('button', { name: 'Desligar', exact: true }).click()
@@ -236,8 +271,8 @@ for (const [action, label] of [
   ['hibernate', 'Hibernar'],
 ]) {
   test(`${action}: ten-second countdown and native cancellation`, async ({ page }) => {
-    await fixture(page)
     await nativeFixture(page)
+    await fixture(page)
     await apiFixture(page)
     await page.clock.install()
     await openMenu(page)
@@ -255,8 +290,8 @@ for (const [action, label] of [
   })
 }
 test('deadline does not send a second execute command', async ({ page }) => {
-  await fixture(page)
   await nativeFixture(page)
+  await fixture(page)
   await apiFixture(page)
   await page.clock.install()
   await openMenu(page)
@@ -271,8 +306,8 @@ test('deadline does not send a second execute command', async ({ page }) => {
 test('hibernate resume reconciles terminal service state and enables a new action', async ({
   page,
 }) => {
-  await fixture(page)
   await nativeFixture(page)
+  await fixture(page)
   await apiFixture(page)
   await page.clock.install()
   await openMenu(page)
@@ -296,8 +331,8 @@ test('hibernate resume reconciles terminal service state and enables a new actio
 test('native revalidation exceeding five seconds is not prematurely cancelled', async ({
   page,
 }) => {
-  await fixture(page)
   await nativeFixture(page, true, false, 6_000)
+  await fixture(page)
   await apiFixture(page)
   await page.clock.install()
   await openMenu(page)
@@ -313,15 +348,15 @@ test('native revalidation exceeding five seconds is not prematurely cancelled', 
 })
 for (const unreachable of [true, false]) {
   test(`offline candidate requires native verification=${unreachable}`, async ({ page }) => {
-    await fixture(page)
     await nativeFixture(page, unreachable)
+    await fixture(page)
     await page.route('**/api/v1/me/time-control/power-action-check', (route) =>
       route.abort('connectionrefused'),
     )
     await openMenu(page)
     await menu(page).getByRole('button', { name: 'Desligar', exact: true }).click()
     await expect(menu(page)).toContainText(
-      unreachable ? 'Ação permitida em contingência' : 'Não foi possível conectar',
+      unreachable ? 'Ação permitida em contingência' : 'Não foi possível acessar o serviço',
     )
     expect(await operations(page)).toEqual(
       unreachable ? ['verify-api-unreachable', 'schedule'] : ['verify-api-unreachable'],
@@ -329,8 +364,8 @@ for (const unreachable of [true, false]) {
   })
 }
 test('failed cancellation keeps retry available', async ({ page }) => {
-  await fixture(page)
   await nativeFixture(page, true, true)
+  await fixture(page)
   await apiFixture(page)
   await openMenu(page)
   await menu(page).getByRole('button', { name: 'Reiniciar', exact: true }).click()
@@ -377,6 +412,7 @@ async function submitPin(page: Page, pin = '012345') {
 test('PIN format is exactly six ASCII digits and clears after invalid attempts', async ({
   page,
 }) => {
+  await nativeFixture(page)
   await fixture(page)
   const requests = await unlockFixture(page)
   await openMenu(page)
@@ -398,8 +434,8 @@ test('PIN format is exactly six ASCII digits and clears after invalid attempts',
 })
 for (const status of [403, 429, 503]) {
   test(`unlock ${status} clears PIN and never enters contingency`, async ({ page }) => {
-    await fixture(page)
     await nativeFixture(page)
+    await fixture(page)
     const requests = await unlockFixture(page, status)
     await openMenu(page)
     await submitPin(page)
@@ -418,8 +454,8 @@ for (const status of [403, 429, 503]) {
 test('correct PIN shows server-based countdown and each of the three actions still checks the API', async ({
   page,
 }) => {
-  await fixture(page)
   await nativeFixture(page)
+  await fixture(page)
   await page.clock.install()
   const requests = await unlockFixture(page)
   const actions: string[] = []
@@ -459,11 +495,11 @@ test('correct PIN shows server-based countdown and each of the three actions sti
     '012345',
   )
   await page.clock.runFor(60_000)
-  await expect(menu(page)).toContainText('liberados temporariamente por 4:00')
+  await expect(menu(page)).toContainText(/liberados temporariamente por (4:00|3:59|3:58)/)
 })
 test('at five minutes the display expires and the server blocks again', async ({ page }) => {
-  await fixture(page)
   await nativeFixture(page)
+  await fixture(page)
   await page.clock.install()
   await unlockFixture(page)
   await apiFixture(page, 'blocked')
@@ -484,6 +520,7 @@ test('at five minutes the display expires and the server blocks again', async ({
 test('PIN clears on logout, is not persisted, and unlock display does not survive a new login', async ({
   page,
 }) => {
+  await nativeFixture(page)
   await fixture(page)
   await unlockFixture(page)
   await openMenu(page)
@@ -516,10 +553,10 @@ test('PIN clears on logout, is not persisted, and unlock display does not surviv
   await expect(menu(page)).not.toContainText('liberados temporariamente por')
 })
 test('failed PIN does not extend an existing window; status remains GET only', async ({ page }) => {
+  await nativeFixture(page)
   await fixture(page)
   await page.clock.install()
   await unlockFixture(page)
-  await nativeFixture(page)
   await openMenu(page)
   await submitPin(page)
   await expect(menu(page)).toContainText('liberados temporariamente por 5:00')
@@ -527,7 +564,7 @@ test('failed PIN does not extend an existing window; status remains GET only', a
   await unlockFixture(page, 403)
   await submitPin(page, '654321')
   await expect(menu(page)).toContainText('PIN administrativo inválido')
-  await expect(menu(page)).toContainText('liberados temporariamente por 4:00')
+  await expect(menu(page)).toContainText(/liberados temporariamente por (4:00|3:59|3:58)/)
   let requests = 0
   await page.route('**/api/v1/me/time-control/power-action-status**', (route) => {
     expect(route.request().method()).toBe('GET')

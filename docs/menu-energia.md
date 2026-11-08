@@ -7,7 +7,7 @@ Reconciliado em 04/10/2026. O contrato pessoal foi conferido na CEP API `main` `
 
 ## Interface e decisão
 
-As áreas autenticadas têm um rodapé recolhível com **Desligar**, **Reiniciar**, **Hibernar** e **Verificar status**, inclusive páginas globais de SystemAdmin. Login, download público e prévia de desenvolvimento não mostram esse menu. Há foco visível, rótulos, teclado de `details/summary`, região de avisos e adaptação a janelas pequenas.
+No aplicativo Windows, as áreas autenticadas com bridge nativo têm um rodapé recolhível com **Desligar**, **Reiniciar**, **Hibernar** e **Verificar status**, inclusive páginas globais de SystemAdmin. O carregamento do rodapé é exclusivo desse ambiente. Há foco visível, rótulos, teclado de `details/summary`, região de avisos e adaptação a janelas pequenas.
 
 | Operação | Endpoint e parâmetros | Efeito |
 |---|---|---|

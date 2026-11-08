@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
 import { Check, LoaderCircle, LogOut } from 'lucide-react'
 import logo from './assets/conceito-logo.png'
 import { errorMessage, type AuthClient, type AuthError, type AuthSession } from './auth/auth-client'
@@ -8,7 +8,8 @@ import { FormNotice } from './components/FormNotice'
 import { AdminShell } from './admin/AdminShell'
 import { SystemAdminShell } from './admin/SystemAdminShell'
 import { UserShell } from './user/UserShell'
-import { AuthenticatedLayout } from './power/PowerMenu'
+
+const DesktopPowerLayout = lazy(() => import('./power/PowerMenu'))
 
 export function App({ client }: { client: AuthClient }) {
   const [session, setSession] = useState<AuthSession | null>(null)
@@ -104,37 +105,26 @@ export function App({ client }: { client: AuthClient }) {
         <LoaderCircle className="spin" /> Verificando sua sessão…
       </div>
     )
-  if (session?.user.role === 'systemAdmin')
-    return (
-      <AuthenticatedLayout client={client}>
-        <SystemAdminShell client={client} session={session} onLogout={() => setSession(null)} />
-      </AuthenticatedLayout>
-    )
-  if (session?.user.role === 'organizationAdmin' && session.user.organizationId)
-    return (
-      <AuthenticatedLayout client={client}>
-        <AdminShell
-          client={client}
-          session={session}
-          onLogout={() => {
-            setSession(null)
-            setNotice('Você saiu da sua conta com segurança.')
-          }}
-        />
-      </AuthenticatedLayout>
-    )
-  if (session?.user.role === 'user' && session.user.organizationId)
-    return (
-      <AuthenticatedLayout client={client}>
-        <UserShell
-          client={client}
-          session={session}
-          onLogout={() => {
-            setSession(null)
-            setNotice('Você saiu da sua conta com segurança.')
-          }}
-        />
-      </AuthenticatedLayout>
+  let authenticated: ReactNode = null
+  if (session) {
+    const onLogout = () => {
+      setSession(null)
+      if (session.user.role !== 'systemAdmin') setNotice('Você saiu da sua conta com segurança.')
+    }
+    const props = { client, session, onLogout }
+    if (session.user.role === 'systemAdmin') authenticated = <SystemAdminShell {...props} />
+    else if (session.user.organizationId) {
+      if (session.user.role === 'organizationAdmin') authenticated = <AdminShell {...props} />
+      else if (session.user.role === 'user') authenticated = <UserShell {...props} />
+    }
+  }
+  if (authenticated)
+    return window.__CEP_DESKTOP__ && window.chrome?.webview ? (
+      <Suspense fallback={<div role="status">Carregando aplicativo…</div>}>
+        <DesktopPowerLayout client={client}>{authenticated}</DesktopPowerLayout>
+      </Suspense>
+    ) : (
+      authenticated
     )
   return (
     <div className="app-shell">
@@ -164,8 +154,8 @@ export function App({ client }: { client: AuthClient }) {
                 <strong>{session.user.email}</strong>
               </div>
               <p className="small-copy">
-                Sua conta não possui um perfil ou vínculo de organização compatível com esta
-                área. Peça ao coordenador para conferir seu acesso.
+                Sua conta não possui um perfil ou vínculo de organização compatível com esta área.
+                Peça ao coordenador para conferir seu acesso.
               </p>
               <FormNotice error={error} />
               <button className="primary-button" onClick={logout} disabled={pending}>

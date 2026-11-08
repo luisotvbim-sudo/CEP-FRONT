@@ -17,7 +17,7 @@ const decisions = {
   blocked: 'Bloqueado',
   indeterminate: 'Não foi possível determinar',
 }
-export function AuthenticatedLayout({
+export default function DesktopPowerLayout({
   client,
   children,
 }: {
@@ -32,7 +32,7 @@ export function AuthenticatedLayout({
   )
 }
 
-export function PowerMenu({ client }: { client: AuthClient }) {
+function PowerMenu({ client }: { client: AuthClient }) {
   const api = useMemo(() => new PowerApi(client), [client])
   const [pending, setPending] = useState(false)
   const busy = useRef(false)
@@ -198,11 +198,7 @@ export function PowerMenu({ client }: { client: AuthClient }) {
       }
       if (!action || !mounted.current) return
       if (!host) {
-        setNotice(
-          window.__CEP_DESKTOP__
-            ? 'O menu de energia ainda depende da integração nativa deste aplicativo.'
-            : 'A execução está disponível no aplicativo Windows.',
-        )
+        setNotice('O menu de energia ainda depende da integração nativa deste aplicativo.')
         return
       }
       const job = await host.schedule(action, authorization)
