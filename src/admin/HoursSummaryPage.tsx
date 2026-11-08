@@ -8,6 +8,7 @@ import { date, daysBeforeToday, duration, timestamp, today, validatePeriod } fro
 import { getHoursSummary, type HoursSummary, type HoursTotals } from './hours-api'
 import { AdminApi } from './api'
 import { DailyHistory } from './DailyHistory'
+import { HoursCharts } from './HoursCharts'
 import { Empty, Loading, PageHeading, QueryError } from './ui'
 import './hours-summary.css'
 
@@ -158,13 +159,7 @@ function Report({ report, api }: { report: HoursSummary; api: AdminApi }) {
             </div>
           ))}
         </dl>
-        <p>
-          <strong>
-            {totals.comparableDays} de {totals.personDays} pessoa-dias comparáveis.
-          </strong>{' '}
-          {totals.personDays - totals.comparableDays} sem comparação válida. Cada pessoa em cada dia
-          conta como um pessoa-dia.
-        </p>
+        <HoursCharts totals={totals} />
         <p className="muted">
           Saldo e divergência usam somente dias comparáveis; o saldo pode ser zero mesmo com
           divergências. A ausência de dados não indica zero horas ou folga.

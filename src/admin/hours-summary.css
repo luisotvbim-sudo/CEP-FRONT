@@ -73,6 +73,67 @@
 .hours-metrics small {
   color: #5e574e;
 }
+.hours-charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+  gap: 10px;
+}
+.hours-chart {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid #e5e2de;
+  border-radius: 8px;
+}
+.hours-chart figcaption {
+  font-weight: 700;
+}
+.hours-chart-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 4px 12px;
+}
+.hours-chart-track {
+  grid-column: 1 / -1;
+  height: 10px;
+  background: #eeeae5;
+  border-radius: 5px;
+  overflow: hidden;
+}
+.hours-chart-fill {
+  height: 100%;
+}
+.hours-chart-monday {
+  background: #b44912;
+}
+.hours-chart-vr {
+  background: #356a6a;
+}
+.hours-chart-coverage {
+  background: #ddd6cf;
+}
+.hours-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.hours-chart-legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.hours-chart-legend i {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+}
 .hours-table {
   overflow-x: auto;
   min-width: 0;
