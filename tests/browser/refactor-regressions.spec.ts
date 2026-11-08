@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { fixture, ids, person } from './admin-fixture'
+import { fixture, ids, person, openCoordinatorPage } from './admin-fixture'
 
 test('duplicate history submissions keep the result of the single accepted request', async ({
   page,
@@ -14,7 +14,7 @@ test('duplicate history submissions keep the result of the single accepted reque
     })
     await route.fulfill({ json: { people: [] } })
   })
-  await page.getByRole('button', { name: 'Histórico', exact: true }).click()
+  await openCoordinatorPage(page, 'Histórico')
   await page.getByRole('button', { name: 'Consultar histórico' }).evaluate((button) => {
     const form = (button as HTMLButtonElement).form!
     form.requestSubmit()
@@ -40,7 +40,7 @@ test('editing a notification does not postpone the dispatch status poll', async 
       await route.fulfill({ json: { items: [], total: 0 } })
     }
   })
-  await page.getByRole('button', { name: 'Enviar aviso', exact: true }).click()
+  await openCoordinatorPage(page, 'Enviar aviso')
   await expect.poll(() => polls).toBe(1)
   await page.clock.runFor(14_000)
   await page.getByLabel('Mensagem', { exact: true }).fill('Rascunho ainda em edição')
@@ -118,6 +118,7 @@ test('late team history cannot appear after returning to the personal view', asy
   })
   await page.getByRole('button', { name: 'Meus times' }).click()
   await page.getByRole('button', { name: 'Projetos de teste' }).click()
+  await page.getByRole('button', { name: 'Histórico por pessoa' }).click()
   await page.getByRole('button', { name: /Bia Exemplo/ }).click()
   await page.getByRole('button', { name: 'Consultar histórico' }).click()
   await expect.poll(() => started).toBe(true)

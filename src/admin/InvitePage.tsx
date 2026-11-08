@@ -105,7 +105,8 @@ export function InvitePage({
   const [monday, setMonday] = useState<Identity | null>(null)
   const [vr, setVr] = useState<Identity | null>(null)
   const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
+  const [emailOverride, setEmailOverride] = useState<string>()
+  const email = emailOverride ?? (monday?.email?.trim() || vr?.email?.trim() || '')
   const [confirmed, setConfirmed] = useState(false)
   const [success, setSuccess] = useState<string | null>(null)
   const action = useAction()
@@ -131,7 +132,7 @@ export function InvitePage({
     if (source === 'monday') setMonday(value)
     else setVr(value)
     setName(value.displayName || '')
-    setEmail(value.email || '')
+    setEmailOverride(undefined)
     setConfirmed(false)
     action.clear()
     setMatchError(null)
@@ -191,7 +192,7 @@ export function InvitePage({
   }
 
   function changeEmail(value: string) {
-    setEmail(value)
+    setEmailOverride(value)
     setConfirmed(false)
     action.clear()
     const address = normalizedEmail(value)
@@ -207,7 +208,7 @@ export function InvitePage({
     ((!!monday.displayName &&
       !!vr.displayName &&
       monday.displayName.localeCompare(vr.displayName, 'pt-BR', { sensitivity: 'base' }) !== 0) ||
-      (!!monday.email && !!vr.email && monday.email.toLowerCase() !== vr.email.toLowerCase()))
+      (!!monday.email && !!vr.email && normalizedEmail(monday.email) !== normalizedEmail(vr.email)))
   if (success)
     return (
       <>

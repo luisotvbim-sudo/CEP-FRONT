@@ -108,7 +108,10 @@ test('daily history groups sources, expands with keyboard, preserves seconds and
   await monday.getByText('Detalhes do registro').nth(1).click()
   await expect(monday.getByText('Manual', { exact: true })).toBeVisible()
   await expect(monday.getByText('Cronômetro', { exact: true })).toBeVisible()
-  await expect(monday.getByRole('link', { name: 'Abrir atividade' })).toHaveAttribute('href', 'https://example.test/activity')
+  await expect(monday.getByRole('link', { name: 'Abrir atividade' })).toHaveAttribute(
+    'href',
+    'https://example.test/activity',
+  )
   await expect(monday.getByText('Importado em', { exact: true })).toHaveCount(0)
   await expect(monday.getByText('Referência externa', { exact: true })).toHaveCount(0)
   const vr = page.getByRole('region', { name: 'VR Mais em 01/09/2026', exact: true })
@@ -134,6 +137,7 @@ for (const leader of [false, true]) {
     if (leader) {
       await page.getByRole('button', { name: 'Meus times' }).click()
       await page.getByRole('button', { name: 'Projetos de teste' }).click()
+      await page.getByRole('button', { name: 'Histórico por pessoa' }).click()
       await page.getByRole('button', { name: /Bia Exemplo/ }).click()
     } else await page.getByRole('button', { name: 'Meu histórico', exact: true }).click()
     await page.getByRole('button', { name: 'Consultar histórico' }).click()
@@ -169,7 +173,7 @@ test('older API keeps expandable records without locally invented totals', async
   )
   await page.getByRole('button', { name: 'Ver histórico' }).click()
   await page.getByRole('button', { name: 'Consultar histórico' }).click()
-  await expect(page.getByRole('status')).toContainText('Resumo diário indisponível')
+  await expect(page.getByRole('status').filter({ hasText: 'Resumo diário indisponível' })).toBeVisible()
   await page.getByRole('button', { name: 'Expandir dia 20/09/2026' }).click()
   await expect(page.getByText('Registro antigo', { exact: true })).toBeVisible()
   await page.getByText('Detalhes do registro').click()

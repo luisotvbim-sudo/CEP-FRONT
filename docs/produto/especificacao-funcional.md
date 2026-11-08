@@ -118,7 +118,7 @@ Dia atual é parcial. A API usa corte real também para decisões de energia; `p
 | RF-01 | Entrada autenticada, organização e escopo explícitos. Membro não acessa colegas; líder não acessa outros times; seleção anterior deve ser descartada ao trocar contexto. | Implementado; aprovação de justificativa própria é restrição do workflow futuro |
 | RF-02 | Associar identidade Monday e VR ativa da mesma organização por IDs únicos; convites de 48h, reenvio administrativo e ativação sem sessão. Nomes iguais não podem misturar dados. | Implementado |
 | RF-03 | Visão de gestão com indicadores, ranking, cobertura e acesso ao detalhe individual no escopo. | Parcial: relatórios autorizados existem; ranking/indicadores avançados planejados |
-| RF-04 | Meus times: tabela operacional de pessoas no escopo, busca, ordenação, totais/diferenças, pendências e seleção para exportação, sem revelar terceiros. Cadastro de times, vínculos/vigências e união dos times liderados são sua fundação atual. | Cadastro/consulta de times e pessoas implementados; tabela comparativa/seleção para exportação planejadas |
+| RF-04 | Meus times: no web, o líder consulta totais, gráficos e detalhes por pessoa/dia no time selecionado, com recorte de vigência calculado pela API. O Excel exporta apenas o time e o período consultados. O histórico por pessoa segue disponível em uma aba própria. | Resumo e exportação Excel no escopo do líder |
 | RF-05 | Detalhe da pessoa/dia com registros seguros, origem, totais conhecidos, corte, qualidade e motivos. Dado importado e análise ao vivo devem ser identificados. | Implementado nos contratos de histórico/relatórios |
 | RF-06 | Área pessoal com histórico, notificações e relatórios permitidos; atualizar próprios dados sem ampliar escopo. | Implementado; resposta a casos planejada |
 | RF-07 | Central de casos: solicitar ajuste/justificativa, responder, aprovar/devolver, resolver por correção e reabrir, com autoria, motivo e histórico. Ninguém aprova o próprio caso. | Planejado |
@@ -156,6 +156,12 @@ PIN global dedicado de seis dígitos é provisionado no servidor sem eco, guarda
 Navegação lateral, tabelas compactas, filtros visíveis e detalhes por pessoa/dia; identidade laranja/cinza, texto junto à cor e foco acessível. Carregamento, vazio, restrição de acesso, fonte parcial e falha devem ter estados distintos. Preservar filtros seguros quando possível, sem reter seleções entre organizações. Fixtures devem ser identificadas e isoladas; não simulam operação real.
 
 Jornadas atuais: coordenador prepara organização, importa diretórios, associa pessoas e convida; membro ativa conta, entra e confere histórico/avisos; líder consulta pessoas e relatórios no escopo atual. A jornada futura de tratamento adiciona solicitação, resposta, decisão e reabertura. Estados previstos: identificada → aguardando membro → aguardando líder → encerrada com justificativa/resolvida por correção; devolução retorna à resposta e mudança material pode exigir reabertura. Esse fluxo não foi implementado.
+
+Em **Associar e convidar**, o formulário sugere o e-mail do perfil Monday, independentemente da ordem de seleção. Se o perfil Monday não tiver e-mail, sugere o do VR Mais. A coordenação pode editar o destinatário antes de confirmar; os IDs dos perfis associados não mudam ao editar o endereço.
+
+Na coordenação web, a navegação é organizada em Pessoas (diretório, times e usuários), Horas (histórico, análises e sincronização), Comunicação (envio de avisos) e Configurações (regras globais e auditoria). O convite é iniciado no diretório; as notificações pessoais ficam no sino do cabeçalho. A organização selecionada e a autorização da API permanecem aplicáveis a todas as telas.
+
+**Horas → Resumo** consulta os agregados da API para um período de até 90 dias: organização, times e pessoas. O saldo e a divergência absoluta usam apenas comparações válidas de uma mesma pessoa e dia. Cada time usa membros atuais, com recorte pelas datas de vínculo. Os totais da organização não somam subtotais de times. O detalhe diário permite consultar registros importados; **Exportar Excel** gera organização, times, pessoas, pessoas por time e detalhe diário a partir do resultado já carregado. Ausência permanece em branco na planilha e indisponível na tela.
 
 ### Aceites detalhados preservados para evoluções
 

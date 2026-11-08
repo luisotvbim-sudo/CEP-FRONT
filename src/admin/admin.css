@@ -97,6 +97,30 @@
   background: #fbecdf;
   color: #b74910;
 }
+.coordinator-sidebar .admin-product { margin-bottom: 22px; }
+.coordinator-sections {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 0 clamp(20px, 3vw, 44px);
+  border-bottom: 1px solid #e2e2e2;
+  background: #fcfcfc;
+}
+.coordinator-sections button {
+  min-height: 44px;
+  padding: 0 8px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: #606060;
+  background: transparent;
+  font: inherit;
+  font-weight: 650;
+}
+.coordinator-sections button:hover { color: #a63d0b; }
+.coordinator-sections button[aria-current='page'] {
+  border-bottom-color: #a63d0b;
+  color: #a63d0b;
+}
 .sidebar-bottom {
   margin-top: auto;
   border-top: 1px solid #e6e6e6;
@@ -1013,6 +1037,9 @@
     padding: 10px;
     gap: 7px;
   }
+  .coordinator-sidebar nav { flex-wrap: wrap; overflow: visible; }
+  .coordinator-sidebar nav button { min-height: 44px; }
+  .coordinator-sections { gap: 0 4px; }
   .admin-main {
     width: 100%;
     margin: 0;

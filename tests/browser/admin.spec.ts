@@ -1,6 +1,45 @@
 import { expect, test } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
-import { fixture, ids, person, disabledBatch } from './admin-fixture'
+import { fixture, ids, person, disabledBatch, openCoordinatorPage } from './admin-fixture'
+
+test('coordinator web groups work by area and keeps invitations and the inbox accessible', async ({
+  page,
+}) => {
+  await fixture(page)
+  const navigation = page.getByRole('navigation', { name: 'Navegação administrativa' })
+  await expect(navigation.getByRole('button')).toHaveText([
+    'Pessoas',
+    'Horas',
+    'Comunicação',
+    'Configurações',
+  ])
+  await expect(navigation.getByRole('button', { name: 'Pessoas' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  )
+  await page.getByRole('button', { name: 'Associar e convidar', exact: true }).click()
+  await expect(
+    page.getByRole('heading', { name: 'Associar e convidar', exact: true }),
+  ).toBeVisible()
+  await navigation.getByRole('button', { name: 'Horas' }).click()
+  const hours = page.getByRole('navigation', { name: 'Seções de Horas' })
+  await expect(hours.getByRole('button')).toHaveText([
+    'Resumo',
+    'Histórico',
+    'Análises e erros',
+    'Sincronização',
+  ])
+  await hours.getByRole('button', { name: 'Sincronização' }).click()
+  await expect(navigation.getByRole('button', { name: 'Horas' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  )
+  await openCoordinatorPage(page, 'Minhas notificações')
+  await expect(
+    page.getByRole('heading', { name: 'Minhas notificações', exact: true }),
+  ).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+})
 
 test('people, search, invitation state and administrative accessibility', async ({
   page,
@@ -71,7 +110,7 @@ test('synchronization shows disabled integrations independently and partial succ
   page,
 }) => {
   await fixture(page)
-  await page.getByRole('button', { name: 'Sincronização', exact: true }).click()
+  await openCoordinatorPage(page, 'Sincronização')
   await expect(page.getByText('Integração desabilitada', { exact: true })).toHaveCount(2)
   await page.route('**/synchronizations?full=*', async (route) => {
     await new Promise((resolve) => setTimeout(resolve, 500))
@@ -95,7 +134,11 @@ test('synchronization shows disabled integrations independently and partial succ
       },
     })
   })
-  await expect(page.getByText('Atualiza Monday e VR Mais nos últimos 20 dias inclusivos, incluindo hoje.', { exact: true })).toBeVisible()
+  await expect(
+    page.getByText('Atualiza Monday e VR Mais nos últimos 20 dias inclusivos, incluindo hoje.', {
+      exact: true,
+    }),
+  ).toBeVisible()
   await page.getByRole('button', { name: 'Atualizar últimos 20 dias' }).click()
   await expect(page.getByRole('button', { name: 'Coleta em andamento' })).toBeDisabled()
   await expect(page.getByText('Sucesso parcial', { exact: true })).toBeVisible()
@@ -105,7 +148,7 @@ test('synchronization shows disabled integrations independently and partial succ
 
 test('teams can be created, edited, assigned and ended with effective dates', async ({ page }) => {
   const calls = await fixture(page)
-  await page.getByRole('button', { name: 'Times', exact: true }).click()
+  await openCoordinatorPage(page, 'Times')
   await page.getByLabel('Nome do novo time').fill('Equipe de teste')
   await page.getByRole('button', { name: 'Cadastrar time' }).click()
   await expect
@@ -162,7 +205,7 @@ test('empty data and access denied never become fake results', async ({ page }) 
   await page.route('**/teams?*', (route) =>
     route.fulfill({ status: 403, json: { code: 'forbidden', correlationId: 'access-denied' } }),
   )
-  await page.getByRole('button', { name: 'Times', exact: true }).click()
+  await openCoordinatorPage(page, 'Times')
   await expect(page.getByRole('alert')).toContainText('não tem acesso')
 })
 
@@ -195,6 +238,7 @@ test('leader keeps personal view and inspects only a member of a managed team', 
   await page.getByRole('button', { name: 'Meus times' }).click()
   await expect(page.getByRole('heading', { name: 'Meus times' })).toBeVisible()
   await page.getByRole('button', { name: 'Projetos de teste' }).click()
+  await page.getByRole('button', { name: 'Histórico por pessoa' }).click()
   await page.getByRole('button', { name: /Bia Exemplo/ }).click()
   await page.getByRole('button', { name: 'Consultar histórico' }).click()
   await expect(page.getByRole('heading', { name: 'Registros de Bia Exemplo' })).toBeVisible()
@@ -209,6 +253,7 @@ test('leader loses a selected member when the managed-team link disappears', asy
   await fixture(page, { role: 'user', leader: true })
   await page.getByRole('button', { name: 'Meus times' }).click()
   await page.getByRole('button', { name: 'Projetos de teste' }).click()
+  await page.getByRole('button', { name: 'Histórico por pessoa' }).click()
   await page.getByRole('button', { name: /Bia Exemplo/ }).click()
   await expect(page.getByRole('heading', { name: 'Histórico da pessoa' })).toBeVisible()
   await page.route(`**/teams/${ids.team}/assignments?*`, (route) => route.fulfill({ json: [] }))
@@ -221,6 +266,7 @@ test('server denial does not reveal a managed member history', async ({ page }) 
   await fixture(page, { role: 'user', leader: true })
   await page.getByRole('button', { name: 'Meus times' }).click()
   await page.getByRole('button', { name: 'Projetos de teste' }).click()
+  await page.getByRole('button', { name: 'Histórico por pessoa' }).click()
   await page.getByRole('button', { name: /Bia Exemplo/ }).click()
   await page.route('**/time-control/history?*', (route) =>
     route.fulfill({ status: 403, json: { code: 'forbidden' } }),
@@ -242,7 +288,9 @@ test('member does not follow an unknown synchronization after another user start
   )
   await page.getByRole('button', { name: 'Revalidar Monday e VR Mais (20 dias)' }).click()
   await expect(page.getByRole('alert')).toContainText('Já existe uma sincronização em andamento')
-  await expect(page.getByRole('button', { name: 'Revalidar Monday e VR Mais (20 dias)' })).toBeEnabled()
+  await expect(
+    page.getByRole('button', { name: 'Revalidar Monday e VR Mais (20 dias)' }),
+  ).toBeEnabled()
   await expect(page.getByText('Integração desabilitada', { exact: true })).toHaveCount(0)
 })
 
@@ -250,7 +298,7 @@ test('coordinator edits users without dropping products and sees administrative 
   page,
 }) => {
   const calls = await fixture(page)
-  await page.getByRole('button', { name: 'Usuários', exact: true }).click()
+  await openCoordinatorPage(page, 'Usuários')
   await expect(page.getByRole('heading', { name: 'Usuários e coordenadores' })).toBeVisible()
   expect(
     (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze())
@@ -282,7 +330,7 @@ test('coordinator edits users without dropping products and sees administrative 
         call.body.role === 'organizationAdmin',
     ),
   ).toBe(true)
-  await page.getByRole('button', { name: 'Auditoria', exact: true }).click()
+  await openCoordinatorPage(page, 'Auditoria')
   await expect(page.getByText('user.updated')).toBeVisible()
   expect(
     (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze())
@@ -304,7 +352,7 @@ test('expired session returns to login and preserves the support correlation', a
       json: { code: 'invalid_refresh_token', correlationId: 'session-support' },
     })
   })
-  await page.getByRole('button', { name: 'Times', exact: true }).click()
+  await openCoordinatorPage(page, 'Times')
   await expect(page.getByRole('heading', { name: 'Bom ter você aqui.' })).toBeVisible()
   await expect(page.getByText(/Sua sessão expirou/)).toContainText('session-support')
   expect(rotations).toBe(1)
@@ -313,14 +361,14 @@ test('expired session returns to login and preserves the support correlation', a
 test('connection failure exposes retry without fabricated data', async ({ page }) => {
   await fixture(page)
   await page.route('**/teams?*', (route) => route.abort('connectionfailed'))
-  await page.getByRole('button', { name: 'Times', exact: true }).click()
+  await openCoordinatorPage(page, 'Times')
   await expect(page.getByRole('alert')).toContainText('Verifique sua conexão')
   await expect(page.getByRole('button', { name: /Projetos de teste/ })).toHaveCount(0)
 })
 
 test('a delayed running poll cannot replace a completed synchronization', async ({ page }) => {
   await fixture(page)
-  await page.getByRole('button', { name: 'Sincronização', exact: true }).click()
+  await openCoordinatorPage(page, 'Sincronização')
   await expect(page.getByText('Integração desabilitada', { exact: true })).toHaveCount(2)
   const id = '70000000-0000-0000-0000-000000000003'
   let pollFinished = false
@@ -343,7 +391,7 @@ test('a delayed running poll cannot replace a completed synchronization', async 
 test('administrative forms remain accessible in each section', async ({ page }) => {
   await fixture(page)
   for (const section of ['Associar e convidar', 'Sincronização', 'Times', 'Histórico']) {
-    await page.getByRole('button', { name: section, exact: true }).first().click()
+    await openCoordinatorPage(page, section)
     await expect(page.getByRole('heading', { name: section, exact: true })).toBeVisible()
     await expect(page.getByRole('status').filter({ hasText: 'Carregando' })).toHaveCount(0)
     const scan = await new AxeBuilder({ page })
@@ -450,7 +498,7 @@ test('resend conflict preserves support code and revoked invitation cannot be re
 
 test('history keeps the server-side person name/email search from main', async ({ page }) => {
   const calls = await fixture(page)
-  await page.getByRole('button', { name: 'Histórico', exact: true }).click()
+  await openCoordinatorPage(page, 'Histórico')
   await page.getByLabel('Filtrar histórico por nome ou e-mail').fill('ana@example.invalid')
   await page.getByRole('button', { name: 'Consultar histórico', exact: true }).click()
   await expect

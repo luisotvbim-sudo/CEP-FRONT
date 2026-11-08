@@ -1,6 +1,34 @@
 import { expect, type Page } from '@playwright/test'
 import { personalOverview } from '../fixtures/overview'
 import type { OverviewPeriod, OverviewStatus } from '../../src/user/overview-api'
+import type { HoursSummary, HoursTotals } from '../../src/admin/hours-api'
+
+export async function openCoordinatorPage(page: Page, label: string) {
+  const areas: Record<string, string> = {
+    Times: 'Pessoas',
+    Usuários: 'Pessoas',
+    Histórico: 'Horas',
+    Sincronização: 'Horas',
+    'Análises e erros': 'Horas',
+    'Enviar aviso': 'Comunicação',
+    'Configurações globais': 'Configurações',
+    Auditoria: 'Configurações',
+  }
+  const area = areas[label]
+  const navigation = page.getByRole('navigation', { name: 'Navegação administrativa' })
+  await expect(navigation).toBeVisible()
+  if (area && (await navigation.getByRole('button', { name: area, exact: true }).isVisible())) {
+    await navigation.getByRole('button', { name: area, exact: true }).click()
+    if (label === 'Enviar aviso') return
+  }
+  await page.getByRole('button', { name: label, exact: true }).click()
+  if (label === 'Minhas notificações') {
+    const bell = page.getByRole('button', { name: label, exact: true })
+    if ((await bell.getAttribute('aria-expanded')) === 'true') {
+      await page.getByRole('button', { name: 'Ver todas as notificações', exact: true }).click()
+    }
+  }
+}
 
 export const ids = {
   org: '10000000-0000-0000-0000-000000000001',
@@ -14,6 +42,49 @@ export const ids = {
   invitation: '90000000-0000-0000-0000-000000000001',
   memberUser: '20000000-0000-0000-0000-000000000002',
   memberPerson: '30000000-0000-0000-0000-000000000002',
+}
+
+const totals = (hours: number, days: number): HoursTotals => ({
+  mondaySeconds: hours * 3600,
+  vrSeconds: hours * 3600,
+  deltaSeconds: 0,
+  absoluteDivergenceSeconds: 0,
+  personDays: days,
+  mondayDays: days,
+  vrDays: days,
+  comparableDays: days,
+  aboveToleranceDays: 0,
+})
+
+export const mockHours: HoursSummary = {
+  from: '2026-09-19',
+  to: '2026-09-20',
+  generatedAt: '2026-09-21T13:00:00Z',
+  toleranceMinutes: 30,
+  organization: totals(16, 2),
+  people: [
+    {
+      id: ids.person,
+      name: 'Pessoa teste horas',
+      totals: totals(16, 2),
+      days: ['2026-09-19', '2026-09-20'].map((day) => ({
+        day,
+        mondaySeconds: 28800,
+        vrSeconds: 28800,
+        deltaSeconds: 0,
+        partial: false,
+        issues: [],
+      })),
+    },
+  ],
+  teams: [
+    {
+      id: ids.team,
+      name: 'Time teste horas',
+      totals: totals(8, 1),
+      members: [{ personId: ids.person, totals: totals(8, 1), days: ['2026-09-20'] }],
+    },
+  ],
 }
 export const admin = {
   id: ids.user,
@@ -244,6 +315,32 @@ export async function fixture(
             : { ...team, name: body.name },
       })
     if (path.endsWith('/teams/' + ids.team)) return route.fulfill({ json: { ...team, ...body } })
+    if (path.endsWith(`/teams/${ids.team}/hours-summary`) && method === 'GET') {
+      const { generatedAt, toleranceMinutes } = mockHours
+      const from = url.searchParams.get('from') ?? mockHours.from
+      const to = url.searchParams.get('to') ?? mockHours.to
+      const summaryTeam = mockHours.teams[0]!
+      const person = mockHours.people[0]!
+      const member = summaryTeam.members[0]!
+      return route.fulfill({
+        json: {
+          from,
+          to,
+          generatedAt,
+          toleranceMinutes,
+          team: summaryTeam,
+          people: [
+            {
+              ...person,
+              totals: member.totals,
+              days: person.days.filter(({ day }) => day !== undefined && member.days.includes(day)),
+            },
+          ],
+        },
+      })
+    }
+    if (path.endsWith('/hours-summary') && method === 'GET')
+      return route.fulfill({ json: mockHours })
     if (path.endsWith('/history'))
       return route.fulfill({
         json: {
@@ -301,6 +398,17 @@ export async function fixture(
       })
     if (path === '/api/v1/me/notifications' && method === 'GET')
       return route.fulfill({ json: { items: [], total: 0, page: 1, pageSize: 20 } })
+    if (path === '/api/v1/time-control/settings' && method === 'GET')
+      return route.fulfill({
+        json: {
+          toleranceMinutes: 30,
+          automaticEnabled: false,
+          timeZoneId: 'America/Sao_Paulo',
+          version: ids.org,
+        },
+      })
+    if (path === '/api/v1/time-control/notification-schedules' && method === 'GET')
+      return route.fulfill({ json: [] })
     throw new Error(`Unexpected API call: ${method} ${path}`)
   })
   await page.goto('/')

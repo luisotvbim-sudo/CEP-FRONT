@@ -1,10 +1,11 @@
 import { useLogout } from '../auth/useLogout'
 import { AccountControls } from '../components/AccountControls'
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import {
   ClipboardList,
   History,
   Link2,
+  Megaphone,
   RefreshCw,
   ShieldCheck,
   UserRoundCog,
@@ -20,6 +21,7 @@ import { InvitePage } from './InvitePage'
 import { SyncPage } from './SyncPage'
 import { TeamsPage } from './TeamsPage'
 import { HistoryPage } from './HistoryPage'
+import { HoursSummaryPage } from './HoursSummaryPage'
 import { UsersPage } from './UsersPage'
 import { AuditPage } from './AuditPage'
 
@@ -27,24 +29,13 @@ import './admin.css'
 import {
   Analyses,
   Inbox,
+  NotificationBell,
   NotificationSettings,
   SendNotification,
   useNotificationApi,
   useOpenInbox,
 } from '../notifications'
 
-type Page =
-  | 'people'
-  | 'invite'
-  | 'sync'
-  | 'teams'
-  | 'history'
-  | 'users'
-  | 'audit'
-  | 'notifications'
-  | 'settings'
-  | 'send'
-  | 'analyses'
 const navigation = [
   { id: 'people', label: 'Pessoas', icon: Users },
   { id: 'invite', label: 'Associar e convidar', icon: Link2 },
@@ -57,7 +48,26 @@ const navigation = [
   { id: 'analyses', label: 'Análises e erros', icon: History },
   { id: 'send', label: 'Enviar aviso', icon: ClipboardList },
   { id: 'settings', label: 'Configurações globais', icon: ShieldCheck },
+  { id: 'hoursSummary', label: 'Resumo', icon: History },
 ] as const
+type Page = (typeof navigation)[number]['id']
+const desktopNavigation = navigation.filter(({ id }) => id !== 'hoursSummary')
+
+const workspaces: {
+  label: string
+  icon: typeof Users
+  pages: [Page, ...Page[]]
+  related?: Page
+}[] = [
+  { label: 'Pessoas', icon: Users, pages: ['people', 'teams', 'users'], related: 'invite' },
+  { label: 'Horas', icon: History, pages: ['hoursSummary', 'history', 'analyses', 'sync'] },
+  { label: 'Comunicação', icon: Megaphone, pages: ['send'] },
+  { label: 'Configurações', icon: ShieldCheck, pages: ['settings', 'audit'] },
+]
+
+function pageLabel(page: Page) {
+  return navigation.find((item) => item.id === page)?.label
+}
 
 export function AdminShell({
   client,
@@ -77,6 +87,11 @@ export function AdminShell({
   useOpenInbox(() => setPage('notifications'))
   const [page, setPage] = useState<Page>('people')
   const [person, setPerson] = useState<Person | null>(null)
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [notificationRevision, setNotificationRevision] = useState(0)
+  const closeNotifications = useCallback(() => setNotificationsOpen(false), [])
+  const web = !window.__CEP_DESKTOP__
+  const workspace = workspaces.find((area) => area.pages.includes(page) || area.related === page)
   const action = useLogout(client, onLogout)
   function navigate(next: Page) {
     setPage(next)
@@ -85,7 +100,7 @@ export function AdminShell({
   }
   return (
     <div className="admin-app">
-      <aside className="admin-sidebar">
+      <aside className={web ? 'admin-sidebar coordinator-sidebar' : 'admin-sidebar'}>
         <img src={logo} alt="Conceito Engenharia" />
         <div className="admin-product">
           <span className="product-mark">C</span>
@@ -94,34 +109,48 @@ export function AdminShell({
             <span>Coordenação</span>
           </div>
         </div>
-        <div className="nav-label">ORGANIZAÇÃO</div>
+        {!web && <div className="nav-label">ORGANIZAÇÃO</div>}
         <nav aria-label="Navegação administrativa">
-          {navigation.map((item) => (
-            <button
-              key={item.id}
-              aria-current={page === item.id ? 'page' : undefined}
-              onClick={() => navigate(item.id)}
-            >
-              <item.icon size={18} strokeWidth={1.6} />
-              {item.label}
-            </button>
-          ))}
+          {web
+            ? workspaces.map((area) => (
+                <button
+                  key={area.label}
+                  aria-current={workspace === area ? 'page' : undefined}
+                  onClick={() => {
+                    if (page !== area.pages[0]) navigate(area.pages[0])
+                  }}
+                >
+                  <area.icon size={18} strokeWidth={1.6} aria-hidden="true" />
+                  {area.label}
+                </button>
+              ))
+            : desktopNavigation.map((item) => (
+                <button
+                  key={item.id}
+                  aria-current={page === item.id ? 'page' : undefined}
+                  onClick={() => navigate(item.id)}
+                >
+                  <item.icon size={18} strokeWidth={1.6} />
+                  {item.label}
+                </button>
+              ))}
         </nav>
-        <div className="sidebar-bottom">
-          <ShieldCheck size={18} />
-          <span>
-            {organization
-              ? 'Administrador técnico · organização selecionada'
-              : 'Acesso de coordenador restrito à organização da sessão'}
-          </span>
-        </div>
+        {!web && (
+          <div className="sidebar-bottom">
+            <ShieldCheck size={18} />
+            <span>
+              {organization
+                ? 'Administrador técnico · organização selecionada'
+                : 'Acesso de coordenador restrito à organização da sessão'}
+            </span>
+          </div>
+        )}
       </aside>
       <div className="admin-main">
         <header className="admin-header">
           <div>
             <span className="breadcrumb">
-              Coordenação <span>/</span>{' '}
-              <strong>{navigation.find((x) => x.id === page)?.label}</strong>
+              Coordenação <span>/</span> <strong>{pageLabel(page)}</strong>
             </span>
             {organization && (
               <div>
@@ -139,8 +168,38 @@ export function AdminShell({
             roleLabel={organization ? 'Administrador técnico' : 'Coordenador da organização'}
             pending={action.pending}
             onLogout={action.logout}
-          />
+          >
+            {web && (
+              <NotificationBell
+                api={notifications}
+                open={notificationsOpen}
+                revision={notificationRevision}
+                poll={page !== 'notifications'}
+                onOpen={() => setNotificationsOpen(true)}
+                onClose={closeNotifications}
+                onAll={() => {
+                  closeNotifications()
+                  navigate('notifications')
+                }}
+              />
+            )}
+          </AccountControls>
         </header>
+        {web && workspace && workspace.pages.length > 1 && (
+          <nav className="coordinator-sections" aria-label={`Seções de ${workspace.label}`}>
+            {workspace.pages.map((section) => (
+              <button
+                key={section}
+                aria-current={page === section ? 'page' : undefined}
+                onClick={() => {
+                  if (page !== section) navigate(section)
+                }}
+              >
+                {section === 'people' ? 'Diretório' : pageLabel(section)}
+              </button>
+            ))}
+          </nav>
+        )}
         <main className="admin-content">
           <FormNotice error={action.error} />
           {page === 'people' && (
@@ -163,9 +222,17 @@ export function AdminShell({
           {page === 'sync' && <SyncPage api={api} />}
           {page === 'teams' && <TeamsPage api={api} />}
           {page === 'history' && <HistoryPage api={api} initialPerson={person} />}
+          {web && page === 'hoursSummary' && (
+            <HoursSummaryPage client={client} organizationId={organization?.id} />
+          )}
           {page === 'users' && <UsersPage api={api} />}
           {page === 'audit' && <AuditPage api={api} />}
-          {page === 'notifications' && <Inbox api={notifications} />}
+          {page === 'notifications' && (
+            <Inbox
+              api={notifications}
+              onRead={() => setNotificationRevision((revision) => revision + 1)}
+            />
+          )}
           {page === 'settings' && <NotificationSettings api={notifications} />}
           {page === 'send' && <SendNotification api={notifications} peopleApi={api} />}
           {page === 'analyses' && <Analyses api={notifications} peopleApi={api} />}
