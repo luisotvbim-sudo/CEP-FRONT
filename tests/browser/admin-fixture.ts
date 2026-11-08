@@ -2,6 +2,33 @@ import { expect, type Page } from '@playwright/test'
 import { personalOverview } from '../fixtures/overview'
 import type { OverviewPeriod, OverviewStatus } from '../../src/user/overview-api'
 
+export async function openCoordinatorPage(page: Page, label: string) {
+  const areas: Record<string, string> = {
+    Times: 'Pessoas',
+    Usuários: 'Pessoas',
+    Histórico: 'Horas',
+    Sincronização: 'Horas',
+    'Análises e erros': 'Horas',
+    'Enviar aviso': 'Comunicação',
+    'Configurações globais': 'Configurações',
+    Auditoria: 'Configurações',
+  }
+  const area = areas[label]
+  const navigation = page.getByRole('navigation', { name: 'Navegação administrativa' })
+  await expect(navigation).toBeVisible()
+  if (area && (await navigation.getByRole('button', { name: area, exact: true }).isVisible())) {
+    await navigation.getByRole('button', { name: area, exact: true }).click()
+    if (label === 'Enviar aviso') return
+  }
+  await page.getByRole('button', { name: label, exact: true }).click()
+  if (label === 'Minhas notificações') {
+    const bell = page.getByRole('button', { name: label, exact: true })
+    if ((await bell.getAttribute('aria-expanded')) === 'true') {
+      await page.getByRole('button', { name: 'Ver todas as notificações', exact: true }).click()
+    }
+  }
+}
+
 export const ids = {
   org: '10000000-0000-0000-0000-000000000001',
   user: '20000000-0000-0000-0000-000000000001',
@@ -301,6 +328,17 @@ export async function fixture(
       })
     if (path === '/api/v1/me/notifications' && method === 'GET')
       return route.fulfill({ json: { items: [], total: 0, page: 1, pageSize: 20 } })
+    if (path === '/api/v1/time-control/settings' && method === 'GET')
+      return route.fulfill({
+        json: {
+          toleranceMinutes: 30,
+          automaticEnabled: false,
+          timeZoneId: 'America/Sao_Paulo',
+          version: ids.org,
+        },
+      })
+    if (path === '/api/v1/time-control/notification-schedules' && method === 'GET')
+      return route.fulfill({ json: [] })
     throw new Error(`Unexpected API call: ${method} ${path}`)
   })
   await page.goto('/')

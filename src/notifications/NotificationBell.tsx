@@ -11,6 +11,7 @@ export function NotificationBell({
   onClose,
   onAll,
   revision,
+  poll = true,
 }: {
   api: NotificationApi
   open: boolean
@@ -18,15 +19,17 @@ export function NotificationBell({
   onClose(): void
   onAll(): void
   revision: number
+  poll?: boolean
 }) {
   const unread = useQuery(() => api.inbox(1, true), [api, revision])
   const root = useRef<HTMLDivElement>(null)
   const button = useRef<HTMLButtonElement>(null)
   const panel = useRef<HTMLDivElement>(null)
   useEffect(() => {
+    if (!poll) return
     const timer = setInterval(unread.reload, 60_000)
     return () => clearInterval(timer)
-  }, [unread.reload])
+  }, [poll, unread.reload])
   useEffect(() => {
     if (!open) return
     panel.current?.focus()

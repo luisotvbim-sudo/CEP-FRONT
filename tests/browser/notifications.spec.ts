@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
-import { admin, fixture, ids } from './admin-fixture'
+import { admin, fixture, ids, openCoordinatorPage } from './admin-fixture'
 
 const version = 'aaaaaaaa-0000-0000-0000-000000000001'
 const analysis = {
@@ -88,7 +88,7 @@ test('global settings update and versioned deletion remain explicitly global', a
           ],
     })
   })
-  await page.getByRole('button', { name: 'Configurações globais', exact: true }).click()
+  await openCoordinatorPage(page, 'Configurações globais')
   await page.getByLabel('Tolerância diária em minutos').fill('45')
   await page.getByRole('button', { name: 'Salvar configuração global' }).click()
   await expect.poll(() => saves.length).toBe(1)
@@ -133,7 +133,7 @@ test('instant dispatch uses server preview, confirmation and one retained key af
     }
     await route.fulfill({ json: { items: [], total: 0, page: 1, pageSize: 20 } })
   })
-  await page.getByRole('button', { name: 'Enviar aviso', exact: true }).click()
+  await openCoordinatorPage(page, 'Enviar aviso')
   await page.getByRole('combobox', { name: 'Análise', exact: true }).selectOption('sprint')
   await page.getByLabel('Mensagem', { exact: true }).fill('Confira a sprint')
   await expect(page.getByText('Prévia: 2 destinatário(s)', { exact: false })).toBeVisible()
@@ -181,7 +181,7 @@ test('inbox preserves unknown totals and original analysis; expanding does not m
       },
     })
   })
-  await page.getByRole('button', { name: 'Minhas notificações', exact: true }).click()
+  await openCoordinatorPage(page, 'Minhas notificações')
   await page.getByText('Ver análise anexada').click()
   await expect(page.getByText('Dados insuficientes', { exact: true })).toBeVisible()
   await expect(page.getByText('Indisponível', { exact: true }).first()).toBeVisible()
@@ -195,6 +195,8 @@ test('inbox polling preserves expanded analysis and keyboard focus through refre
 }) => {
   await fixture(page)
   await page.clock.install()
+  await openCoordinatorPage(page, 'Minhas notificações')
+  await expect(page.getByText('Nenhuma notificação neste filtro')).toBeVisible()
   let requests = 0
   let release!: () => void
   await page.route('**/api/v1/me/notifications**', async (route) => {
@@ -206,7 +208,7 @@ test('inbox polling preserves expanded analysis and keyboard focus through refre
       await route.fulfill({ status: 503, json: { code: 'unavailable' } })
     } else await route.fulfill({ json: inboxPage('Último aviso confirmado') })
   })
-  await page.getByRole('button', { name: 'Minhas notificações', exact: true }).click()
+  await page.getByRole('button', { name: 'Atualizar', exact: true }).click()
   await expect(page.getByText('Último aviso confirmado', { exact: true })).toBeVisible()
   const summary = page.getByText('Ver análise anexada', { exact: true })
   await summary.click()
@@ -230,6 +232,8 @@ test('inbox polling preserves expanded analysis and keyboard focus through refre
 test('inbox filter changes discard the old result and an outstanding poll', async ({ page }) => {
   await fixture(page)
   await page.clock.install()
+  await openCoordinatorPage(page, 'Minhas notificações')
+  await expect(page.getByText('Nenhuma notificação neste filtro')).toBeVisible()
   let oldRequests = 0
   let releaseOld!: () => void
   let releaseNew!: () => void
@@ -253,7 +257,7 @@ test('inbox filter changes discard the old result and an outstanding poll', asyn
       await route.fulfill({ json: inboxPage('Filtro atual confirmado') })
     }
   })
-  await page.getByRole('button', { name: 'Minhas notificações', exact: true }).click()
+  await page.getByRole('button', { name: 'Atualizar', exact: true }).click()
   await expect(page.getByText('Filtro anterior', { exact: true })).toBeVisible()
   await page.clock.runFor(60_000)
   await expect.poll(() => oldRequests).toBe(2)
@@ -291,7 +295,7 @@ test('dispatch polling keeps the visible history and message draft while updatin
       json: dispatchPage('Envio confirmado', requests === 1 ? 'pending' : 'succeeded'),
     })
   })
-  await page.getByRole('button', { name: 'Enviar aviso', exact: true }).click()
+  await openCoordinatorPage(page, 'Enviar aviso')
   await expect(page.getByText('Envio confirmado', { exact: true })).toBeVisible()
   const message = page.getByRole('textbox', { name: 'Mensagem', exact: true })
   await message.fill('Rascunho ainda em edição')
@@ -346,7 +350,7 @@ test('an organization switch cannot restore dispatches from the previous pending
       .filter({ hasText: name })
       .getByRole('button', { name: 'Administrar' })
       .click()
-    await page.getByRole('button', { name: 'Enviar aviso', exact: true }).click()
+    await openCoordinatorPage(page, 'Enviar aviso')
   }
   await select('Organização A')
   await expect(page.getByText('Histórico da organização anterior', { exact: true })).toBeVisible()
@@ -372,6 +376,8 @@ test('an organization switch cannot restore dispatches from the previous pending
 test('logout and another account discard an outstanding inbox poll', async ({ page }) => {
   await fixture(page)
   await page.clock.install()
+  await openCoordinatorPage(page, 'Minhas notificações')
+  await expect(page.getByText('Nenhuma notificação neste filtro')).toBeVisible()
   let oldRequests = 0
   let releaseOld!: () => void
   let nextAccount = false
@@ -385,7 +391,7 @@ test('logout and another account discard an outstanding inbox poll', async ({ pa
       await route.fulfill({ json: inboxPage('Aviso da conta anterior') })
     } else await route.fulfill({ json: inboxPage('Aviso da conta atual') })
   })
-  await page.getByRole('button', { name: 'Minhas notificações', exact: true }).click()
+  await page.getByRole('button', { name: 'Atualizar', exact: true }).click()
   await expect(page.getByText('Aviso da conta anterior', { exact: true })).toBeVisible()
   await page.clock.runFor(60_000)
   await expect.poll(() => oldRequests).toBe(2)
@@ -413,7 +419,7 @@ test('logout and another account discard an outstanding inbox poll', async ({ pa
   await page.getByLabel('Senha', { exact: true }).fill('Test-only-password')
   await page.getByRole('button', { name: 'Entrar na minha conta' }).click()
   await expect(page.getByText('Outra conta de teste', { exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'Minhas notificações', exact: true }).click()
+  await openCoordinatorPage(page, 'Minhas notificações')
   await expect(page.getByText('Aviso da conta atual', { exact: true })).toBeVisible()
   const oldResponse = page.waitForResponse((response) =>
     response.url().includes('/me/notifications'),
