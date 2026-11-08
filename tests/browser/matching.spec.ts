@@ -63,6 +63,32 @@ for (const first of ['Monday', 'VR Mais'] as const) {
   })
 }
 
+for (const first of ['Monday', 'VR Mais'] as const) {
+  test(`prefers Monday's invitation email when different emails are selected starting with ${first}`, async ({
+    page,
+  }) => {
+    const calls = await fixture(page)
+    await page.route('**/external-identities?*', (route) => {
+      const q = new URL(route.request().url()).searchParams
+      const items = q.get('search') ? [] : [q.get('source') === 'monday' ? monday : secondVr]
+      return route.fulfill({ json: { items, total: items.length, page: 1, pageSize: 8 } })
+    })
+    await openMatching(page)
+    await profiles(page, first).getByRole('radio').check()
+    await expect(page.getByRole('status')).toContainText('Nenhum perfil disponível')
+    await profiles(page, first === 'Monday' ? 'VR Mais' : 'Monday').getByRole('radio').check()
+    await expect(page.getByLabel('E-mail do convite')).toHaveValue(monday.email)
+    await page.getByLabel('Conferi os perfis Monday').check()
+    await page.getByRole('button', { name: 'Confirmar e enviar convite' }).click()
+    await expect(page.getByRole('heading', { name: 'Convite criado' })).toBeVisible()
+    expect(calls.find((c) => c.path.endsWith('/people/invitations'))?.body).toMatchObject({
+      mondayIdentityId: monday.id,
+      vrMaisIdentityId: secondVr.id,
+      email: monday.email,
+    })
+  })
+}
+
 test('editing the recipient to a selected profile email updates the name and requires confirmation again', async ({
   page,
 }) => {

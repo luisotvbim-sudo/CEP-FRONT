@@ -157,6 +157,8 @@ Navegação lateral, tabelas compactas, filtros visíveis e detalhes por pessoa/
 
 Jornadas atuais: coordenador prepara organização, importa diretórios, associa pessoas e convida; membro ativa conta, entra e confere histórico/avisos; líder consulta pessoas e relatórios no escopo atual. A jornada futura de tratamento adiciona solicitação, resposta, decisão e reabertura. Estados previstos: identificada → aguardando membro → aguardando líder → encerrada com justificativa/resolvida por correção; devolução retorna à resposta e mudança material pode exigir reabertura. Esse fluxo não foi implementado.
 
+Em **Associar e convidar**, o formulário sugere o e-mail do perfil Monday, independentemente da ordem de seleção. Se o perfil Monday não tiver e-mail, sugere o do VR Mais. A coordenação pode editar o destinatário antes de confirmar; os IDs dos perfis associados não mudam ao editar o endereço.
+
 ### Aceites detalhados preservados para evoluções
 
 - **RF-03/RF-04/RF-05:** painel futuro usa mesma interseção de período/escopo em cards, gráfico e tabela; cada contagem informa sua unidade. Ranking abre detalhe com período preservado. Seleção distingue página e todos os resultados, sem incluir pessoas invisíveis. Detalhe explica parcelas elegíveis/exclusões e procedência; campo ausente fica indisponível e referência à origem só aparece quando utilizável. Jornada prevista é referência adicional planejada, não fonte atual de horas calculadas.

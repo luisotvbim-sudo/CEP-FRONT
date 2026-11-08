@@ -131,7 +131,10 @@ export function InvitePage({
     if (source === 'monday') setMonday(value)
     else setVr(value)
     setName(value.displayName || '')
-    setEmail(value.email || '')
+    const pairMonday = source === 'monday' ? value : manualPair ? monday : null
+    const pairVr = source === 'vrMais' ? value : manualPair ? vr : null
+    const suggestedEmail = pairMonday?.email?.trim() || pairVr?.email?.trim() || ''
+    setEmail(suggestedEmail)
     setConfirmed(false)
     action.clear()
     setMatchError(null)
@@ -168,6 +171,10 @@ export function InvitePage({
       const complete = typeof result.total === 'number' && result.total <= items.length
       if (complete && matches.length === 1) {
         setOther(matches[0])
+        if (otherSource === 'monday') {
+          const mondayEmail = matches[0].email?.trim()
+          setEmail((current) => (current === suggestedEmail && mondayEmail ? mondayEmail : current))
+        }
         suggestedSource.current = otherSource
         setMatchNotice(
           `Perfil do ${sourceLabel(otherSource)} pré-selecionado pelo mesmo e-mail. Confira se pertence à mesma pessoa antes de confirmar.`,
