@@ -316,7 +316,9 @@ export async function fixture(
       })
     if (path.endsWith('/teams/' + ids.team)) return route.fulfill({ json: { ...team, ...body } })
     if (path.endsWith(`/teams/${ids.team}/hours-summary`) && method === 'GET') {
-      const { from, to, generatedAt, toleranceMinutes } = mockHours
+      const { generatedAt, toleranceMinutes } = mockHours
+      const from = url.searchParams.get('from') ?? mockHours.from
+      const to = url.searchParams.get('to') ?? mockHours.to
       const summaryTeam = mockHours.teams[0]!
       const person = mockHours.people[0]!
       const member = summaryTeam.members[0]!

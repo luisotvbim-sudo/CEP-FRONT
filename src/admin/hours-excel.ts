@@ -27,7 +27,25 @@ const cells = (totals: HoursTotals) => [
   totals.aboveToleranceDays,
 ]
 
-export async function buildHoursWorkbook(report: HoursSummary) {
+export async function buildHoursWorkbook(report: HoursSummary, teamId?: string) {
+  const team = teamId ? report.teams.find(({ id }) => id === teamId) : undefined
+  if (teamId && !team) throw new Error('O resumo não contém o time selecionado.')
+  const teams = team ? [team] : report.teams
+  const teamMembers = new Map(team?.members.map((member) => [member.personId, member]))
+  const people = team
+    ? report.people.flatMap((person) => {
+        const member = teamMembers.get(person.id)
+        if (!member) return []
+        const days = new Set(member.days)
+        return [
+          {
+            ...person,
+            totals: member.totals,
+            days: person.days.filter(({ day }) => day !== undefined && days.has(day)),
+          },
+        ]
+      })
+    : report.people
   const sheets: Sheet<File | Blob | ArrayBuffer>[] = []
   const addSheet = (
     name: string,
@@ -58,51 +76,50 @@ export async function buildHoursWorkbook(report: HoursSummary) {
     })
     return data
   }
-  const organization = addSheet(
-    'Organização',
+  const summary = addSheet(
+    team ? 'Resumo do time' : 'Organização',
     ['Escopo', ...headers],
     [1, 2, 3, 4],
-    [['Total da organização', ...cells(report.organization)]],
+    [[team?.name ?? 'Total da organização', ...cells(team?.totals ?? report.organization)]],
   )
-  organization.push(
+  summary.push(
     [],
     ['Período', report.from, report.to],
     ['Consultado em (São Paulo)', timestamp(report.generatedAt)],
     ['Tolerância diária (min)', report.toleranceMinutes],
     ['Base', 'Histórico importado. Célula em branco = dado indisponível.'],
     ['Saldo e divergência', 'Somente pessoa-dias com comparação válida.'],
-    ['Times', 'Vínculos atuais, recortados pela vigência. Times podem compartilhar pessoas.'],
+    team
+      ? ['Vínculos', 'Somente os dias em que a pessoa fazia parte deste time.']
+      : ['Times', 'Vínculos atuais, recortados pela vigência. Times podem compartilhar pessoas.'],
   )
+  if (!team)
+    addSheet(
+      'Times',
+      ['Time', ...headers],
+      [1, 2, 3, 4],
+      teams.map((item) => [item.name, ...cells(item.totals)]),
+    )
   addSheet(
-    'Times',
-    ['Time', ...headers],
-    [1, 2, 3, 4],
-    report.teams.map((team) => [team.name, ...cells(team.totals)]),
-  )
-  addSheet(
-    'Pessoas',
+    team ? 'Pessoas do time' : 'Pessoas',
     ['Pessoa', ...headers],
     [1, 2, 3, 4],
-    report.people.map((person) => [person.name, ...cells(person.totals)]),
+    people.map((person) => [person.name, ...cells(person.totals)]),
   )
   const memberships = new Map<string, string[]>()
-  const byPerson = new Map(report.people.map((person) => [person.id, person.name]))
-  addSheet(
-    'Pessoas por time',
-    ['Time', 'Pessoa', ...headers],
-    [2, 3, 4, 5],
-    report.teams.flatMap((team) =>
-      team.members.map((member) => {
-        for (const day of member.days) {
-          const key = `${member.personId}/${day}`
-          const names = memberships.get(key) ?? []
-          names.push(team.name)
-          memberships.set(key, names)
-        }
-        return [team.name, byPerson.get(member.personId) ?? 'Pessoa', ...cells(member.totals)]
-      }),
-    ),
+  const byPerson = new Map(people.map((person) => [person.id, person.name]))
+  const rowsByTeam = teams.flatMap((item) =>
+    item.members.map((member) => {
+      for (const day of member.days) {
+        const key = `${member.personId}/${day}`
+        const names = memberships.get(key) ?? []
+        names.push(item.name)
+        memberships.set(key, names)
+      }
+      return [item.name, byPerson.get(member.personId) ?? 'Pessoa', ...cells(member.totals)]
+    }),
   )
+  if (!team) addSheet('Pessoas por time', ['Time', 'Pessoa', ...headers], [2, 3, 4, 5], rowsByTeam)
   addSheet(
     'Detalhe diário',
     [
@@ -116,7 +133,7 @@ export async function buildHoursWorkbook(report: HoursSummary) {
       'Ocorrências',
     ],
     [3, 4, 5],
-    report.people.flatMap((person) =>
+    people.flatMap((person) =>
       person.days.map((day) => [
         person.name,
         day.day ?? '',
@@ -132,13 +149,17 @@ export async function buildHoursWorkbook(report: HoursSummary) {
   return writeXlsxFile(sheets).toBlob()
 }
 
-export async function downloadHoursWorkbook(report: HoursSummary, canDownload: () => boolean) {
-  const file = await buildHoursWorkbook(report)
+export async function downloadHoursWorkbook(
+  report: HoursSummary,
+  canDownload: () => boolean,
+  teamId?: string,
+) {
+  const file = await buildHoursWorkbook(report, teamId)
   if (!canDownload()) return
   const url = URL.createObjectURL(file)
   const link = document.createElement('a')
   link.href = url
-  link.download = `cep-horas-${report.from}-a-${report.to}.xlsx`
+  link.download = `cep-horas${teamId ? '-time' : ''}-${report.from}-a-${report.to}.xlsx`
   document.body.append(link)
   link.click()
   link.remove()

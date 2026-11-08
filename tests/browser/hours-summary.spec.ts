@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { readFile } from 'node:fs/promises'
 import { fixture, ids, mockHours } from './admin-fixture'
 
-test('leader sees the team summary without organization totals', async ({ page }) => {
+test('leader exports the team summary for the applied dates', async ({ page }) => {
   const calls = await fixture(page, { role: 'user', leader: true })
   await page.getByRole('button', { name: 'Meus times' }).click()
   await expect(page.getByRole('heading', { name: 'Resumo do time' })).toBeVisible()
@@ -11,15 +11,30 @@ test('leader sees the team summary without organization totals', async ({ page }
       .getByRole('figure', { name: 'Horas conhecidas por fonte' })
       .getByText('08:00 h', { exact: true }),
   ).toHaveCount(2)
-  await expect(page.getByRole('button', { name: 'Exportar Excel' })).toHaveCount(0)
+  const exportButton = page.getByRole('button', { name: 'Exportar Excel' })
+  await expect(exportButton).toBeEnabled()
   await expect(page.getByRole('heading', { name: 'Toda a organização' })).toHaveCount(0)
   await page.getByRole('button', { name: 'Pessoa teste horas', exact: true }).click()
   await expect(page.getByRole('button', { name: '20/09/2026', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: '19/09/2026', exact: true })).toHaveCount(0)
+  await page.getByLabel('De', { exact: true }).fill('2026-09-20')
+  await page.getByLabel('Até', { exact: true }).fill('2026-09-21')
+  await expect(exportButton).toBeDisabled()
+  await page.getByRole('button', { name: 'Consultar período' }).click()
+  await expect(exportButton).toBeEnabled()
+  const summaryCalls = () => calls.filter(({ path }) => path.includes('/hours-summary'))
+  const consulted = summaryCalls().length
+  expect(summaryCalls().at(-1)?.path).toContain('from=2026-09-20&to=2026-09-21')
+  const download = page.waitForEvent('download')
+  await exportButton.click()
+  const workbook = await download
+  expect(workbook.suggestedFilename()).toBe('cep-horas-time-2026-09-20-a-2026-09-21.xlsx')
+  expect((await readFile((await workbook.path())!)).subarray(0, 4)).toEqual(
+    Buffer.from([0x50, 0x4b, 3, 4]),
+  )
+  expect(summaryCalls()).toHaveLength(consulted)
   expect(
-    calls
-      .filter(({ path }) => path.includes('/hours-summary'))
-      .every(({ path }) => path.includes(`/teams/${ids.team}/hours-summary`)),
+    summaryCalls().every(({ path }) => path.includes(`/teams/${ids.team}/hours-summary`)),
   ).toBe(true)
 })
 

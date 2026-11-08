@@ -331,12 +331,15 @@ export function HoursSummaryPage({
     if (draft.from === period.from && draft.to === period.to) result.reload()
     else setPeriod(draft)
   }
+  const exportableReport =
+    !result.pending && !result.error && draft.from === period.from && draft.to === period.to
+      ? result.data
+      : undefined
   function exportReport() {
-    const report = result.data
-    if (!report) return
+    if (!exportableReport?.people.length) return
     void action.run(async () => {
       const { downloadHoursWorkbook } = await import('./hours-excel')
-      await downloadHoursWorkbook(report, () => mounted.current)
+      await downloadHoursWorkbook(exportableReport, () => mounted.current, teamId)
     })
   }
   return (
@@ -350,17 +353,15 @@ export function HoursSummaryPage({
             : 'Compare os registros importados do Monday e do VR Mais por pessoa, time ou organização.'
         }
         action={
-          !teamId && (
-            <button
-              className="primary-button compact"
-              type="button"
-              onClick={exportReport}
-              disabled={!result.data?.people.length || result.pending || action.pending}
-            >
-              <Download size={17} aria-hidden="true" />
-              {action.pending ? 'Gerando Excel…' : 'Exportar Excel'}
-            </button>
-          )
+          <button
+            className="primary-button compact"
+            type="button"
+            onClick={exportReport}
+            disabled={!exportableReport?.people.length || action.pending}
+          >
+            <Download size={17} aria-hidden="true" />
+            {action.pending ? 'Gerando Excel…' : 'Exportar Excel'}
+          </button>
         }
       />
       <form className="admin-panel hours-period" onSubmit={apply}>
@@ -371,6 +372,7 @@ export function HoursSummaryPage({
             value={draft.from}
             max={today()}
             required
+            disabled={action.pending}
             onChange={(event) => setDraft({ ...draft, from: event.target.value })}
           />
         </label>
@@ -381,6 +383,7 @@ export function HoursSummaryPage({
             value={draft.to}
             max={today()}
             required
+            disabled={action.pending}
             onChange={(event) => setDraft({ ...draft, to: event.target.value })}
           />
         </label>
