@@ -21,6 +21,7 @@ import { InvitePage } from './InvitePage'
 import { SyncPage } from './SyncPage'
 import { TeamsPage } from './TeamsPage'
 import { HistoryPage } from './HistoryPage'
+import { HoursSummaryPage } from './HoursSummaryPage'
 import { UsersPage } from './UsersPage'
 import { AuditPage } from './AuditPage'
 
@@ -41,6 +42,7 @@ type Page =
   | 'sync'
   | 'teams'
   | 'history'
+  | 'hoursSummary'
   | 'users'
   | 'audit'
   | 'notifications'
@@ -68,12 +70,13 @@ const workspaces: {
   related?: Page
 }[] = [
   { label: 'Pessoas', icon: Users, pages: ['people', 'teams', 'users'], related: 'invite' },
-  { label: 'Horas', icon: History, pages: ['history', 'analyses', 'sync'] },
+  { label: 'Horas', icon: History, pages: ['hoursSummary', 'history', 'analyses', 'sync'] },
   { label: 'Comunicação', icon: Megaphone, pages: ['send'] },
   { label: 'Configurações', icon: ShieldCheck, pages: ['settings', 'audit'] },
 ]
 
 function pageLabel(page: Page) {
+  if (page === 'hoursSummary') return 'Resumo'
   return navigation.find((item) => item.id === page)?.label
 }
 
@@ -230,6 +233,9 @@ export function AdminShell({
           {page === 'sync' && <SyncPage api={api} />}
           {page === 'teams' && <TeamsPage api={api} />}
           {page === 'history' && <HistoryPage api={api} initialPerson={person} />}
+          {web && page === 'hoursSummary' && (
+            <HoursSummaryPage client={client} organizationId={organization?.id} />
+          )}
           {page === 'users' && <UsersPage api={api} />}
           {page === 'audit' && <AuditPage api={api} />}
           {page === 'notifications' && (

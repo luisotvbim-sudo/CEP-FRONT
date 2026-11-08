@@ -161,6 +161,8 @@ Em **Associar e convidar**, o formulário sugere o e-mail do perfil Monday, inde
 
 Na coordenação web, a navegação é organizada em Pessoas (diretório, times e usuários), Horas (histórico, análises e sincronização), Comunicação (envio de avisos) e Configurações (regras globais e auditoria). O convite é iniciado no diretório; as notificações pessoais ficam no sino do cabeçalho. A organização selecionada e a autorização da API permanecem aplicáveis a todas as telas.
 
+**Horas → Resumo** consulta os agregados da API para um período de até 90 dias: organização, times e pessoas. O saldo e a divergência absoluta usam apenas comparações válidas de uma mesma pessoa e dia. Cada time usa membros atuais, com recorte pelas datas de vínculo. Os totais da organização não somam subtotais de times. O detalhe diário permite consultar registros importados; **Exportar Excel** gera organização, times, pessoas, pessoas por time e detalhe diário a partir do resultado já carregado. Ausência permanece em branco na planilha e indisponível na tela.
+
 ### Aceites detalhados preservados para evoluções
 
 - **RF-03/RF-04/RF-05:** painel futuro usa mesma interseção de período/escopo em cards, gráfico e tabela; cada contagem informa sua unidade. Ranking abre detalhe com período preservado. Seleção distingue página e todos os resultados, sem incluir pessoas invisíveis. Detalhe explica parcelas elegíveis/exclusões e procedência; campo ausente fica indisponível e referência à origem só aparece quando utilizável. Jornada prevista é referência adicional planejada, não fonte atual de horas calculadas.

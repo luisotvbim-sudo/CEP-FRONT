@@ -24,6 +24,7 @@ test('coordinator web groups work by area and keeps invitations and the inbox ac
   await navigation.getByRole('button', { name: 'Horas' }).click()
   const hours = page.getByRole('navigation', { name: 'Seções de Horas' })
   await expect(hours.getByRole('button')).toHaveText([
+    'Resumo',
     'Histórico',
     'Análises e erros',
     'Sincronização',

@@ -1,6 +1,7 @@
 import { expect, type Page } from '@playwright/test'
 import { personalOverview } from '../fixtures/overview'
 import type { OverviewPeriod, OverviewStatus } from '../../src/user/overview-api'
+import type { HoursSummary, HoursTotals } from '../../src/admin/hours-api'
 
 export async function openCoordinatorPage(page: Page, label: string) {
   const areas: Record<string, string> = {
@@ -41,6 +42,49 @@ export const ids = {
   invitation: '90000000-0000-0000-0000-000000000001',
   memberUser: '20000000-0000-0000-0000-000000000002',
   memberPerson: '30000000-0000-0000-0000-000000000002',
+}
+
+const totals = (hours: number, days: number): HoursTotals => ({
+  mondaySeconds: hours * 3600,
+  vrSeconds: hours * 3600,
+  deltaSeconds: 0,
+  absoluteDivergenceSeconds: 0,
+  personDays: days,
+  mondayDays: days,
+  vrDays: days,
+  comparableDays: days,
+  aboveToleranceDays: 0,
+})
+
+export const mockHours: HoursSummary = {
+  from: '2026-09-19',
+  to: '2026-09-20',
+  generatedAt: '2026-09-21T13:00:00Z',
+  toleranceMinutes: 30,
+  organization: totals(16, 2),
+  people: [
+    {
+      id: ids.person,
+      name: 'Pessoa teste horas',
+      totals: totals(16, 2),
+      days: ['2026-09-19', '2026-09-20'].map((day) => ({
+        day,
+        mondaySeconds: 28800,
+        vrSeconds: 28800,
+        deltaSeconds: 0,
+        partial: false,
+        issues: [],
+      })),
+    },
+  ],
+  teams: [
+    {
+      id: ids.team,
+      name: 'Time teste horas',
+      totals: totals(8, 1),
+      members: [{ personId: ids.person, totals: totals(8, 1), days: ['2026-09-20'] }],
+    },
+  ],
 }
 export const admin = {
   id: ids.user,
@@ -271,6 +315,8 @@ export async function fixture(
             : { ...team, name: body.name },
       })
     if (path.endsWith('/teams/' + ids.team)) return route.fulfill({ json: { ...team, ...body } })
+    if (path.endsWith('/hours-summary') && method === 'GET')
+      return route.fulfill({ json: mockHours })
     if (path.endsWith('/history'))
       return route.fulfill({
         json: {
